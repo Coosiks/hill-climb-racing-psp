@@ -18,15 +18,21 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Compile PSP EBOOT.PBP
+        shell: bash
         run: |
+          set -euo pipefail
           export PSPDEV=/opt/pspdev
           export PATH=$PSPDEV/bin:$PATH
           make -j$(nproc) 2>&1 | tee build_psp.log
+          test -f EBOOT.PBP && test -s EBOOT.PBP
+          ls -la EBOOT.PBP hcr.elf
+          sha256sum EBOOT.PBP hcr.elf
 
       - name: Upload PSP Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: hcr-psp-eboot
+          if-no-files-found: error
           path: |
             EBOOT.PBP
             hcr.elf
@@ -40,24 +46,30 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Dependencies
+        shell: bash
         run: |
+          set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y build-essential cmake libsdl2-dev libgl-dev
 
       - name: Configure and Compile PC Binary
+        shell: bash
         run: |
-          cmake -B build-pc -S .
+          set -euo pipefail
+          cmake -B build-pc -S . -DCMAKE_BUILD_TYPE=Release
           cmake --build build-pc -j$(nproc) 2>&1 | tee build_pc.log
 
       - name: Run Determinism & Verification Tests
+        shell: bash
         run: |
-          ./build-pc/test_physics 2>&1 | tee test_results.log
+          set -euo pipefail
+          ./build-pc/test_physics
 
       - name: Upload PC Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: hcr-pc-binary
+          if-no-files-found: error
           path: |
             build-pc/hcr_pc
             build_pc.log
-            test_results.log

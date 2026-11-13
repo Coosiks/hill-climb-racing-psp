@@ -13,6 +13,26 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 
 ---
 
+## [ ] Milestone M0.2: Reviewer Fixes & Hardening (v0.1.0-beta.2)
+- [ ] **T-100 (ci):** Enforce CI integrity: `set -euo pipefail` on all bash steps, eliminate tee return-code masking, verify non-empty EBOOT/ELF, fail artifact upload on missing files.
+- [ ] **T-101 (build):** Fix PSP compilation in `src/main.cpp`, verify clean build on PSPSDK.
+- [ ] **T-102 (build):** Rebuild release binary from clean tree, verify on PPSSPP with screenshot.
+- [ ] **T-103 (physics):** Fix inverted in-air pitch control (gas = backflip/CCW, brake = frontflip/CW) and flip detectors.
+- [ ] **T-104 (game):** Implement vehicle coasting on empty fuel tank until $|v| < 0.3$ m/s.
+- [ ] **T-105 (physics):** Filter sensor contacts in `IsInAir()` to prevent coin arcs from disabling air control.
+- [ ] **T-106 (physics):** Deferred item destruction queue post-step, fix duplicate collection and body memory leak.
+- [ ] **T-107 (physics):** Replace `b2EdgeShape` with sliding window `b2ChainShape` chunks (30 m window).
+- [ ] **T-108 (core):** Implement fixed timestep accumulator with max substeps and render transform interpolation.
+- [ ] **T-109 (physics):** Enable suspension travel limits (`enableLimit`, translation bounds).
+- [ ] **T-110 (core):** Unify constants into `Config::Physics`, parse all vehicle vertices, head radii, and upgrade multipliers.
+- [ ] **T-111 (tools):** Rewrite `convert_assets.py` with CLI argparse, ZIP extraction, texture POT/tiling, offline audio conversion.
+- [ ] **T-112 (perf):** Quantize terrain heightfield math and add cross-platform heightfield hash verification test.
+- [ ] **T-113 (tune):** Tune stunt bonuses (TODO-TUNE), add air-time bonus and fuel capacity upgrade.
+- [ ] **T-114 (docs):** Audit params.csv classification (design vs RE), clean vendor folder, strip release binaries.
+- [ ] **T-115 (release):** Release v0.1.0-beta.2 with updated notes, changelog, and clean artifacts.
+
+---
+
 ## [ ] Milestone M1: Physics Engine Calibration & Vehicle Dynamics
 - [ ] **T-010 (physics):** Implement zero-allocation static memory pool for Box2D allocations (`b2Alloc`/`b2Free`).
 - [ ] **T-011 (vehicle):** Refine Jeep chassis mass, rotational inertia, and center-of-mass placement according to decompiled parameters.
@@ -55,3 +75,4 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [ ] **T-051 (game):** Complete game-over flow (distance score, coins gathered, best stage record, retry/garage navigation).
 - [ ] **T-052 (perf):** Final performance profiling on real PSP-1000 hardware at 333 MHz (verification of locked 60 FPS in stress scenes).
 - [ ] **T-053 (release):** Production release v1.0.0 (signed EBOOT.PBP, release notes, packaging guide).
+
