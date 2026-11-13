@@ -91,6 +91,9 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     jd.maxMotorTorque = 500.0f; // maximum joint capacity
     jd.motorSpeed = 0.0f;
     jd.enableMotor = true;
+    jd.enableLimit = true;
+    jd.lowerTranslation = -0.35f; // TODO-TUNE: calibrate to vehicle sprite/reference video
+    jd.upperTranslation =  0.35f;
     mRearJoint = (b2WheelJoint*)mWorld->CreateJoint(&jd);
 
     // Front Wheel Joint
@@ -100,6 +103,9 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     jd.maxMotorTorque = 500.0f;
     jd.motorSpeed = 0.0f;
     jd.enableMotor = (mAWDLevel > 0);
+    jd.enableLimit = true;
+    jd.lowerTranslation = -0.35f;
+    jd.upperTranslation =  0.35f;
     mFrontJoint = (b2WheelJoint*)mWorld->CreateJoint(&jd);
 
     // 4. Create Driver Head

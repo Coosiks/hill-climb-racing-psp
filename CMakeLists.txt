@@ -75,6 +75,18 @@ add_executable(test_air_sensors
 )
 target_link_libraries(test_air_sensors box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
 
+add_executable(test_suspension
+    tools/test_suspension.cpp
+    src/physics/PlayerCar.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Renderer2D.cpp
+    src/core/Config.cpp
+    src/core/System.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_suspension box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
+
 
 
 

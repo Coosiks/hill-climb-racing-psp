@@ -35,6 +35,9 @@ struct b2WheelJointDef : public b2JointDef
 		localAnchorA.SetZero();
 		localAnchorB.SetZero();
 		localAxisA.Set(1.0f, 0.0f);
+		enableLimit = false;
+		lowerTranslation = 0.0f;
+		upperTranslation = 0.0f;
 		enableMotor = false;
 		maxMotorTorque = 0.0f;
 		motorSpeed = 0.0f;
@@ -54,6 +57,15 @@ struct b2WheelJointDef : public b2JointDef
 
 	/// The local translation axis in bodyA.
 	b2Vec2 localAxisA;
+
+	/// Enable/disable the joint translation limit.
+	bool enableLimit;
+
+	/// The lower translation limit, usually in meters.
+	float32 lowerTranslation;
+
+	/// The upper translation limit, usually in meters.
+	float32 upperTranslation;
 
 	/// Enable/disable the joint motor.
 	bool enableMotor;
@@ -99,6 +111,21 @@ public:
 
 	/// Get the current joint translation speed, usually in meters per second.
 	float32 GetJointSpeed() const;
+
+	/// Is the joint limit enabled?
+	bool IsLimitEnabled() const;
+
+	/// Enable/disable the joint translation limit.
+	void EnableLimit(bool flag);
+
+	/// Get the lower translation limit, usually in meters.
+	float32 GetLowerLimit() const;
+
+	/// Get the upper translation limit, usually in meters.
+	float32 GetUpperLimit() const;
+
+	/// Set the joint translation limits, usually in meters.
+	void SetLimits(float32 lower, float32 upper);
 
 	/// Is the joint motor enabled?
 	bool IsMotorEnabled() const;
@@ -151,6 +178,13 @@ protected:
 	float32 m_impulse;
 	float32 m_motorImpulse;
 	float32 m_springImpulse;
+	float32 m_lowerImpulse;
+	float32 m_upperImpulse;
+	float32 m_translation;
+	float32 m_lowerTranslation;
+	float32 m_upperTranslation;
+	bool m_enableLimit;
+	float32 m_axialMass;
 
 	float32 m_maxMotorTorque;
 	float32 m_motorSpeed;

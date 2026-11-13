@@ -67,6 +67,14 @@ b2WheelJoint::b2WheelJoint(const b2WheelJointDef* def)
 	m_frequencyHz = def->frequencyHz;
 	m_dampingRatio = def->dampingRatio;
 
+	m_lowerTranslation = def->lowerTranslation;
+	m_upperTranslation = def->upperTranslation;
+	m_enableLimit = def->enableLimit;
+	m_lowerImpulse = 0.0f;
+	m_upperImpulse = 0.0f;
+	m_axialMass = 0.0f;
+	m_translation = 0.0f;
+
 	m_bias = 0.0f;
 	m_gamma = 0.0f;
 
@@ -119,21 +127,29 @@ void b2WheelJoint::InitVelocityConstraints(const b2SolverData& data)
 		}
 	}
 
-	// Spring constraint
+	// Axial mass and Spring constraint
+	m_ax = b2Mul(qA, m_localXAxisA);
+	m_sAx = b2Cross(d + rA, m_ax);
+	m_sBx = b2Cross(rB, m_ax);
+
+	float32 invAxialMass = mA + mB + iA * m_sAx * m_sAx + iB * m_sBx * m_sBx;
+	if (invAxialMass > 0.0f)
+	{
+		m_axialMass = 1.0f / invAxialMass;
+	}
+	else
+	{
+		m_axialMass = 0.0f;
+	}
+
 	m_springMass = 0.0f;
 	m_bias = 0.0f;
 	m_gamma = 0.0f;
 	if (m_frequencyHz > 0.0f)
 	{
-		m_ax = b2Mul(qA, m_localXAxisA);
-		m_sAx = b2Cross(d + rA, m_ax);
-		m_sBx = b2Cross(rB, m_ax);
-
-		float32 invMass = mA + mB + iA * m_sAx * m_sAx + iB * m_sBx * m_sBx;
-
-		if (invMass > 0.0f)
+		if (invAxialMass > 0.0f)
 		{
-			m_springMass = 1.0f / invMass;
+			m_springMass = 1.0f / invAxialMass;
 
 			float32 C = b2Dot(d, m_ax);
 
@@ -156,7 +172,7 @@ void b2WheelJoint::InitVelocityConstraints(const b2SolverData& data)
 
 			m_bias = C * h * k * m_gamma;
 
-			m_springMass = invMass + m_gamma;
+			m_springMass = invAxialMass + m_gamma;
 			if (m_springMass > 0.0f)
 			{
 				m_springMass = 1.0f / m_springMass;
@@ -166,6 +182,16 @@ void b2WheelJoint::InitVelocityConstraints(const b2SolverData& data)
 	else
 	{
 		m_springImpulse = 0.0f;
+	}
+
+	if (m_enableLimit)
+	{
+		m_translation = b2Dot(m_ax, d);
+	}
+	else
+	{
+		m_lowerImpulse = 0.0f;
+		m_upperImpulse = 0.0f;
 	}
 
 	// Rotational motor
@@ -189,10 +215,13 @@ void b2WheelJoint::InitVelocityConstraints(const b2SolverData& data)
 		m_impulse *= data.step.dtRatio;
 		m_springImpulse *= data.step.dtRatio;
 		m_motorImpulse *= data.step.dtRatio;
+		m_lowerImpulse *= data.step.dtRatio;
+		m_upperImpulse *= data.step.dtRatio;
 
-		b2Vec2 P = m_impulse * m_ay + m_springImpulse * m_ax;
-		float32 LA = m_impulse * m_sAy + m_springImpulse * m_sAx + m_motorImpulse;
-		float32 LB = m_impulse * m_sBy + m_springImpulse * m_sBx + m_motorImpulse;
+		float32 axialImpulse = m_springImpulse + m_lowerImpulse - m_upperImpulse;
+		b2Vec2 P = m_impulse * m_ay + axialImpulse * m_ax;
+		float32 LA = m_impulse * m_sAy + axialImpulse * m_sAx + m_motorImpulse;
+		float32 LB = m_impulse * m_sBy + axialImpulse * m_sBx + m_motorImpulse;
 
 		vA -= m_invMassA * P;
 		wA -= m_invIA * LA;
@@ -205,6 +234,8 @@ void b2WheelJoint::InitVelocityConstraints(const b2SolverData& data)
 		m_impulse = 0.0f;
 		m_springImpulse = 0.0f;
 		m_motorImpulse = 0.0f;
+		m_lowerImpulse = 0.0f;
+		m_upperImpulse = 0.0f;
 	}
 
 	data.velocities[m_indexA].v = vA;
@@ -254,6 +285,47 @@ void b2WheelJoint::SolveVelocityConstraints(const b2SolverData& data)
 		wB += iB * impulse;
 	}
 
+	if (m_enableLimit)
+	{
+		// Lower limit
+		{
+			float32 C = m_translation - m_lowerTranslation;
+			float32 Cdot = b2Dot(m_ax, vB - vA) + m_sBx * wB - m_sAx * wA;
+			float32 impulse = -m_axialMass * (Cdot + b2Max(C, 0.0f) * data.step.inv_dt);
+			float32 oldImpulse = m_lowerImpulse;
+			m_lowerImpulse = b2Max(m_lowerImpulse + impulse, 0.0f);
+			impulse = m_lowerImpulse - oldImpulse;
+
+			b2Vec2 P = impulse * m_ax;
+			float32 LA = impulse * m_sAx;
+			float32 LB = impulse * m_sBx;
+
+			vA -= mA * P;
+			wA -= iA * LA;
+			vB += mB * P;
+			wB += iB * LB;
+		}
+
+		// Upper limit
+		{
+			float32 C = m_upperTranslation - m_translation;
+			float32 Cdot = b2Dot(m_ax, vA - vB) + m_sAx * wA - m_sBx * wB;
+			float32 impulse = -m_axialMass * (Cdot + b2Max(C, 0.0f) * data.step.inv_dt);
+			float32 oldImpulse = m_upperImpulse;
+			m_upperImpulse = b2Max(m_upperImpulse + impulse, 0.0f);
+			impulse = m_upperImpulse - oldImpulse;
+
+			b2Vec2 P = impulse * m_ax;
+			float32 LA = impulse * m_sAx;
+			float32 LB = impulse * m_sBx;
+
+			vA += mA * P;
+			wA += iA * LA;
+			vB -= mB * P;
+			wB -= iB * LB;
+		}
+	}
+
 	// Solve point to line constraint
 	{
 		float32 Cdot = b2Dot(m_ay, vB - vA) + m_sBy * wB - m_sAy * wA;
@@ -284,46 +356,102 @@ bool b2WheelJoint::SolvePositionConstraints(const b2SolverData& data)
 	b2Vec2 cB = data.positions[m_indexB].c;
 	float32 aB = data.positions[m_indexB].a;
 
-	b2Rot qA(aA), qB(aB);
+	float32 linearError = 0.0f;
 
-	b2Vec2 rA = b2Mul(qA, m_localAnchorA - m_localCenterA);
-	b2Vec2 rB = b2Mul(qB, m_localAnchorB - m_localCenterB);
-	b2Vec2 d = (cB - cA) + rB - rA;
-
-	b2Vec2 ay = b2Mul(qA, m_localYAxisA);
-
-	float32 sAy = b2Cross(d + rA, ay);
-	float32 sBy = b2Cross(rB, ay);
-
-	float32 C = b2Dot(d, ay);
-
-	float32 k = m_invMassA + m_invMassB + m_invIA * m_sAy * m_sAy + m_invIB * m_sBy * m_sBy;
-
-	float32 impulse;
-	if (k != 0.0f)
+	if (m_enableLimit)
 	{
-		impulse = - C / k;
+		b2Rot qA(aA), qB(aB);
+
+		b2Vec2 rA = b2Mul(qA, m_localAnchorA - m_localCenterA);
+		b2Vec2 rB = b2Mul(qB, m_localAnchorB - m_localCenterB);
+		b2Vec2 d = (cB - cA) + rB - rA;
+
+		b2Vec2 ax = b2Mul(qA, m_localXAxisA);
+		float32 sAx = b2Cross(d + rA, ax);
+		float32 sBx = b2Cross(rB, ax);
+
+		float32 C = 0.0f;
+		float32 translation = b2Dot(ax, d);
+		if (b2Abs(m_upperTranslation - m_lowerTranslation) < 2.0f * b2_linearSlop)
+		{
+			C = translation;
+		}
+		else if (translation <= m_lowerTranslation)
+		{
+			C = b2Min(translation - m_lowerTranslation, 0.0f);
+		}
+		else if (translation >= m_upperTranslation)
+		{
+			C = b2Max(translation - m_upperTranslation, 0.0f);
+		}
+
+		if (C != 0.0f)
+		{
+			float32 invMass = m_invMassA + m_invMassB + m_invIA * sAx * sAx + m_invIB * sBx * sBx;
+			float32 impulse = 0.0f;
+			if (invMass != 0.0f)
+			{
+				impulse = -C / invMass;
+			}
+
+			b2Vec2 P = impulse * ax;
+			float32 LA = impulse * sAx;
+			float32 LB = impulse * sBx;
+
+			cA -= m_invMassA * P;
+			aA -= m_invIA * LA;
+			cB += m_invMassB * P;
+			aB += m_invIB * LB;
+
+			linearError = b2Abs(C);
+		}
 	}
-	else
+
+	// Solve perpendicular constraint
 	{
-		impulse = 0.0f;
+		b2Rot qA(aA), qB(aB);
+
+		b2Vec2 rA = b2Mul(qA, m_localAnchorA - m_localCenterA);
+		b2Vec2 rB = b2Mul(qB, m_localAnchorB - m_localCenterB);
+		b2Vec2 d = (cB - cA) + rB - rA;
+
+		b2Vec2 ay = b2Mul(qA, m_localYAxisA);
+
+		float32 sAy = b2Cross(d + rA, ay);
+		float32 sBy = b2Cross(rB, ay);
+
+		float32 C = b2Dot(d, ay);
+
+		float32 k = m_invMassA + m_invMassB + m_invIA * sAy * sAy + m_invIB * sBy * sBy;
+
+		float32 impulse;
+		if (k != 0.0f)
+		{
+			impulse = - C / k;
+		}
+		else
+		{
+			impulse = 0.0f;
+		}
+
+		b2Vec2 P = impulse * ay;
+		float32 LA = impulse * sAy;
+		float32 LB = impulse * sBy;
+
+		cA -= m_invMassA * P;
+		aA -= m_invIA * LA;
+		cB += m_invMassB * P;
+		aB += m_invIB * LB;
+
+		linearError = b2Max(linearError, b2Abs(C));
 	}
-
-	b2Vec2 P = impulse * ay;
-	float32 LA = impulse * sAy;
-	float32 LB = impulse * sBy;
-
-	cA -= m_invMassA * P;
-	aA -= m_invIA * LA;
-	cB += m_invMassB * P;
-	aB += m_invIB * LB;
 
 	data.positions[m_indexA].c = cA;
 	data.positions[m_indexA].a = aA;
 	data.positions[m_indexB].c = cB;
 	data.positions[m_indexB].a = aB;
 
-	return b2Abs(C) <= b2_linearSlop;
+	return linearError <= b2_linearSlop;
 }
 
 b2Vec2 b2WheelJoint::GetAnchorA() const
@@ -398,6 +526,46 @@ float32 b2WheelJoint::GetMotorTorque(float32 inv_dt) const
 	return inv_dt * m_motorImpulse;
 }
 
+bool b2WheelJoint::IsLimitEnabled() const
+{
+	return m_enableLimit;
+}
+
+void b2WheelJoint::EnableLimit(bool flag)
+{
+	if (flag != m_enableLimit)
+	{
+		m_bodyA->SetAwake(true);
+		m_bodyB->SetAwake(true);
+		m_enableLimit = flag;
+		m_lowerImpulse = 0.0f;
+		m_upperImpulse = 0.0f;
+	}
+}
+
+float32 b2WheelJoint::GetLowerLimit() const
+{
+	return m_lowerTranslation;
+}
+
+float32 b2WheelJoint::GetUpperLimit() const
+{
+	return m_upperTranslation;
+}
+
+void b2WheelJoint::SetLimits(float32 lower, float32 upper)
+{
+	if (lower != m_lowerTranslation || upper != m_upperTranslation)
+	{
+		m_bodyA->SetAwake(true);
+		m_bodyB->SetAwake(true);
+		m_lowerTranslation = lower;
+		m_upperTranslation = upper;
+		m_lowerImpulse = 0.0f;
+		m_upperImpulse = 0.0f;
+	}
+}
+
 void b2WheelJoint::Dump()
 {
 	int32 indexA = m_bodyA->m_islandIndex;
@@ -410,6 +578,9 @@ void b2WheelJoint::Dump()
 	b2Log("  jd.localAnchorA.Set(%.15lef, %.15lef);\n", m_localAnchorA.x, m_localAnchorA.y);
 	b2Log("  jd.localAnchorB.Set(%.15lef, %.15lef);\n", m_localAnchorB.x, m_localAnchorB.y);
 	b2Log("  jd.localAxisA.Set(%.15lef, %.15lef);\n", m_localXAxisA.x, m_localXAxisA.y);
+	b2Log("  jd.enableLimit = bool(%d);\n", m_enableLimit);
+	b2Log("  jd.lowerTranslation = %.15lef;\n", m_lowerTranslation);
+	b2Log("  jd.upperTranslation = %.15lef;\n", m_upperTranslation);
 	b2Log("  jd.enableMotor = bool(%d);\n", m_enableMotor);
 	b2Log("  jd.motorSpeed = %.15lef;\n", m_motorSpeed);
 	b2Log("  jd.maxMotorTorque = %.15lef;\n", m_maxMotorTorque);

@@ -31,6 +31,11 @@ public:
     float GetAirTime() const { return mAirTime; }
     int PopFlips(); // Returns +1 for backflip, -1 for frontflip, 0 for none
 
+    b2WheelJoint* GetRearJoint() const { return mRearJoint; }
+    b2WheelJoint* GetFrontJoint() const { return mFrontJoint; }
+    float GetRearSuspensionTranslation() const { return mRearJoint ? mRearJoint->GetJointTranslation() : 0.0f; }
+    float GetFrontSuspensionTranslation() const { return mFrontJoint ? mFrontJoint->GetJointTranslation() : 0.0f; }
+
 private:
     b2World* mWorld;
 
