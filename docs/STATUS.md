@@ -1,6 +1,6 @@
 ---
 updated: 2026-11-13
-commit: pending-T-100
+commit: d00b8c7
 milestone: M0.2
 version: v0.1.0-beta.1
 ci: failing (honest failure in T-100 pending T-101)
