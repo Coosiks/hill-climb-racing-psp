@@ -50,4 +50,8 @@ PSP_HEAP_SIZE_KB_OVERHEAD,-1024,design/TODO-TUNE,2026-11-14,Dynamic heap thresho
 ITEM_DESPAWN_DISTANCE_BEHIND,40.0,design/TODO-TUNE,2026-11-14,Despawn threshold for items behind player
 TERRAIN_CHUNK_WIDTH_METERS,30.0,design/TODO-TUNE,2026-11-14,b2ChainShape chunk width
 TERRAIN_CHUNK_POOL_SLOTS,6,design/TODO-TUNE,2026-11-14,Preallocated b2ChainShape chunk pool slots
+CAMERA_ZOOM_BASE,1.0,design/TODO-TUNE,2026-11-14,Base camera zoom level at zero speed
+CAMERA_ZOOM_SPEED_FACTOR,0.005,design/TODO-TUNE,2026-11-14,Dynamic camera zoom factor proportional to speed
+CAMERA_MIN_ZOOM,0.8,design/TODO-TUNE,2026-11-14,Minimum camera zoom bound
+CAMERA_MAX_ZOOM,1.2,design/TODO-TUNE,2026-11-14,Maximum camera zoom bound
 

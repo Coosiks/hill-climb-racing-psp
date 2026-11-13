@@ -1,5 +1,6 @@
 #include "PhysicsWorld.h"
 #include "Terrain.h"
+#include "core/Config.h"
 #include <stdio.h>
 
 PhysicsWorld::PhysicsWorld(float gravityY, GameListener* listener, Terrain* terrain)
@@ -18,7 +19,7 @@ PhysicsWorld::~PhysicsWorld() {
 
 void PhysicsWorld::Step(float dt) {
     if (mWorld) {
-        mWorld->Step(dt, VELOCITY_ITERS, POSITION_ITERS);
+        mWorld->Step(dt, Config::Physics.velocity_iterations, Config::Physics.position_iterations);
     }
 }
 

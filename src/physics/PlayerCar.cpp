@@ -1,4 +1,5 @@
 #include "PlayerCar.h"
+#include "core/Config.h"
 #include <math.h>
 
 static inline float clampf(float v, float lo, float hi) {
@@ -12,7 +13,7 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
       mTireLevel(tireLvl), mAWDLevel(awdLvl),
       mChassis(NULL), mRearWheel(NULL), mFrontWheel(NULL), mDriverHead(NULL),
       mRearJoint(NULL), mFrontJoint(NULL), mNeckJoint(NULL),
-      mFuel(MAX_FUEL), mEngineRev(0.0f), mIsDead(false), mOutOfFuel(false),
+      mFuel(Config::Physics.max_fuel), mEngineRev(0.0f), mIsDead(false), mOutOfFuel(false),
       mThrottleActive(false), mBrakeActive(false),
       mThrottleRamp(0.0f), mAirTime(0.0f), mAirRotation(0.0f), mLastAngle(0.0f), mFlipsCount(0) {
 
@@ -22,25 +23,28 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     mTexDriverBody.LoadPNG("assets/driver-body.png");
     mTexDriverHead.LoadPNG("assets/driver-head.png");
 
-    // 1. Create Chassis Body (1:1 decompiled polygon from libgame.so)
+    // 1. Create Chassis Body (polygon from Config::VehicleJeep)
     b2BodyDef bd;
     bd.type = b2_dynamicBody;
     bd.position = startPos;
     mChassis = mWorld->CreateBody(&bd);
 
-    b2Vec2 verts[CAR_VERTEX_COUNT];
-    for (int i = 0; i < CAR_VERTEX_COUNT; ++i) {
-        verts[i].Set(CAR_VERTICES[i][0], CAR_VERTICES[i][1]);
+    int vertexCount = Config::VehicleJeep.chassis_vertex_count;
+    if (vertexCount < 3) vertexCount = 3;
+    if (vertexCount > 8) vertexCount = 8;
+    b2Vec2 verts[8];
+    for (int i = 0; i < vertexCount; ++i) {
+        verts[i].Set(Config::VehicleJeep.chassis_vertices[i][0], Config::VehicleJeep.chassis_vertices[i][1]);
     }
 
     b2PolygonShape chassisShape;
-    chassisShape.Set(verts, CAR_VERTEX_COUNT);
+    chassisShape.Set(verts, vertexCount);
 
     b2FixtureDef fd;
     fd.shape = &chassisShape;
-    fd.density = CHASSIS_DENSITY;
-    fd.friction = CHASSIS_FRICTION;
-    fd.restitution = CHASSIS_RESTITUTION;
+    fd.density = Config::VehicleJeep.chassis_density;
+    fd.friction = Config::VehicleJeep.chassis_friction;
+    fd.restitution = Config::VehicleJeep.chassis_restitution;
     fd.filter.categoryBits = CAT_CHASSIS;
     fd.filter.maskBits = CAT_TERRAIN | CAT_ITEM;
     mChassis->CreateFixture(&fd);
@@ -52,35 +56,35 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     md.I = 2.4f;
     mChassis->SetMassData(&md);
 
-    // 2. Create Wheels (1:1 decompiled offsets: X = +/-1.15m, Y = -0.50m, Radius = 0.40m)
-    float wheelFriction = WHEEL_BASE_FRICTION * powf(UPGRADE_MULT_TIRES, mTireLevel);
+    // 2. Create Wheels (offsets and properties from Config::VehicleJeep)
+    float wheelFriction = Config::VehicleJeep.wheel_base_friction * powf(Config::VehicleJeep.upg_mult_tires, mTireLevel);
 
     b2CircleShape wheelShape;
-    wheelShape.m_radius = WHEEL_RADIUS;
+    wheelShape.m_radius = Config::VehicleJeep.wheel_radius;
 
     b2FixtureDef wfd;
     wfd.shape = &wheelShape;
-    wfd.density = WHEEL_DENSITY;
+    wfd.density = Config::VehicleJeep.wheel_density;
     wfd.friction = wheelFriction;
-    wfd.restitution = WHEEL_RESTITUTION;
+    wfd.restitution = Config::VehicleJeep.wheel_restitution;
     wfd.filter.categoryBits = CAT_WHEEL;
     wfd.filter.maskBits = CAT_TERRAIN | CAT_ITEM;
 
     // Rear Wheel
-    b2Vec2 rearPos = startPos + b2Vec2(REAR_WHEEL_OFFSET_X, REAR_WHEEL_OFFSET_Y);
+    b2Vec2 rearPos = startPos + b2Vec2(Config::VehicleJeep.rear_wheel_offset[0], Config::VehicleJeep.rear_wheel_offset[1]);
     bd.position = rearPos;
     mRearWheel = mWorld->CreateBody(&bd);
     mRearWheel->CreateFixture(&wfd);
 
     // Front Wheel
-    b2Vec2 frontPos = startPos + b2Vec2(FRONT_WHEEL_OFFSET_X, FRONT_WHEEL_OFFSET_Y);
+    b2Vec2 frontPos = startPos + b2Vec2(Config::VehicleJeep.front_wheel_offset[0], Config::VehicleJeep.front_wheel_offset[1]);
     bd.position = frontPos;
     mFrontWheel = mWorld->CreateBody(&bd);
     mFrontWheel->CreateFixture(&wfd);
 
-    // 3. Create Wheel Joints (Suspension: base 3.0 Hz, 0.20 damping, deep realistic travel)
-    float springFreq = BASE_SPRING_FREQ + (mSuspensionLevel * 0.40f);
-    float springDamp = BASE_SPRING_DAMP;
+    // 3. Create Wheel Joints (Suspension from Config::VehicleJeep)
+    float springFreq = Config::VehicleJeep.base_spring_freq + (mSuspensionLevel * 0.40f);
+    float springDamp = Config::VehicleJeep.base_spring_damp;
     b2Vec2 axis(0.0f, 1.0f); // Upwards
 
     // Rear Wheel Joint
@@ -109,12 +113,12 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     mFrontJoint = (b2WheelJoint*)mWorld->CreateJoint(&jd);
 
     // 4. Create Driver Head
-    b2Vec2 headPos = startPos + b2Vec2(DRIVER_HEAD_OFFSET_X, DRIVER_HEAD_OFFSET_Y);
+    b2Vec2 headPos = startPos + b2Vec2(Config::VehicleJeep.driver_head_offset[0], Config::VehicleJeep.driver_head_offset[1]);
     bd.position = headPos;
     mDriverHead = mWorld->CreateBody(&bd);
 
     b2CircleShape headShape;
-    headShape.m_radius = DRIVER_HEAD_RADIUS;
+    headShape.m_radius = Config::VehicleJeep.driver_head_radius;
 
     b2FixtureDef hfd;
     hfd.shape = &headShape;
@@ -226,7 +230,7 @@ void PlayerCar::Idle() {
 
 void PlayerCar::AddFuel(float amount) {
     mFuel += amount;
-    if (mFuel > MAX_FUEL) mFuel = MAX_FUEL;
+    if (mFuel > Config::Physics.max_fuel) mFuel = Config::Physics.max_fuel;
     mOutOfFuel = false;
 }
 
@@ -279,8 +283,8 @@ void PlayerCar::Update(float dt) {
     mLastAngle = angle;
 
     // 3. 1:1 Motor & Wheel Physics Actuation (from libgame.so PlayerCar::accelerate)
-    float maxSpeed = BASE_MOTOR_SPEED * powf(1.05f, mEngineLevel);
-    float engineTorque = BASE_MOTOR_TORQUE * powf(UPGRADE_MULT_ENGINE, mEngineLevel);
+    float maxSpeed = Config::VehicleJeep.base_motor_speed * powf(1.05f, mEngineLevel);
+    float engineTorque = Config::VehicleJeep.base_motor_torque * powf(Config::VehicleJeep.upg_mult_engine, mEngineLevel);
     float awdFactor = (float)mAWDLevel / 18.0f;
     if (awdFactor > 0.50f) awdFactor = 0.50f;
 
@@ -306,7 +310,7 @@ void PlayerCar::Update(float dt) {
 
         // Air control: gas tilts nose up (backflip, CCW, positive torque)
         if (mAirTime > 0.08f) {
-            mChassis->ApplyTorque(AIR_PITCH_TORQUE, true);
+            mChassis->ApplyTorque(Config::VehicleJeep.air_pitch_torque, true);
         }
     } else if (mBrakeActive) {
         float forwardSpeed = mChassis->GetLinearVelocity().x;
@@ -338,7 +342,7 @@ void PlayerCar::Update(float dt) {
 
         // Air control: brake tilts nose down (frontflip, CW, negative torque)
         if (mAirTime > 0.08f) {
-            mChassis->ApplyTorque(-AIR_PITCH_TORQUE, true);
+            mChassis->ApplyTorque(-Config::VehicleJeep.air_pitch_torque, true);
         }
     } else {
         // Coasting / Idle: disable motor so wheels rotate completely freely down hills
@@ -350,7 +354,7 @@ void PlayerCar::Update(float dt) {
 
     // 4. Fuel consumption
     if (mFuel > 0.0f) {
-        float drain = mThrottleActive ? FUEL_DRAIN_DRIVE : (mBrakeActive ? (FUEL_DRAIN_DRIVE * 0.6f) : FUEL_DRAIN_IDLE);
+        float drain = mThrottleActive ? Config::Physics.fuel_drain_drive : (mBrakeActive ? (Config::Physics.fuel_drain_drive * 0.6f) : Config::Physics.fuel_drain_idle);
         mFuel -= drain * dt;
         if (mFuel <= 0.0f) {
             mFuel = 0.0f;
@@ -378,7 +382,7 @@ void PlayerCar::Render() {
     if (mRearWheel) {
         b2Vec2 pos = mRearWheel->GetPosition();
         float angle = mRearWheel->GetAngle();
-        float diameter = WHEEL_RADIUS * 2.0f;
+        float diameter = Config::VehicleJeep.wheel_radius * 2.0f;
         Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y, diameter, diameter, angle);
     }
 
@@ -386,7 +390,7 @@ void PlayerCar::Render() {
     if (mFrontWheel) {
         b2Vec2 pos = mFrontWheel->GetPosition();
         float angle = mFrontWheel->GetAngle();
-        float diameter = WHEEL_RADIUS * 2.0f;
+        float diameter = Config::VehicleJeep.wheel_radius * 2.0f;
         Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y, diameter, diameter, angle);
     }
 

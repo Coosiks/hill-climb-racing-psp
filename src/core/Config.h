@@ -19,6 +19,10 @@ struct PhysicsConfig {
     float camera_lead_x;
     float camera_lead_y;
     float camera_smoothing;
+    float zoom_base;
+    float zoom_speed_factor;
+    float min_zoom;
+    float max_zoom;
 };
 
 struct VehicleConfig {

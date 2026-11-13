@@ -1,4 +1,5 @@
 #include "Game.h"
+#include "Config.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -63,7 +64,7 @@ void Game::StartRace() {
     EndRace();
 
     HCR_Log("StartRace: creating PhysicsWorld");
-    float grav = (mCurrentStage == STAGE_MOON) ? GRAVITY_MOON : GRAVITY_EARTH;
+    float grav = (mCurrentStage >= 0 && mCurrentStage < STAGE_COUNT) ? Config::Stages[mCurrentStage].gravity : Config::Stages[STAGE_COUNTRYSIDE].gravity;
     mPhysics = new PhysicsWorld(grav, this);
 
     HCR_Log("StartRace: creating Terrain");
@@ -134,7 +135,7 @@ void Game::OnCoinCollected(int value) {
 
 void Game::OnFuelCollected() {
     if (mCar) {
-        mCar->AddFuel(MAX_FUEL);
+        mCar->AddFuel(Config::Physics.max_fuel);
     }
     AudioEngine::PlaySFX(SFX_REFUEL);
 }
@@ -364,15 +365,15 @@ void Game::UpdatePlaying() {
     // Stunt Tracking (Flips in air)
     int flip = mCar->PopFlips();
     if (flip > 0) {
-        mSessionCoins += 1000;
+        mSessionCoins += Config::Physics.flip_bonus_coins;
         mStuntName = "BACKFLIP!";
-        mStuntCoins = 1000;
+        mStuntCoins = Config::Physics.flip_bonus_coins;
         mStuntTimer = 2.0f;
         AudioEngine::PlaySFX(SFX_COIN);
     } else if (flip < 0) {
-        mSessionCoins += 1000;
+        mSessionCoins += Config::Physics.flip_bonus_coins;
         mStuntName = "FRONTFLIP!";
-        mStuntCoins = 1000;
+        mStuntCoins = Config::Physics.flip_bonus_coins;
         mStuntTimer = 2.0f;
         AudioEngine::PlaySFX(SFX_COIN);
     }
@@ -410,12 +411,18 @@ void Game::UpdatePlaying() {
     AudioEngine::UpdateEngineSound(mCar->GetEngineRev(), true);
     if (sUpdateCount < 5) HCR_Log("UpdatePlaying frame %d: after Audio Update", sUpdateCount);
 
-    // Camera follow (lead forward by +3.5m)
-    float targetCamX = pos.x + 3.5f;
-    float targetCamY = pos.y + 1.2f;
+    // Camera follow (lead forward and smoothing from Config)
+    float targetCamX = pos.x + Config::Physics.camera_lead_x;
+    float targetCamY = pos.y + Config::Physics.camera_lead_y;
 
-    mCameraX += (targetCamX - mCameraX) * 0.12f;
-    mCameraY += (targetCamY - mCameraY) * 0.12f;
+    mCameraX += (targetCamX - mCameraX) * Config::Physics.camera_smoothing;
+    mCameraY += (targetCamY - mCameraY) * Config::Physics.camera_smoothing;
+
+    float speed = mCar->GetSpeedKmH() / 3.6f;
+    float targetZoom = Config::Physics.zoom_base - (speed * Config::Physics.zoom_speed_factor);
+    if (targetZoom < Config::Physics.min_zoom) targetZoom = Config::Physics.min_zoom;
+    if (targetZoom > Config::Physics.max_zoom) targetZoom = Config::Physics.max_zoom;
+    mCameraZoom += (targetZoom - mCameraZoom) * Config::Physics.camera_smoothing;
     if (sUpdateCount < 5) HCR_Log("UpdatePlaying frame %d: done", sUpdateCount++);
 }
 
@@ -448,7 +455,7 @@ void Game::RenderHUD() {
     Renderer2D::DrawFilledRect(10, 8, 160, 28, 0x90000000);
     Renderer2D::DrawSpriteScreen(&mTexFuelIcon, 14, 11, 18, 22);
 
-    float fuelPct = (mCar ? mCar->GetFuel() : 0.0f) / MAX_FUEL;
+    float fuelPct = (mCar ? mCar->GetFuel() : 0.0f) / Config::Physics.max_fuel;
     if (fuelPct < 0.0f) fuelPct = 0.0f;
     if (fuelPct > 1.0f) fuelPct = 1.0f;
 

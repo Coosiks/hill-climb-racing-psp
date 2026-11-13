@@ -1,4 +1,5 @@
 #include "Terrain.h"
+#include "core/Config.h"
 #include <math.h>
 
 static inline float clampf(float v, float lo, float hi) {
@@ -16,29 +17,10 @@ Terrain::Terrain(b2World* world, StageType stageType)
         mDestroyQueue[i] = NULL;
     }
 
-    // Load textures based on stage
-    const char* groundPath = "assets/terrain-ground.png";
-    const char* surfacePath = "assets/terrain-surface.png";
-
-    switch (mStageType) {
-        case STAGE_DESERT:
-            groundPath = "assets/desert-ground.png";
-            surfacePath = "assets/desert-surface.png";
-            break;
-        case STAGE_ARCTIC:
-            groundPath = "assets/arctic-ground.png";
-            surfacePath = "assets/arctic-surface.png";
-            break;
-        case STAGE_MOON:
-            groundPath = "assets/moon-ground.png";
-            surfacePath = "assets/moon-surface.png";
-            break;
-        default:
-            break;
-    }
-
-    mTexGround.LoadPNG(groundPath);
-    mTexSurface.LoadPNG(surfacePath);
+    // Load textures based on stage config
+    int stageIdx = (mStageType >= 0 && mStageType < STAGE_COUNT) ? mStageType : STAGE_COUNTRYSIDE;
+    mTexGround.LoadPNG(Config::Stages[stageIdx].ground_texture);
+    mTexSurface.LoadPNG(Config::Stages[stageIdx].surface_texture);
 
     // Collectibles
     mTexCoin5.LoadPNG("assets/Coin5.png");
@@ -184,21 +166,17 @@ void Terrain::ProcessDeferredDestroy(float carX) {
 }
 
 float Terrain::GetStageFriction() const {
-    switch (mStageType) {
-        case STAGE_DESERT: return FRICTION_DESERT;
-        case STAGE_ARCTIC: return FRICTION_ARCTIC;
-        case STAGE_MOON:   return FRICTION_MOON;
-        default:           return FRICTION_COUNTRYSIDE;
+    if (mStageType >= 0 && mStageType < STAGE_COUNT) {
+        return Config::Stages[mStageType].friction;
     }
+    return Config::Stages[STAGE_COUNTRYSIDE].friction;
 }
 
 float Terrain::GetCoinMultiplier() const {
-    switch (mStageType) {
-        case STAGE_DESERT: return COIN_MULT_DESERT;
-        case STAGE_ARCTIC: return COIN_MULT_ARCTIC;
-        case STAGE_MOON:   return COIN_MULT_MOON;
-        default:           return COIN_MULT_COUNTRYSIDE;
+    if (mStageType >= 0 && mStageType < STAGE_COUNT) {
+        return Config::Stages[mStageType].coin_multiplier;
     }
+    return Config::Stages[STAGE_COUNTRYSIDE].coin_multiplier;
 }
 
 // 1:1 mathematical reconstruction of Stage*::getHeightAtX(float) from libgame.so

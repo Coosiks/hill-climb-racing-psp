@@ -112,6 +112,19 @@ add_executable(test_terrain
 )
 target_link_libraries(test_terrain box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
 
+add_executable(test_config
+    tools/test_config.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
+    src/physics/PlayerCar.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Renderer2D.cpp
+    src/core/Config.cpp
+    src/core/System.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_config box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
 
 
 

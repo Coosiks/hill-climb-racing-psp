@@ -13,7 +13,11 @@ PhysicsConfig Config::Physics = {
     1.0f,           // air_time_threshold
     3.5f,           // camera_lead_x
     1.2f,           // camera_lead_y
-    0.12f           // camera_smoothing
+    0.12f,          // camera_smoothing
+    1.0f,           // zoom_base
+    0.005f,         // zoom_speed_factor
+    0.8f,           // min_zoom
+    1.2f            // max_zoom
 };
 
 VehicleConfig Config::VehicleJeep = {
@@ -99,8 +103,8 @@ bool Config::LoadPhysics(const char* filepath) {
         Trim(line);
         if (line[0] == '#' || line[0] == ';' || line[0] == '[' || line[0] == '\0') continue;
 
-        char key[64], val[64];
-        if (sscanf(line, "%63[^=]=%63s", key, val) == 2) {
+        char key[64], val[128];
+        if (sscanf(line, "%63[^=]=%127[^\r\n]", key, val) == 2) {
             Trim(key);
             Trim(val);
             if (strcmp(key, "ptm_ratio") == 0) Physics.ptm_ratio = (float)atof(val);
@@ -116,6 +120,10 @@ bool Config::LoadPhysics(const char* filepath) {
             else if (strcmp(key, "lead_x") == 0) Physics.camera_lead_x = (float)atof(val);
             else if (strcmp(key, "lead_y") == 0) Physics.camera_lead_y = (float)atof(val);
             else if (strcmp(key, "smoothing") == 0) Physics.camera_smoothing = (float)atof(val);
+            else if (strcmp(key, "zoom_base") == 0) Physics.zoom_base = (float)atof(val);
+            else if (strcmp(key, "zoom_speed_factor") == 0) Physics.zoom_speed_factor = (float)atof(val);
+            else if (strcmp(key, "min_zoom") == 0) Physics.min_zoom = (float)atof(val);
+            else if (strcmp(key, "max_zoom") == 0) Physics.max_zoom = (float)atof(val);
         }
     }
     fclose(f);
@@ -132,24 +140,57 @@ bool Config::LoadVehicles(const char* filepath) {
         if (line[0] == '#' || line[0] == ';' || line[0] == '[' || line[0] == '\0') continue;
 
         char key[64], val[128];
-        if (sscanf(line, "%63[^=]=%127s", key, val) == 2) {
+        if (sscanf(line, "%63[^=]=%127[^\r\n]", key, val) == 2) {
             Trim(key);
             Trim(val);
             if (strcmp(key, "name") == 0) strncpy(VehicleJeep.name, val, sizeof(VehicleJeep.name) - 1);
             else if (strcmp(key, "chassis_density") == 0) VehicleJeep.chassis_density = (float)atof(val);
             else if (strcmp(key, "chassis_friction") == 0) VehicleJeep.chassis_friction = (float)atof(val);
             else if (strcmp(key, "chassis_restitution") == 0) VehicleJeep.chassis_restitution = (float)atof(val);
+            else if (strcmp(key, "chassis_vertex_count") == 0) VehicleJeep.chassis_vertex_count = atoi(val);
+            else if (key[0] == 'v' && key[1] >= '0' && key[1] <= '7' && key[2] == '\0') {
+                int vIdx = key[1] - '0';
+                char* comma = strchr(val, ',');
+                if (comma) {
+                    VehicleJeep.chassis_vertices[vIdx][0] = (float)atof(val);
+                    VehicleJeep.chassis_vertices[vIdx][1] = (float)atof(comma + 1);
+                }
+            }
             else if (strcmp(key, "wheel_radius") == 0) VehicleJeep.wheel_radius = (float)atof(val);
             else if (strcmp(key, "wheel_density") == 0) VehicleJeep.wheel_density = (float)atof(val);
             else if (strcmp(key, "wheel_base_friction") == 0) VehicleJeep.wheel_base_friction = (float)atof(val);
             else if (strcmp(key, "wheel_restitution") == 0) VehicleJeep.wheel_restitution = (float)atof(val);
+            else if (strcmp(key, "rear_wheel_offset") == 0) {
+                char* comma = strchr(val, ',');
+                if (comma) {
+                    VehicleJeep.rear_wheel_offset[0] = (float)atof(val);
+                    VehicleJeep.rear_wheel_offset[1] = (float)atof(comma + 1);
+                }
+            }
+            else if (strcmp(key, "front_wheel_offset") == 0) {
+                char* comma = strchr(val, ',');
+                if (comma) {
+                    VehicleJeep.front_wheel_offset[0] = (float)atof(val);
+                    VehicleJeep.front_wheel_offset[1] = (float)atof(comma + 1);
+                }
+            }
+            else if (strcmp(key, "driver_head_radius") == 0) VehicleJeep.driver_head_radius = (float)atof(val);
+            else if (strcmp(key, "driver_head_offset") == 0) {
+                char* comma = strchr(val, ',');
+                if (comma) {
+                    VehicleJeep.driver_head_offset[0] = (float)atof(val);
+                    VehicleJeep.driver_head_offset[1] = (float)atof(comma + 1);
+                }
+            }
             else if (strcmp(key, "base_motor_speed") == 0) VehicleJeep.base_motor_speed = (float)atof(val);
             else if (strcmp(key, "base_motor_torque") == 0) VehicleJeep.base_motor_torque = (float)atof(val);
             else if (strcmp(key, "base_spring_freq") == 0) VehicleJeep.base_spring_freq = (float)atof(val);
             else if (strcmp(key, "base_spring_damp") == 0) VehicleJeep.base_spring_damp = (float)atof(val);
             else if (strcmp(key, "air_pitch_torque") == 0) VehicleJeep.air_pitch_torque = (float)atof(val);
-            else if (strcmp(key, "rear_wheel_offset") == 0) sscanf(val, "%f,%f", &VehicleJeep.rear_wheel_offset[0], &VehicleJeep.rear_wheel_offset[1]);
-            else if (strcmp(key, "front_wheel_offset") == 0) sscanf(val, "%f,%f", &VehicleJeep.front_wheel_offset[0], &VehicleJeep.front_wheel_offset[1]);
+            else if (strcmp(key, "upgrade_mult_engine") == 0) VehicleJeep.upg_mult_engine = (float)atof(val);
+            else if (strcmp(key, "upgrade_mult_suspension") == 0) VehicleJeep.upg_mult_suspension = (float)atof(val);
+            else if (strcmp(key, "upgrade_mult_tires") == 0) VehicleJeep.upg_mult_tires = (float)atof(val);
+            else if (strcmp(key, "upgrade_mult_awd") == 0) VehicleJeep.upg_mult_awd = (float)atof(val);
         }
     }
     fclose(f);
@@ -177,14 +218,16 @@ bool Config::LoadStages(const char* filepath) {
 
         if (currentStage >= 0 && currentStage < 4) {
             char key[64], val[128];
-            if (sscanf(line, "%63[^=]=%127s", key, val) == 2) {
+            if (sscanf(line, "%63[^=]=%127[^\r\n]", key, val) == 2) {
                 Trim(key);
                 Trim(val);
-                if (strcmp(key, "gravity") == 0) Stages[currentStage].gravity = (float)atof(val);
+                if (strcmp(key, "name") == 0) strncpy(Stages[currentStage].name, val, sizeof(Stages[currentStage].name) - 1);
+                else if (strcmp(key, "gravity") == 0) Stages[currentStage].gravity = (float)atof(val);
                 else if (strcmp(key, "friction") == 0) Stages[currentStage].friction = (float)atof(val);
                 else if (strcmp(key, "coin_multiplier") == 0) Stages[currentStage].coin_multiplier = (float)atof(val);
                 else if (strcmp(key, "ground_texture") == 0) strncpy(Stages[currentStage].ground_texture, val, sizeof(Stages[currentStage].ground_texture) - 1);
                 else if (strcmp(key, "surface_texture") == 0) strncpy(Stages[currentStage].surface_texture, val, sizeof(Stages[currentStage].surface_texture) - 1);
+                else if (strcmp(key, "music") == 0) strncpy(Stages[currentStage].music, val, sizeof(Stages[currentStage].music) - 1);
             }
         }
     }
