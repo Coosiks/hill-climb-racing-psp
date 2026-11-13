@@ -68,6 +68,7 @@ void Game::StartRace() {
 
     HCR_Log("StartRace: creating Terrain");
     mTerrain = new Terrain(mPhysics->GetWorld(), mCurrentStage);
+    mPhysics->SetTerrain(mTerrain);
 
     HCR_Log("StartRace: creating PlayerCar");
     b2Vec2 startPos(0.0f, 2.5f);
@@ -346,10 +347,12 @@ void Game::UpdatePlaying() {
     mPhysics->Step(FIXED_TIMESTEP);
     if (sUpdateCount < 5) HCR_Log("UpdatePlaying frame %d: after Physics Step", sUpdateCount);
 
+    b2Vec2 pos = mCar->GetPosition();
+    mTerrain->ProcessDeferredDestroy(pos.x);
+
     mCar->Update(FIXED_TIMESTEP);
     if (sUpdateCount < 5) HCR_Log("UpdatePlaying frame %d: after Car Update", sUpdateCount);
 
-    b2Vec2 pos = mCar->GetPosition();
     mTerrain->Update(pos.x);
     if (sUpdateCount < 5) HCR_Log("UpdatePlaying frame %d: after Terrain Update", sUpdateCount);
 

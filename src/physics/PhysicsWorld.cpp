@@ -1,8 +1,9 @@
 #include "PhysicsWorld.h"
+#include "Terrain.h"
 #include <stdio.h>
 
-PhysicsWorld::PhysicsWorld(float gravityY, GameListener* listener)
-    : mListener(listener) {
+PhysicsWorld::PhysicsWorld(float gravityY, GameListener* listener, Terrain* terrain)
+    : mListener(listener), mTerrain(terrain) {
     b2Vec2 gravity(0.0f, gravityY);
     mWorld = new b2World(gravity);
     mWorld->SetContactListener(this);
@@ -45,16 +46,34 @@ void PhysicsWorld::BeginContact(b2Contact* contact) {
 
     if (itemFixture) {
         uintptr_t itemType = (uintptr_t)itemFixture->GetUserData();
+        if (itemType == 0) {
+            return; // Sentinel check: already collected or queued for destruction
+        }
+
+        b2Body* itemBody = itemFixture->GetBody();
+        if (itemBody) {
+            Collectible* item = (Collectible*)itemBody->GetUserData();
+            if (item) {
+                if (item->collected) {
+                    return; // Already collected
+                }
+                item->collected = true;
+            }
+        }
+
+        // Set sentinel on fixture immediately to prevent duplicate contacts in same step
+        itemFixture->SetUserData((void*)0);
+
         if (itemType >= 1000) {
             // Fuel canister (tagged with 1000)
             if (mListener) mListener->OnFuelCollected();
-            itemFixture->SetSensor(true);
-            itemFixture->SetUserData((void*)1); // collected flag
         } else if (itemType > 0) {
-            // Coin (value stored in userData: 5, 25, 100, 500)
+            // Coin (value stored in itemType: 5, 25, 100, 500)
             if (mListener) mListener->OnCoinCollected((int)itemType);
-            itemFixture->SetSensor(true);
-            itemFixture->SetUserData((void*)1); // collected flag
+        }
+
+        if (mTerrain && itemBody) {
+            mTerrain->EnqueueDestroy(itemBody);
         }
     }
 }

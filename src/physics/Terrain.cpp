@@ -10,7 +10,12 @@ static inline float clampf(float v, float lo, float hi) {
 Terrain::Terrain(b2World* world, StageType stageType)
     : mWorld(world), mStageType(stageType), mPointCount(0),
       mLastGeneratedX(0.0f), mFirstGeneratedX(0.0f),
-      mTerrainBody(NULL), mItemCount(0), mLastItemSpawnX(15.0f) {
+      mTerrainBody(NULL), mItemCount(0), mLastItemSpawnX(15.0f),
+      mQueueHead(0), mQueueTail(0), mQueueCount(0) {
+
+    for (int i = 0; i < DEFERRED_QUEUE_CAPACITY; ++i) {
+        mDestroyQueue[i] = NULL;
+    }
 
     // Load textures based on stage
     const char* groundPath = "assets/terrain-ground.png";
@@ -68,15 +73,115 @@ Terrain::Terrain(b2World* world, StageType stageType)
 }
 
 Terrain::~Terrain() {
+    mQueueHead = 0;
+    mQueueTail = 0;
+    mQueueCount = 0;
+    for (int i = 0; i < DEFERRED_QUEUE_CAPACITY; ++i) {
+        mDestroyQueue[i] = NULL;
+    }
     for (int i = 0; i < mItemCount; ++i) {
         if (mItems[i].body) {
             mWorld->DestroyBody(mItems[i].body);
             mItems[i].body = NULL;
         }
     }
+    mItemCount = 0;
     if (mTerrainBody) {
         mWorld->DestroyBody(mTerrainBody);
         mTerrainBody = NULL;
+    }
+}
+
+b2Body* Terrain::SpawnItem(float x, float y, int type) {
+    if (mItemCount >= MAX_COLLECTIBLES) return NULL;
+
+    b2BodyDef bd;
+    bd.type = b2_staticBody;
+    bd.position.Set(x, y);
+    b2Body* b = mWorld->CreateBody(&bd);
+
+    b2CircleShape circle;
+    circle.m_radius = (type >= 1000) ? 0.5f : 0.4f;
+
+    b2FixtureDef fd;
+    fd.shape = &circle;
+    fd.isSensor = true;
+    fd.filter.categoryBits = CAT_ITEM;
+    fd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL;
+    fd.userData = (void*)(uintptr_t)type;
+
+    b->CreateFixture(&fd);
+
+    mItems[mItemCount].x = x;
+    mItems[mItemCount].y = y;
+    mItems[mItemCount].type = type;
+    mItems[mItemCount].body = b;
+    mItems[mItemCount].collected = false;
+    b->SetUserData(&mItems[mItemCount]);
+    mItemCount++;
+
+    return b;
+}
+
+void Terrain::EnqueueDestroy(b2Body* body) {
+    if (!body) return;
+    if (mQueueCount >= DEFERRED_QUEUE_CAPACITY) return;
+
+    for (int i = 0; i < mQueueCount; ++i) {
+        int idx = (mQueueHead + i) % DEFERRED_QUEUE_CAPACITY;
+        if (mDestroyQueue[idx] == body) return; // already queued
+    }
+
+    mDestroyQueue[mQueueTail] = body;
+    mQueueTail = (mQueueTail + 1) % DEFERRED_QUEUE_CAPACITY;
+    mQueueCount++;
+}
+
+void Terrain::ProcessDeferredDestroy(float carX) {
+    // 1. Process deferred destruction ring buffer
+    while (mQueueCount > 0) {
+        b2Body* body = mDestroyQueue[mQueueHead];
+        mQueueHead = (mQueueHead + 1) % DEFERRED_QUEUE_CAPACITY;
+        mQueueCount--;
+
+        if (body) {
+            for (int i = 0; i < mItemCount; ++i) {
+                if (mItems[i].body == body) {
+                    mItems[i].body = NULL;
+                    mItems[i].collected = true;
+                    mItems[i] = mItems[mItemCount - 1];
+                    mItemCount--;
+                    if (i < mItemCount && mItems[i].body) {
+                        mItems[i].body->SetUserData(&mItems[i]);
+                    }
+                    break;
+                }
+            }
+            mWorld->DestroyBody(body);
+        }
+    }
+
+    // 2. Despawn items behind carX - 40.0f
+    float despawnX = carX - 40.0f;
+    for (int i = 0; i < mItemCount; ++i) {
+        if (mItems[i].x < despawnX) {
+            if (mItems[i].body) {
+                for (int q = 0; q < mQueueCount; ++q) {
+                    int qIdx = (mQueueHead + q) % DEFERRED_QUEUE_CAPACITY;
+                    if (mDestroyQueue[qIdx] == mItems[i].body) {
+                        mDestroyQueue[qIdx] = NULL;
+                    }
+                }
+                mWorld->DestroyBody(mItems[i].body);
+                mItems[i].body = NULL;
+            }
+            mItems[i] = mItems[mItemCount - 1];
+            mItemCount--;
+            if (i < mItemCount && mItems[i].body) {
+                mItems[i].body->SetUserData(&mItems[i]);
+            }
+            i--; // re-check swapped item
+        }
     }
 }
 
@@ -242,67 +347,20 @@ void Terrain::SpawnItemsAhead(float startX, float endX) {
 
     if (spawnFuel && mItemCount < MAX_COLLECTIBLES) {
         float y = GetHeightAtX(spawnX) + 1.2f;
-
-        b2BodyDef bd;
-        bd.type = b2_staticBody;
-        bd.position.Set(spawnX, y);
-        b2Body* b = mWorld->CreateBody(&bd);
-
-        b2CircleShape circle;
-        circle.m_radius = 0.5f;
-
-        b2FixtureDef fd;
-        fd.shape = &circle;
-        fd.isSensor = true;
-        fd.filter.categoryBits = CAT_ITEM;
-        fd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL;
-        fd.userData = (void*)(uintptr_t)1000; // 1000 = Fuel
-
-        b->CreateFixture(&fd);
-
-        mItems[mItemCount].x = spawnX;
-        mItems[mItemCount].y = y;
-        mItems[mItemCount].type = 1000;
-        mItems[mItemCount].body = b;
-        mItems[mItemCount].collected = false;
-        mItemCount++;
+        SpawnItem(spawnX, y, 1000); // 1000 = Fuel
     } else {
         // Spawn coin arc (3 coins)
         int coinVal = (spawnX > 300.0f) ? 100 : (spawnX > 100.0f ? 25 : 5);
         for (int k = 0; k < 3 && mItemCount < MAX_COLLECTIBLES; ++k) {
             float cx = spawnX + k * 1.5f;
             float cy = GetHeightAtX(cx) + 1.0f + sinf(k * 1.0f) * 0.4f;
-
-            b2BodyDef bd;
-            bd.type = b2_staticBody;
-            bd.position.Set(cx, cy);
-            b2Body* b = mWorld->CreateBody(&bd);
-
-            b2CircleShape circle;
-            circle.m_radius = 0.4f;
-
-            b2FixtureDef fd;
-            fd.shape = &circle;
-            fd.isSensor = true;
-            fd.filter.categoryBits = CAT_ITEM;
-            fd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL;
-            fd.userData = (void*)(uintptr_t)coinVal;
-
-            b->CreateFixture(&fd);
-
-            mItems[mItemCount].x = cx;
-            mItems[mItemCount].y = cy;
-            mItems[mItemCount].type = coinVal;
-            mItems[mItemCount].body = b;
-            mItems[mItemCount].collected = false;
-            mItemCount++;
+            SpawnItem(cx, cy, coinVal);
         }
     }
 }
 
 void Terrain::Update(float playerX) {
     float aheadLimit = playerX + 45.0f;
-    float behindLimit = playerX - 30.0f;
 
     // Generate new points ahead with exact 0.5m segment step
     float step = 0.5f;
@@ -335,24 +393,6 @@ void Terrain::Update(float playerX) {
 
     if (added) {
         SpawnItemsAhead(playerX, aheadLimit);
-    }
-
-    // Clean up collected or far behind items
-    for (int i = 0; i < mItemCount; ++i) {
-        if (mItems[i].body) {
-            b2Fixture* f = mItems[i].body->GetFixtureList();
-            if (f && f->GetUserData() == (void*)1) {
-                mItems[i].collected = true;
-            }
-            if (mItems[i].collected || mItems[i].x < behindLimit) {
-                mWorld->DestroyBody(mItems[i].body);
-                mItems[i].body = NULL;
-                // Swap with last
-                mItems[i] = mItems[mItemCount - 1];
-                mItemCount--;
-                i--;
-            }
-        }
     }
 }
 

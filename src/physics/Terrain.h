@@ -15,6 +15,7 @@ struct Collectible {
 
 #define MAX_TERRAIN_POINTS 8192
 #define MAX_COLLECTIBLES   64
+#define DEFERRED_QUEUE_CAPACITY 64
 
 class Terrain {
 public:
@@ -22,11 +23,17 @@ public:
     ~Terrain();
 
     void Update(float playerX);
+    void ProcessDeferredDestroy(float carX);
+    void EnqueueDestroy(b2Body* body);
+    b2Body* SpawnItem(float x, float y, int type);
     void Render(float cameraX, float cameraY);
 
     float GetHeightAtX(float x) const;
     float GetStageFriction() const;
     float GetCoinMultiplier() const;
+
+    int GetItemCount() const { return mItemCount; }
+    const Collectible* GetItems() const { return mItems; }
 
 private:
     b2World* mWorld;
@@ -46,6 +53,12 @@ private:
     Collectible mItems[MAX_COLLECTIBLES];
     int mItemCount;
     float mLastItemSpawnX;
+
+    // Deferred destroy ring buffer
+    b2Body* mDestroyQueue[DEFERRED_QUEUE_CAPACITY];
+    int mQueueHead;
+    int mQueueTail;
+    int mQueueCount;
 
     // Textures
     Texture mTexGround;
