@@ -1,6 +1,7 @@
 # Build artifacts & binaries
 build*/
 release/
+ci_artifacts/
 *.o
 *.a
 *.elf

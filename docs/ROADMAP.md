@@ -16,7 +16,7 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 ## [ ] Milestone M0.2: Reviewer Fixes & Hardening (v0.1.0-beta.2)
 - [x] **T-100 (ci):** Enforce CI integrity: `set -euo pipefail` on all bash steps, eliminate tee return-code masking, verify non-empty EBOOT/ELF, fail artifact upload on missing files.
 - [x] **T-101 (build):** Fix PSP compilation in `src/main.cpp`, verify clean build on PSPSDK.
-- [ ] **T-102 (build):** Rebuild release binary from clean tree, verify on PPSSPP with screenshot.
+- [x] **T-102 (build):** Rebuild release binary from clean tree, verify on PPSSPP with screenshot.
 - [ ] **T-103 (physics):** Fix inverted in-air pitch control (gas = backflip/CCW, brake = frontflip/CW) and flip detectors.
 - [ ] **T-104 (game):** Implement vehicle coasting on empty fuel tank until $|v| < 0.3$ m/s.
 - [ ] **T-105 (physics):** Filter sensor contacts in `IsInAir()` to prevent coin arcs from disabling air control.

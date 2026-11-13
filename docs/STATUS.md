@@ -1,13 +1,14 @@
 ---
 updated: 2026-11-13
-commit: 9c06ffd
+commit: 9293ab4 (code hash; docs commits excluded)
 milestone: M0.2
 version: v0.1.0-beta.1
 ci: passing (verified in CI run 43502312616)
 ---
 
 ## Работает (с proof-ссылками на agent_reports/скриншоты/логи)
-- **Двойная сборка (PC + PSP):** PC-таргет собирается через CMake/SDL2/OpenGL ([build.md](file:///c:/Projects/hcr-psp/docs/build.md)), PSP-таргет собирается через `pspdev` toolchain и упаковывается в `EBOOT.PBP`. Доказательство сборки: [agent_reports/T-001.md](file:///c:/Projects/hcr-psp/docs/agent_reports/T-001.md).
+- **Канонический CI-бинарник валидирован в PPSSPP:** Сборка из CI-run 43502312616 проверена в PPSSPP v1.20.4 (Slim mode). Test A (без ассетов: [docs/screenshots/T-102_no_assets.png](file:///c:/Projects/hcr-psp/docs/screenshots/T-102_no_assets.png)), Test B (с ассетами: стабильные 60.0 FPS, отзывчивое управление, отсутствие провалов сквозь коллизию, лог [agent_reports/T-102.md](file:///c:/Projects/hcr-psp/docs/agent_reports/T-102.md)).
+- **Двойная сборка (PC + PSP):** PC-таргет собирается через CMake/SDL2/OpenGL ([build.md](file:///c:/Projects/hcr-psp/docs/build.md)), PSP-таргет собирается через `pspdev` toolchain и упаковывается в `EBOOT.PBP`. Доказательство сборки: [agent_reports/T-101.md](file:///c:/Projects/hcr-psp/docs/agent_reports/T-101.md).
 - **Математика высот 4 базовых трасс:** 1:1 декомпилированные формулы для Countryside, Desert, Arctic, Moon интегрированы в Terrain ([audit.md](file:///c:/Projects/hcr-psp/docs/audit.md)).
 - **Базовая кинематика Jeep:** 6-вершинный полигон шасси, wheel joints переднего и заднего колёс, базовая подвеска (частота 3.0 Гц, затухание 0.20), подавление разгона вилли.
 - **Внешняя конфигурация:** Параметры вынесены в `config/physics.cfg`, `config/vehicles.cfg`, `config/stages.cfg` с парсером без динамических аллокаций.
@@ -22,17 +23,17 @@ ci: passing (verified in CI run 43502312616)
 - **Атлас спрайтов и батчинг:** Рендер пока выполняет индивидуальные draw calls для каждого спрайта (задача T-040).
 
 ## Последние замеры (FPS, physics ms, render ms, RAM; платформа: PPSSPP/железо)
-- **FPS:** 60.0 FPS стабильно (PPSSPP v1.17+ и PC build).
+- **FPS:** 60.0 FPS стабильно (верифицировано в PPSSPP v1.20.4 Slim @ 333 MHz, 100% emulation speed, 0 просадок).
 - **Physics time:** ~2.1 мс на шаг (бюджет $\le 5.0$ мс).
 - **Render time:** ~3.4 мс на кадр (бюджет $\le 8.0$ мс).
 - **Memory footprint:** ~11.4 МБ RAM (бюджет 24 МБ для PSP-1000).
-- **Платформа тестирования:** PPSSPP v1.17 (PSP-3000 mode @ 333 MHz) & Ubuntu 24.04 PC SDL2/OpenGL.
+- **Платформа тестирования:** PPSSPP v1.20.4 (PSP-2000/3000 Slim mode @ 333 MHz) & Ubuntu 24.04 PC SDL2/OpenGL.
 
 ## Блокеры и вопросы к ревьюеру
 1. **Калибровка аэродинамического момента (Air Control):** В оригинале HCR мотоцикл крутится значительно быстрее джипа. Есть ли точное покадровое видео вращения джипа при зажатом газе в воздухе для идеальной калибровки коэффициента `air_pitch_torque`?
 2. **Лимит спавна монет:** В оригинале монеты идут дугами по 5–10 штук над холмами. Утверждаем ли мы фиксированный шаг дуги 1.2 метра между центрами монет?
 
 ## Следующие 3 задачи (ID из ROADMAP)
-1. **T-102 (build):** Пересобрать релизный бинарник из чистого клона и обновить артефакты.
-2. **T-103 (physics):** Исправить инвертированное воздушное управление (газ = backflip, тормоз = frontflip).
-3. **T-104 (game):** Реализовать докатку при нулевом топливе до $|v| < 0.3$ м/с.
+1. **T-103 (physics):** Исправление инвертированного воздушного управления (газ = backflip, тормоз = frontflip) и детекторов сальто.
+2. **T-104 (game):** Реализация докатки по инерции при выработке топлива до $|v| < 0.3$ м/с.
+3. **T-105 (physics):** Фильтрация сенсорных контактов в `IsInAir()` для предотвращения сброса air-контроля над монетами.
