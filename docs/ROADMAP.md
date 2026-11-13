@@ -17,13 +17,13 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [x] **T-100 (ci):** Enforce CI integrity: `set -euo pipefail` on all bash steps, eliminate tee return-code masking, verify non-empty EBOOT/ELF, fail artifact upload on missing files.
 - [x] **T-101 (build):** Fix PSP compilation in `src/main.cpp`, verify clean build on PSPSDK.
 - [x] **T-102 (build):** Rebuild release binary from clean tree, verify on PPSSPP with screenshot.
-- [ ] **T-103 (physics):** Fix inverted in-air pitch control (gas = backflip/CCW, brake = frontflip/CW) and flip detectors.
-- [ ] **T-104 (game):** Implement vehicle coasting on empty fuel tank until $|v| < 0.3$ m/s.
-- [ ] **T-105 (physics):** Filter sensor contacts in `IsInAir()` to prevent coin arcs from disabling air control.
+- [x] **T-103 (physics):** Fix inverted in-air pitch control (gas = backflip/CCW, brake = frontflip/CW) and flip detectors.
+- [x] **T-104 (game):** Implement vehicle coasting on empty fuel tank until $|v| < 0.3$ m/s.
+- [x] **T-105 (physics):** Filter sensor contacts in `IsInAir()` to prevent coin arcs from disabling air control.
 - [ ] **T-106 (physics):** Deferred item destruction queue post-step, fix duplicate collection and body memory leak.
 - [ ] **T-107 (physics):** Replace `b2EdgeShape` with sliding window `b2ChainShape` chunks (30 m window).
 - [ ] **T-108 (core):** Implement fixed timestep accumulator with max substeps and render transform interpolation.
-- [ ] **T-109 (physics):** Enable suspension travel limits (`enableLimit`, translation bounds).
+- [x] **T-109 (physics):** Enable suspension travel limits (`enableLimit`, translation bounds).
 - [ ] **T-110 (core):** Unify constants into `Config::Physics`, parse all vehicle vertices, head radii, and upgrade multipliers.
 - [ ] **T-111 (tools):** Rewrite `convert_assets.py` with CLI argparse, ZIP extraction, texture POT/tiling, offline audio conversion.
 - [ ] **T-112 (perf):** Quantize terrain heightfield math and add cross-platform heightfield hash verification test.

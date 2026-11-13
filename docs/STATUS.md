@@ -1,14 +1,18 @@
 ---
-updated: 2026-11-13
-commit: 9293ab4 (code hash; docs commits excluded)
+updated: 2026-11-14
+commit: 9195b30 (code hash; docs commits excluded)
 milestone: M0.2
 version: v0.1.0-beta.1
-ci: passing (verified in CI run 43502312616)
+ci: passing (verified in CI run 43509448789)
 ---
 
 ## Работает (с proof-ссылками на agent_reports/скриншоты/логи)
 - **Канонический CI-бинарник валидирован в PPSSPP:** Сборка из CI-run 43502312616 проверена в PPSSPP v1.20.4 (Slim mode). Test A (без ассетов: [docs/screenshots/T-102_no_assets.png](file:///c:/Projects/hcr-psp/docs/screenshots/T-102_no_assets.png)), Test B (с ассетами: стабильные 60.0 FPS, отзывчивое управление, отсутствие провалов сквозь коллизию, лог [agent_reports/T-102.md](file:///c:/Projects/hcr-psp/docs/agent_reports/T-102.md)).
-- **Двойная сборка (PC + PSP):** PC-таргет собирается через CMake/SDL2/OpenGL ([build.md](file:///c:/Projects/hcr-psp/docs/build.md)), PSP-таргет собирается через `pspdev` toolchain и упаковывается в `EBOOT.PBP`. Доказательство сборки: [agent_reports/T-101.md](file:///c:/Projects/hcr-psp/docs/agent_reports/T-101.md).
+- **Двойная сборка (PC + PSP) & Честный CI:** PC-таргет собирается через CMake/SDL2/OpenGL ([build.md](file:///c:/Projects/hcr-psp/docs/build.md)), PSP-таргет собирается через `pspdev` toolchain и упаковывается в `EBOOT.PBP`. CI проверяет обе платформы со строгим `set -euo pipefail` и гоняет набор тестов регрессии ([agent_reports/T-100.md](file:///c:/Projects/hcr-psp/docs/agent_reports/T-100.md), [agent_reports/T-101.md](file:///c:/Projects/hcr-psp/docs/agent_reports/T-101.md)).
+- **Воздушный контроль (Air Control, T-103):** Газ в воздухе даёт положительный крутящий момент (CCW, наклон носа вверх, Backflip); тормоз даёт отрицательный момент (CW, наклон носа вниз, Frontflip). Поведение подтверждено регрессионным тестом [tools/test_aircontrol.cpp](file:///c:/Projects/hcr-psp/tools/test_aircontrol.cpp) (отчёт [agent_reports/T-103.md](file:///c:/Projects/hcr-psp/docs/agent_reports/T-103.md)).
+- **Докатка по инерции при выработке топлива (T-104):** При `mFuel <= 0` двигатель отключается, машина катится по рельефу свободно без мгновенного Game Over. Экран «OUT OF FUEL!» срабатывает только при непрерывной остановке $|v| < 0.3$ м/с в течение 1.0 с (или fallback 15 с). Водитель остаётся жив (мёртвый таймер 3 с удалён). Подтверждено тестом [tools/test_coasting.cpp](file:///c:/Projects/hcr-psp/tools/test_coasting.cpp) (отчёт [agent_reports/T-104.md](file:///c:/Projects/hcr-psp/docs/agent_reports/T-104.md)).
+- **Фильтрация сенсоров в воздухе (T-105):** `PlayerCar::IsInAir()` игнорирует сенсоры монет/канистр (`!fixture->IsSensor()` && `CAT_TERRAIN`), предотвращая ложный сброс `mAirTime` и отключение air control при пролёте сквозь дуги монет. Подтверждено тестом [tools/test_air_sensors.cpp](file:///c:/Projects/hcr-psp/tools/test_air_sensors.cpp) (отчёт [agent_reports/T-105.md](file:///c:/Projects/hcr-psp/docs/agent_reports/T-105.md)).
+- **Ограничители хода подвески (T-109):** Интегрированы лимиты хода колесных суставов Box2D (`enableLimit = true`, `lowerTranslation = -0.35f`, `upperTranslation = 0.35f`). При падении с высоты 5 м колёса не проваливаются сквозь кузов, машина стабильно гасит удар без взрыва физики. Подтверждено тестом [tools/test_suspension.cpp](file:///c:/Projects/hcr-psp/tools/test_suspension.cpp) (отчёт [agent_reports/T-109.md](file:///c:/Projects/hcr-psp/docs/agent_reports/T-109.md)).
 - **Математика высот 4 базовых трасс:** 1:1 декомпилированные формулы для Countryside, Desert, Arctic, Moon интегрированы в Terrain ([audit.md](file:///c:/Projects/hcr-psp/docs/audit.md)).
 - **Базовая кинематика Jeep:** 6-вершинный полигон шасси, wheel joints переднего и заднего колёс, базовая подвеска (частота 3.0 Гц, затухание 0.20), подавление разгона вилли.
 - **Внешняя конфигурация:** Параметры вынесены в `config/physics.cfg`, `config/vehicles.cfg`, `config/stages.cfg` с парсером без динамических аллокаций.
@@ -29,11 +33,11 @@ ci: passing (verified in CI run 43502312616)
 - **Memory footprint:** ~11.4 МБ RAM (бюджет 24 МБ для PSP-1000).
 - **Платформа тестирования:** PPSSPP v1.20.4 (PSP-2000/3000 Slim mode @ 333 MHz) & Ubuntu 24.04 PC SDL2/OpenGL.
 
-## Блокеры и вопросы к ревьюеру
-1. **Калибровка аэродинамического момента (Air Control):** В оригинале HCR мотоцикл крутится значительно быстрее джипа. Есть ли точное покадровое видео вращения джипа при зажатом газе в воздухе для идеальной калибровки коэффициента `air_pitch_torque`?
-2. **Лимит спавна монет:** В оригинале монеты идут дугами по 5–10 штук над холмами. Утверждаем ли мы фиксированный шаг дуги 1.2 метра между центрами монет?
+## Блокеры и ответы на вопросы ревьюера
+1. **Калибровка аэродинамического момента (Air Control):** Знак момента исправлен (T-103: газ = backflip, тормоз = frontflip). Для калибровки абсолютной величины `AIR_PITCH_TORQUE` запрошено покадровое 60 FPS reference-видео оригинального джипа в воздухе у пользователя; в коде значение оставлено с меткой `TODO-TUNE`.
+2. **Лимит и шаг спавна монет:** Фиксированный шаг дуги 1.2 метра между центрами монет **НЕ утверждается** окончательно — остаётся `TODO-TUNE` до инструментальных замеров по спрайтам/видео оригинального APK.
 
 ## Следующие 3 задачи (ID из ROADMAP)
-1. **T-103 (physics):** Исправление инвертированного воздушного управления (газ = backflip, тормоз = frontflip) и детекторов сальто.
-2. **T-104 (game):** Реализация докатки по инерции при выработке топлива до $|v| < 0.3$ м/с.
-3. **T-105 (physics):** Фильтрация сенсорных контактов в `IsInAir()` для предотвращения сброса air-контроля над монетами.
+1. **T-106 (physics):** Отложенная очередь уничтожения предметов post-step, фикс дубликатов сбора монет/канистр и утечки тел Box2D.
+2. **T-107 (physics):** Замена монолитного `b2EdgeShape` на скользящее окно чанков `b2ChainShape` (окно 30 м) для предотвращения ghost collisions.
+3. **T-108 (core):** Реализация аккумулятора фиксированного шага времени (fixed timestep accumulator) с ограничением максимального числа субшагов и интерполяцией рендер-трансформов.
