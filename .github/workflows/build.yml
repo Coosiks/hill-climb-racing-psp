@@ -76,6 +76,7 @@ jobs:
           ./build-pc/test_items
           ./build-pc/test_terrain
           ./build-pc/test_config
+          ./build-pc/test_timestep
 
       - name: Upload PC Artifacts
         uses: actions/upload-artifact@v4

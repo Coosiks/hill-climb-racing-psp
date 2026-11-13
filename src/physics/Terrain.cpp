@@ -1,6 +1,11 @@
 #include "Terrain.h"
 #include "core/Config.h"
 #include <math.h>
+#include <stdio.h>
+
+#if defined(__PSP__)
+#include <psprtc.h>
+#endif
 
 static inline float clampf(float v, float lo, float hi) {
     if (v < lo) return lo;
@@ -321,7 +326,35 @@ void Terrain::GenerateChunkVertices(int chunkIndex, b2Vec2* outVerts, b2Vec2* ou
     }
 }
 
+#if defined(__PSP__)
+static u64 sTotalChunkTicks = 0;
+static int sChunkGenCount = 0;
+#endif
+
+float Terrain::GetAverageChunkGenMs() {
+#if defined(__PSP__)
+    if (sChunkGenCount <= 0) return 0.0f;
+    u32 res = sceRtcGetTickResolution();
+    if (res == 0) res = 1000000;
+    return (float)(((double)sTotalChunkTicks / (double)sChunkGenCount) * 1000.0 / (double)res);
+#else
+    return 0.0f;
+#endif
+}
+
+int Terrain::GetChunkGenCount() {
+#if defined(__PSP__)
+    return sChunkGenCount;
+#else
+    return 0;
+#endif
+}
+
 void Terrain::LoadChunk(int slotIdx, int chunkIndex) {
+#if defined(__PSP__)
+    u64 t0 = 0, t1 = 0;
+    sceRtcGetCurrentTick(&t0);
+#endif
     TerrainChunk& slot = mChunks[slotIdx];
     if (slot.active && slot.fixture && slot.body) {
         slot.body->DestroyFixture(slot.fixture);
@@ -346,6 +379,18 @@ void Terrain::LoadChunk(int slotIdx, int chunkIndex) {
 
     slot.chunkIndex = chunkIndex;
     slot.active = true;
+
+#if defined(__PSP__)
+    sceRtcGetCurrentTick(&t1);
+    u32 res = sceRtcGetTickResolution();
+    if (res == 0) res = 1000000;
+    u64 diff = t1 - t0;
+    sTotalChunkTicks += diff;
+    sChunkGenCount++;
+    double chunkMs = ((double)diff) * 1000.0 / (double)res;
+    printf("[PERF] Chunk %d gen: %.3f ms (avg: %.3f ms over %d chunks)\n",
+           chunkIndex, chunkMs, ((double)sTotalChunkTicks / sChunkGenCount) * 1000.0 / (double)res, sChunkGenCount);
+#endif
 }
 
 void Terrain::UnloadChunk(int slotIdx) {

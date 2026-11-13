@@ -48,6 +48,9 @@ public:
     int GetItemCount() const { return mItemCount; }
     const Collectible* GetItems() const { return mItems; }
 
+    static float GetAverageChunkGenMs();
+    static int GetChunkGenCount();
+
     int GetActiveChunkCount() const;
     int GetTotalChunkSlots() const { return NUM_CHUNK_SLOTS; }
     b2Body* GetRearWallBody() const { return mRearWallBody; }

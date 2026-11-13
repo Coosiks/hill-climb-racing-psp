@@ -56,6 +56,11 @@ private:
     float mCameraY;
     float mCameraZoom;
 
+    // Timestep & Accumulator
+    double mLastTime;
+    float mAccumulator;
+    float mRenderAlpha;
+
     // UI Textures
     Texture mTexLogo;
     Texture mTexCoinIcon;
@@ -76,7 +81,8 @@ private:
     void UpdateGarage();
     void RenderGarage();
 
-    void UpdatePlaying();
+    void UpdatePlaying(float frameTime);
+    void UpdatePhysicsStep(float dt);
     void RenderPlaying();
 
     void UpdateGameOver();

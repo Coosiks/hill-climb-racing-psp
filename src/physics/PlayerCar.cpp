@@ -137,6 +137,26 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     mNeckJoint = (b2RevoluteJoint*)mWorld->CreateJoint(&rjd);
 
     mLastAngle = mChassis->GetAngle();
+    CapturePreviousTransforms();
+}
+
+void PlayerCar::CapturePreviousTransforms() {
+    if (mChassis) {
+        mPrevChassis.position = mChassis->GetPosition();
+        mPrevChassis.angle = mChassis->GetAngle();
+    }
+    if (mRearWheel) {
+        mPrevRearWheel.position = mRearWheel->GetPosition();
+        mPrevRearWheel.angle = mRearWheel->GetAngle();
+    }
+    if (mFrontWheel) {
+        mPrevFrontWheel.position = mFrontWheel->GetPosition();
+        mPrevFrontWheel.angle = mFrontWheel->GetAngle();
+    }
+    if (mDriverHead) {
+        mPrevDriverHead.position = mDriverHead->GetPosition();
+        mPrevDriverHead.angle = mDriverHead->GetAngle();
+    }
 }
 
 PlayerCar::~PlayerCar() {
@@ -161,6 +181,15 @@ PlayerCar::~PlayerCar() {
 b2Vec2 PlayerCar::GetPosition() const {
     if (mChassis) return mChassis->GetPosition();
     return b2Vec2(0.0f, 0.0f);
+}
+
+b2Vec2 PlayerCar::GetInterpolatedPosition(float alpha) const {
+    if (!mChassis) return b2Vec2(0.0f, 0.0f);
+    b2Vec2 curPos = mChassis->GetPosition();
+    return b2Vec2(
+        (1.0f - alpha) * mPrevChassis.position.x + alpha * curPos.x,
+        (1.0f - alpha) * mPrevChassis.position.y + alpha * curPos.y
+    );
 }
 
 float PlayerCar::GetSpeedKmH() const {
@@ -375,41 +404,58 @@ void PlayerCar::Update(float dt) {
     mEngineRev += (targetRev - mEngineRev) * 10.0f * dt;
 }
 
-void PlayerCar::Render() {
+static inline float LerpAngle(float prevAngle, float curAngle, float alpha) {
+    float diff = curAngle - prevAngle;
+    while (diff > 3.14159265f)  diff -= 6.2831853f;
+    while (diff < -3.14159265f) diff += 6.2831853f;
+    return prevAngle + diff * alpha;
+}
+
+void PlayerCar::Render(float alpha) {
     if (!mChassis) return;
 
     // 1. Draw Rear Wheel
     if (mRearWheel) {
-        b2Vec2 pos = mRearWheel->GetPosition();
-        float angle = mRearWheel->GetAngle();
+        b2Vec2 curPos = mRearWheel->GetPosition();
+        float curAngle = mRearWheel->GetAngle();
+        b2Vec2 pos = (1.0f - alpha) * mPrevRearWheel.position + alpha * curPos;
+        float angle = LerpAngle(mPrevRearWheel.angle, curAngle, alpha);
         float diameter = Config::VehicleJeep.wheel_radius * 2.0f;
         Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y, diameter, diameter, angle);
     }
 
     // 2. Draw Front Wheel
     if (mFrontWheel) {
-        b2Vec2 pos = mFrontWheel->GetPosition();
-        float angle = mFrontWheel->GetAngle();
+        b2Vec2 curPos = mFrontWheel->GetPosition();
+        float curAngle = mFrontWheel->GetAngle();
+        b2Vec2 pos = (1.0f - alpha) * mPrevFrontWheel.position + alpha * curPos;
+        float angle = LerpAngle(mPrevFrontWheel.angle, curAngle, alpha);
         float diameter = Config::VehicleJeep.wheel_radius * 2.0f;
         Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y, diameter, diameter, angle);
     }
 
-    // 3. Draw Driver Body (torso attached to chassis)
-    b2Vec2 chassisPos = mChassis->GetPosition();
-    float chassisAngle = mChassis->GetAngle();
+    // 3. Interpolated Chassis & Driver Body
+    b2Vec2 curChassisPos = mChassis->GetPosition();
+    float curChassisAngle = mChassis->GetAngle();
+    b2Vec2 chassisPos = (1.0f - alpha) * mPrevChassis.position + alpha * curChassisPos;
+    float chassisAngle = LerpAngle(mPrevChassis.angle, curChassisAngle, alpha);
+    b2Rot chassisRot(chassisAngle);
+
     b2Vec2 torsoLocal(-0.15f, 0.20f);
-    b2Vec2 torsoWorld = mChassis->GetWorldPoint(torsoLocal);
+    b2Vec2 torsoWorld = chassisPos + b2Mul(chassisRot, torsoLocal);
     Renderer2D::DrawSprite(&mTexDriverBody, torsoWorld.x, torsoWorld.y, 0.65f, 0.65f, chassisAngle);
 
     // 4. Draw Driver Head (rotates with its own body or freely after crash)
     if (mDriverHead) {
-        b2Vec2 headPos = mDriverHead->GetPosition();
-        float headAngle = mDriverHead->GetAngle();
+        b2Vec2 curHeadPos = mDriverHead->GetPosition();
+        float curHeadAngle = mDriverHead->GetAngle();
+        b2Vec2 headPos = (1.0f - alpha) * mPrevDriverHead.position + alpha * curHeadPos;
+        float headAngle = LerpAngle(mPrevDriverHead.angle, curHeadAngle, alpha);
         Renderer2D::DrawSprite(&mTexDriverHead, headPos.x, headPos.y, 0.55f, 0.55f, headAngle);
     }
 
     // 5. Draw Chassis Sprite (Car.png: 3.4m wide x 1.45m high)
     b2Vec2 spriteOffsetLocal(0.0f, 0.02f);
-    b2Vec2 spriteWorld = mChassis->GetWorldPoint(spriteOffsetLocal);
+    b2Vec2 spriteWorld = chassisPos + b2Mul(chassisRot, spriteOffsetLocal);
     Renderer2D::DrawSprite(&mTexChassis, spriteWorld.x, spriteWorld.y, 3.40f, 1.45f, chassisAngle);
 }

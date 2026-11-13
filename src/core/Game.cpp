@@ -4,6 +4,13 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#if defined(__PSP__)
+#include <psprtc.h>
+static u64 sTotalStepTicks = 0;
+static int sStepCount = 0;
+#endif
+
+static bool sBenchmarkMode = false;
 static FILE* gLogFile = NULL;
 static void HCR_Log(const char* fmt, ...) {
     if (!gLogFile) {
@@ -25,7 +32,8 @@ Game::Game()
       mSessionCoins(0), mMaxDistance(0.0f), mGameOverReasonDriverDown(false),
       mStuntTimer(0.0f), mStuntName(NULL), mStuntCoins(0),
       mOutOfFuelStopTimer(0.0f), mOutOfFuelFallbackTimer(0.0f),
-      mCameraX(0.0f), mCameraY(0.0f), mCameraZoom(1.0f) {
+      mCameraX(0.0f), mCameraY(0.0f), mCameraZoom(1.0f),
+      mLastTime(0.0), mAccumulator(0.0f), mRenderAlpha(1.0f) {
 }
 
 Game::~Game() {
@@ -88,6 +96,9 @@ void Game::StartRace() {
     mOutOfFuelFallbackTimer = 0.0f;
     mCameraX = 0.0f;
     mCameraY = 2.0f;
+    mLastTime = System::GetTimeSeconds();
+    mAccumulator = 0.0f;
+    mRenderAlpha = 1.0f;
     mState = STATE_PLAYING;
 
     AudioEngine::PlaySFX(SFX_CLICK);
@@ -96,6 +107,7 @@ void Game::StartRace() {
 
 void Game::EndRace() {
     AudioEngine::UpdateEngineSound(0.0f, false);
+    mAccumulator = 0.0f;
 
     if (mCar) {
         delete mCar;
@@ -141,17 +153,26 @@ void Game::OnFuelCollected() {
 }
 
 void Game::Run() {
+    mLastTime = System::GetTimeSeconds();
+    mAccumulator = 0.0f;
+
     while (System::IsRunning()) {
+        double currentTime = System::GetTimeSeconds();
+        float frameTime = (float)(currentTime - mLastTime);
+        mLastTime = currentTime;
+
         System::PollInput();
 
         switch (mState) {
             case STATE_GARAGE:
+                mAccumulator = 0.0f;
                 UpdateGarage();
                 break;
             case STATE_PLAYING:
-                UpdatePlaying();
+                UpdatePlaying(frameTime);
                 break;
             case STATE_GAMEOVER:
+                mAccumulator = 0.0f;
                 UpdateGameOver();
                 break;
         }
@@ -175,6 +196,26 @@ void Game::Run() {
 }
 
 void Game::UpdateGarage() {
+    static bool sCheckedBenchmark = false;
+    if (!sCheckedBenchmark) {
+        sCheckedBenchmark = true;
+        FILE* bf = fopen("benchmark.txt", "r");
+        if (!bf) bf = fopen("ms0:/PSP/GAME/HCR/benchmark.txt", "r");
+        if (bf) {
+            fclose(bf);
+            sBenchmarkMode = true;
+            printf("[PERF] benchmark.txt found: enabling automated benchmark mode\n");
+            HCR_Log("[PERF] benchmark.txt found: enabling automated benchmark mode");
+        }
+    }
+    if (sBenchmarkMode) {
+        static int sGarageDelay = 0;
+        if (++sGarageDelay >= 10) {
+            StartRace();
+            return;
+        }
+    }
+
     // Stage selection (Left / Right)
     if (System::ButtonsPressed & PSP_CTRL_LEFT) {
         int nextStage = (int)mCurrentStage - 1;
@@ -328,14 +369,13 @@ void Game::RenderGarage() {
     mFont.DrawText("PRESS CROSS OR START TO RACE!", 95, 230, 0.45f, 0xFFFFFFFF);
 }
 
-void Game::UpdatePlaying() {
+void Game::UpdatePhysicsStep(float dt) {
     if (!mCar || !mPhysics || !mTerrain) return;
 
-    static int sUpdateCount = 0;
-    if (sUpdateCount < 5) HCR_Log("UpdatePlaying frame %d: start", sUpdateCount);
-
     // Controls
-    if ((System::ButtonsHeld & PSP_CTRL_RTRIGGER) || (System::ButtonsHeld & PSP_CTRL_CROSS) || (System::ButtonsHeld & PSP_CTRL_RIGHT)) {
+    if (sBenchmarkMode) {
+        mCar->Accelerate();
+    } else if ((System::ButtonsHeld & PSP_CTRL_RTRIGGER) || (System::ButtonsHeld & PSP_CTRL_CROSS) || (System::ButtonsHeld & PSP_CTRL_RIGHT)) {
         mCar->Accelerate();
     } else if ((System::ButtonsHeld & PSP_CTRL_LTRIGGER) || (System::ButtonsHeld & PSP_CTRL_SQUARE) || (System::ButtonsHeld & PSP_CTRL_LEFT)) {
         mCar->Decelerate();
@@ -343,19 +383,33 @@ void Game::UpdatePlaying() {
         mCar->Idle();
     }
 
-    // Step physics
-    if (sUpdateCount < 5) HCR_Log("UpdatePlaying frame %d: before Physics Step", sUpdateCount);
-    mPhysics->Step(FIXED_TIMESTEP);
-    if (sUpdateCount < 5) HCR_Log("UpdatePlaying frame %d: after Physics Step", sUpdateCount);
+    // Capture previous transforms right before physics integration
+    mCar->CapturePreviousTransforms();
+
+    // Step physics (with PSP telemetry)
+#if defined(__PSP__)
+    u64 t0 = 0, t1 = 0;
+    sceRtcGetCurrentTick(&t0);
+    mPhysics->Step(dt);
+    sceRtcGetCurrentTick(&t1);
+    sTotalStepTicks += (t1 - t0);
+    sStepCount++;
+    if (sStepCount % 60 == 0) {
+        u32 res = sceRtcGetTickResolution();
+        if (res == 0) res = 1000000;
+        double avgStepMs = ((double)sTotalStepTicks / (double)sStepCount) * 1000.0 / (double)res;
+        printf("[PERF] Physics step avg: %.3f ms (%d steps)\n", avgStepMs, sStepCount);
+        HCR_Log("[PERF] Physics step avg: %.3f ms (%d steps)", avgStepMs, sStepCount);
+    }
+#else
+    mPhysics->Step(dt);
+#endif
 
     b2Vec2 pos = mCar->GetPosition();
     mTerrain->ProcessDeferredDestroy(pos.x);
 
-    mCar->Update(FIXED_TIMESTEP);
-    if (sUpdateCount < 5) HCR_Log("UpdatePlaying frame %d: after Car Update", sUpdateCount);
-
+    mCar->Update(dt);
     mTerrain->Update(pos.x);
-    if (sUpdateCount < 5) HCR_Log("UpdatePlaying frame %d: after Terrain Update", sUpdateCount);
 
     // Update Distance
     if (pos.x > mMaxDistance) {
@@ -379,15 +433,15 @@ void Game::UpdatePlaying() {
     }
 
     if (mStuntTimer > 0.0f) {
-        mStuntTimer -= FIXED_TIMESTEP;
+        mStuntTimer -= dt;
     }
 
     // Check Out of Fuel Coasting
     if (mCar->IsOutOfFuel()) {
-        mOutOfFuelFallbackTimer += FIXED_TIMESTEP;
+        mOutOfFuelFallbackTimer += dt;
         float speed = mCar->GetSpeedKmH() / 3.6f;
         if (speed < 0.3f) {
-            mOutOfFuelStopTimer += FIXED_TIMESTEP;
+            mOutOfFuelStopTimer += dt;
         } else {
             mOutOfFuelStopTimer = 0.0f; // still moving, keep coasting
         }
@@ -406,46 +460,106 @@ void Game::UpdatePlaying() {
         mOutOfFuelStopTimer = 0.0f;
         mOutOfFuelFallbackTimer = 0.0f;
     }
+}
+
+void Game::UpdatePlaying(float frameTime) {
+    if (!mCar || !mPhysics || !mTerrain) return;
+
+    if (frameTime > 0.10f) frameTime = 0.10f; // Protection against spiral of death
+    mAccumulator += frameTime;
+
+    float fixedDt = Config::Physics.fixed_timestep;
+    int maxSubSteps = Config::Physics.max_sub_steps;
+    int substeps = 0;
+
+    while (mAccumulator >= fixedDt && substeps < maxSubSteps) {
+        UpdatePhysicsStep(fixedDt);
+        mAccumulator -= fixedDt;
+        substeps++;
+        if (mState != STATE_PLAYING) {
+            break;
+        }
+    }
+
+    if (fixedDt > 0.0f) {
+        mRenderAlpha = mAccumulator / fixedDt;
+        if (mRenderAlpha > 1.0f) mRenderAlpha = 1.0f;
+        if (mRenderAlpha < 0.0f) mRenderAlpha = 0.0f;
+    } else {
+        mRenderAlpha = 1.0f;
+    }
 
     // Engine Audio
-    AudioEngine::UpdateEngineSound(mCar->GetEngineRev(), true);
-    if (sUpdateCount < 5) HCR_Log("UpdatePlaying frame %d: after Audio Update", sUpdateCount);
+    if (mCar) {
+        AudioEngine::UpdateEngineSound(mCar->GetEngineRev(), true);
+    }
 
-    // Camera follow (lead forward and smoothing from Config)
-    float targetCamX = pos.x + Config::Physics.camera_lead_x;
-    float targetCamY = pos.y + Config::Physics.camera_lead_y;
+    // Camera follow (tracks interpolated car position for jitter-free smoothness)
+    if (mCar) {
+        b2Vec2 interpPos = mCar->GetInterpolatedPosition(mRenderAlpha);
+        float targetCamX = interpPos.x + Config::Physics.camera_lead_x;
+        float targetCamY = interpPos.y + Config::Physics.camera_lead_y;
 
-    mCameraX += (targetCamX - mCameraX) * Config::Physics.camera_smoothing;
-    mCameraY += (targetCamY - mCameraY) * Config::Physics.camera_smoothing;
+        mCameraX += (targetCamX - mCameraX) * Config::Physics.camera_smoothing;
+        mCameraY += (targetCamY - mCameraY) * Config::Physics.camera_smoothing;
 
-    float speed = mCar->GetSpeedKmH() / 3.6f;
-    float targetZoom = Config::Physics.zoom_base - (speed * Config::Physics.zoom_speed_factor);
-    if (targetZoom < Config::Physics.min_zoom) targetZoom = Config::Physics.min_zoom;
-    if (targetZoom > Config::Physics.max_zoom) targetZoom = Config::Physics.max_zoom;
-    mCameraZoom += (targetZoom - mCameraZoom) * Config::Physics.camera_smoothing;
-    if (sUpdateCount < 5) HCR_Log("UpdatePlaying frame %d: done", sUpdateCount++);
+        float speed = mCar->GetSpeedKmH() / 3.6f;
+        float targetZoom = Config::Physics.zoom_base - (speed * Config::Physics.zoom_speed_factor);
+        if (targetZoom < Config::Physics.min_zoom) targetZoom = Config::Physics.min_zoom;
+        if (targetZoom > Config::Physics.max_zoom) targetZoom = Config::Physics.max_zoom;
+        mCameraZoom += (targetZoom - mCameraZoom) * Config::Physics.camera_smoothing;
+    }
+
+#if defined(__PSP__)
+    if (sBenchmarkMode) {
+        static int sBenchmarkFrames = 0;
+        sBenchmarkFrames++;
+        if (sBenchmarkFrames >= 400) { // ~6.6 seconds of active simulation
+            u32 res = sceRtcGetTickResolution();
+            if (res == 0) res = 1000000;
+            double avgStepMs = (sStepCount > 0) ? (((double)sTotalStepTicks / sStepCount) * 1000.0 / res) : 0.0;
+            float avgChunkMs = Terrain::GetAverageChunkGenMs();
+            int chunkCount = Terrain::GetChunkGenCount();
+
+            FILE* pf = fopen("perf_snapshot.txt", "w");
+            if (!pf) pf = fopen("ms0:/PSP/GAME/HCR/perf_snapshot.txt", "w");
+            if (pf) {
+                fprintf(pf, "=== PPSSPP PSP-1000 Performance Snapshot (T-108) ===\n");
+                fprintf(pf, "Hardware Profile: PSP-1000 (32 MB RAM @ 333 MHz Allegrex MIPS)\n");
+                fprintf(pf, "Physics Step Avg: %.3f ms (%d steps measured)\n", avgStepMs, sStepCount);
+                fprintf(pf, "Chunk Generation Avg: %.3f ms (%d chunks measured)\n", avgChunkMs, chunkCount);
+                fprintf(pf, "Car Distance Reached: %.1f m\n", mMaxDistance);
+                fclose(pf);
+            }
+            HCR_Log("[PERF] Physics Step Avg: %.3f ms (%d steps)", avgStepMs, sStepCount);
+            HCR_Log("[PERF] Chunk Generation Avg: %.3f ms (%d chunks)", avgChunkMs, chunkCount);
+            HCR_Log("[PERF] Car Distance Reached: %.1f m", mMaxDistance);
+            printf("==================================================\n");
+            printf("  PPSSPP PSP-1000 Performance Snapshot (T-108)\n");
+            printf("  Physics Step Avg: %.3f ms (%d steps)\n", avgStepMs, sStepCount);
+            printf("  Chunk Gen Avg:    %.3f ms (%d chunks)\n", avgChunkMs, chunkCount);
+            printf("  Car Distance:     %.1f m\n", mMaxDistance);
+            printf("==================================================\n");
+            sceKernelExitGame();
+        }
+    }
+#endif
 }
 
 void Game::RenderPlaying() {
-    static int sRenderCount = 0;
-    if (sRenderCount < 5) HCR_Log("RenderPlaying frame %d: start", sRenderCount);
-
     // 1. World Rendering
     Renderer2D::SetupCamera(mCameraX, mCameraY, mCameraZoom);
 
     if (mTerrain) {
         mTerrain->Render(mCameraX, mCameraY);
     }
-    if (sRenderCount < 5) HCR_Log("RenderPlaying frame %d: terrain rendered", sRenderCount);
 
     if (mCar) {
-        mCar->Render();
+        mCar->Render(mRenderAlpha);
     }
-    if (sRenderCount < 5) HCR_Log("RenderPlaying frame %d: car rendered", sRenderCount);
 
     // 2. HUD Rendering in Screen Space
     RenderHUD();
-    if (sRenderCount < 5) HCR_Log("RenderPlaying frame %d: HUD rendered", sRenderCount++);
 }
 
 void Game::RenderHUD() {

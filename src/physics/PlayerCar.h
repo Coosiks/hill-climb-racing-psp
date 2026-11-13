@@ -6,19 +6,28 @@
 #include "graphics/Texture.h"
 #include "graphics/Renderer2D.h"
 
+struct BodyTransform {
+    b2Vec2 position;
+    float angle;
+    BodyTransform() : position(0.0f, 0.0f), angle(0.0f) {}
+    BodyTransform(const b2Vec2& p, float a) : position(p), angle(a) {}
+};
+
 class PlayerCar {
 public:
     PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int suspLvl, int tireLvl, int awdLvl);
     ~PlayerCar();
 
+    void CapturePreviousTransforms();
     void Update(float dt);
-    void Render();
+    void Render(float alpha = 1.0f);
 
     void Accelerate();
     void Decelerate();
     void Idle();
 
     b2Vec2 GetPosition() const;
+    b2Vec2 GetInterpolatedPosition(float alpha) const;
     float GetSpeedKmH() const;
     float GetEngineRev() const { return mEngineRev; }
     float GetFuel() const { return mFuel; }
@@ -50,6 +59,11 @@ private:
     b2Body* mRearWheel;
     b2Body* mFrontWheel;
     b2Body* mDriverHead;
+
+    BodyTransform mPrevChassis;
+    BodyTransform mPrevRearWheel;
+    BodyTransform mPrevFrontWheel;
+    BodyTransform mPrevDriverHead;
 
     b2WheelJoint* mRearJoint;
     b2WheelJoint* mFrontJoint;

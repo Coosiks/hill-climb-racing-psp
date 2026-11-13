@@ -120,6 +120,31 @@ bool System::IsRunning() {
     return mRunning;
 }
 
+double System::GetTimeSeconds() {
+    static u64 sStartTicks = 0;
+    static u32 sTickRes = 0;
+    u64 ticks = 0;
+    sceRtcGetCurrentTick(&ticks);
+    if (sTickRes == 0) {
+        sTickRes = sceRtcGetTickResolution();
+        if (sTickRes == 0) sTickRes = 1000000;
+        sStartTicks = ticks;
+    }
+    return (double)(ticks - sStartTicks) / (double)sTickRes;
+}
+
+float System::GetDeltaTime() {
+    static double sLastTime = 0.0;
+    double now = GetTimeSeconds();
+    if (sLastTime <= 0.0) {
+        sLastTime = now;
+        return 0.0f;
+    }
+    float dt = (float)(now - sLastTime);
+    sLastTime = now;
+    return dt;
+}
+
 void System::PollInput() {
     sceCtrlReadBufferPositive(&Pad, 1);
     ButtonsHeld = Pad.Buttons;
@@ -195,8 +220,39 @@ void System::EndFrame() {
     }
 }
 
+#include <chrono>
+
 bool System::IsRunning() {
     return mRunning;
+}
+
+double System::GetTimeSeconds() {
+    static Uint64 sStartCounter = 0;
+    static Uint64 sFreq = 0;
+    if (sFreq == 0) {
+        sFreq = SDL_GetPerformanceFrequency();
+        if (sFreq == 0) {
+            static auto sStartChrono = std::chrono::steady_clock::now();
+            auto now = std::chrono::steady_clock::now();
+            std::chrono::duration<double> diff = now - sStartChrono;
+            return diff.count();
+        }
+        sStartCounter = SDL_GetPerformanceCounter();
+    }
+    Uint64 current = SDL_GetPerformanceCounter();
+    return (double)(current - sStartCounter) / (double)sFreq;
+}
+
+float System::GetDeltaTime() {
+    static double sLastTime = 0.0;
+    double now = GetTimeSeconds();
+    if (sLastTime <= 0.0) {
+        sLastTime = now;
+        return 0.0f;
+    }
+    float dt = (float)(now - sLastTime);
+    sLastTime = now;
+    return dt;
 }
 
 void System::PollInput() {

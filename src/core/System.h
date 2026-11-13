@@ -39,6 +39,10 @@ public:
     static bool IsRunning();
     static void PollInput();
 
+    // Precision timer
+    static double GetTimeSeconds();
+    static float GetDeltaTime();
+
     // Input state
     static unsigned int ButtonsPressed; // Single-frame press
     static unsigned int ButtonsHeld;
