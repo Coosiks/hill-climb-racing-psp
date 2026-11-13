@@ -26,12 +26,13 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [x] **T-109 (physics):** Enable suspension travel limits (`enableLimit`, translation bounds).
 - [x] **T-110 (core):** Unify constants into `Config::Physics`, parse all vehicle vertices, head radii, and upgrade multipliers.
 - [ ] **T-111 (tools):** Rewrite `convert_assets.py` with CLI argparse, ZIP extraction, texture POT/tiling, offline audio conversion.
-- [ ] **T-112 (perf):** Quantize terrain heightfield math and add cross-platform heightfield hash verification test.
+- [x] **T-112 (core):** Cross-platform heightfield determinism: verified bit-exact match between glibc and newlib soft-float (4 stages, 0-2000m, 4001 pts).
 - [ ] **T-113 (tune):** Tune stunt bonuses (TODO-TUNE), add air-time bonus and fuel capacity upgrade.
 - [ ] **T-114 (docs):** Audit params.csv classification (design vs RE), clean vendor folder, strip release binaries.
 - [ ] **T-115 (release):** Release v0.1.0-beta.2 with updated notes, changelog, and clean artifacts.
 - [x] **T-116 (core):** Fix PSP-1000 heap allocation budget: replace fixed 24 MB request with dynamic allocation (`PSP_HEAP_SIZE_KB(-1024)`).
 - [ ] **T-118 (test):** Tighten seam crossing deltaVx metric in `test_terrain.cpp` (isolate natural curvature gradient from ghost-jolt collisions).
+- [x] **T-119 (perf):** Amortize terrain chunk generation into 8-vertex slices per step, eliminating the 10.9 ms frame spike on PSP-1000.
 
 ---
 
