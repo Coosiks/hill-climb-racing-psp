@@ -71,6 +71,7 @@ jobs:
           ./build-pc/test_physics
           ./build-pc/test_aircontrol
           ./build-pc/test_coasting
+          ./build-pc/test_air_sensors
 
       - name: Upload PC Artifacts
         uses: actions/upload-artifact@v4

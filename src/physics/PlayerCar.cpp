@@ -178,19 +178,27 @@ int PlayerCar::PopFlips() {
     return f;
 }
 
+static bool IsGroundContact(b2ContactEdge* ce, b2Body* wheel) {
+    if (!ce || !ce->contact || !ce->contact->IsTouching()) return false;
+    b2Fixture* fA = ce->contact->GetFixtureA();
+    b2Fixture* fB = ce->contact->GetFixtureB();
+    if (fA->IsSensor() || fB->IsSensor()) return false;
+
+    b2Fixture* other = (fA->GetBody() == wheel) ? fB : fA;
+    return (other->GetFilterData().categoryBits & CAT_TERRAIN) != 0;
+}
+
 bool PlayerCar::IsInAir() const {
     if (!mRearWheel || !mFrontWheel) return true;
 
-    // Check contact count
-    int contacts = 0;
     for (b2ContactEdge* ce = mRearWheel->GetContactList(); ce; ce = ce->next) {
-        if (ce->contact->IsTouching()) contacts++;
+        if (IsGroundContact(ce, mRearWheel)) return false;
     }
     for (b2ContactEdge* ce = mFrontWheel->GetContactList(); ce; ce = ce->next) {
-        if (ce->contact->IsTouching()) contacts++;
+        if (IsGroundContact(ce, mFrontWheel)) return false;
     }
 
-    return (contacts == 0);
+    return true;
 }
 
 void PlayerCar::Accelerate() {
