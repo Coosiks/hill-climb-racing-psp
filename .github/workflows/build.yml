@@ -21,12 +21,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export PSPDEV=/opt/pspdev
-          export PATH=$PSPDEV/bin:$PATH
+          echo "=== Step 1: Environment Diagnostics ==="
+          echo "PSPDEV=${PSPDEV:-unset}"
+          which psp-config
+          psp-config --pspdev-path
+          psp-config --pspsdk-path
+          ls -la "$(psp-config --pspsdk-path)/lib/build.mak"
+          psp-gcc --version | head -1
+          echo "======================================="
+          test -f "$(psp-config --pspsdk-path)/lib/build.mak"
           make -j$(nproc) 2>&1 | tee build_psp.log
-          test -f EBOOT.PBP && test -s EBOOT.PBP
-          ls -la EBOOT.PBP hcr.elf
-          sha256sum EBOOT.PBP hcr.elf
+          test -s EBOOT.PBP && ls -la EBOOT.PBP hcr.elf && sha256sum EBOOT.PBP hcr.elf
 
       - name: Upload PSP Artifacts
         uses: actions/upload-artifact@v4

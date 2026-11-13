@@ -71,6 +71,9 @@ PSP_EBOOT_TITLE = Hill Climb Racing
 PSP_EBOOT_ICON = ICON0.PNG
 PSP_EBOOT_PIC1 = PIC1.PNG
 
-PSPSDK = $(shell psp-config --pspsdk-path)
+PSPSDK := $(shell psp-config --pspsdk-path)
+ifeq ($(wildcard $(PSPSDK)/lib/build.mak),)
+$(error build.mak not found at $(PSPSDK)/lib — psp-config trusts $$PSPDEV; check your environment)
+endif
 include $(PSPSDK)/lib/build.mak
 
