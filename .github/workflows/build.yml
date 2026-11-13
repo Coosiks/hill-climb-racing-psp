@@ -51,8 +51,7 @@ jobs:
 
       - name: Run Determinism & Verification Tests
         run: |
-          g++ -Isrc -Ivendor -Ivendor/Box2D tools/test_physics.cpp vendor/Box2D/Box2D/Common/b2Math.cpp vendor/Box2D/Box2D/Common/b2Settings.cpp -o run_tests
-          ./run_tests 2>&1 | tee test_results.log
+          ./build-pc/test_physics 2>&1 | tee test_results.log
 
       - name: Upload PC Artifacts
         uses: actions/upload-artifact@v4
