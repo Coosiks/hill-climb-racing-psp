@@ -3,7 +3,7 @@ updated: 2026-11-14
 commit: 2343295 (code hash; docs commits excluded)
 milestone: M0.2
 version: v0.1.0-beta.1
-ci: passing
+ci: passing (verified in CI run 43526975963)
 ---
 
 ## Работает (с proof-ссылками на agent_reports/скриншоты/логи)
