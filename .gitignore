@@ -30,6 +30,7 @@ save*.bin*
 save*.dat*
 *.bak
 hcr_log.txt
+*.csv
 
 # IDE & Editor files
 .vscode/

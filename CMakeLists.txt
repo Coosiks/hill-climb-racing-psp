@@ -42,4 +42,16 @@ target_compile_definitions(hcr_pc PRIVATE NDEBUG)
 add_executable(test_physics tools/test_physics.cpp)
 target_link_libraries(test_physics box2d m pthread)
 
+add_executable(test_aircontrol
+    tools/test_aircontrol.cpp
+    src/physics/PlayerCar.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Renderer2D.cpp
+    src/core/Config.cpp
+    src/core/System.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_aircontrol box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
+
 

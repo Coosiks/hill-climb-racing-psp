@@ -252,12 +252,12 @@ void PlayerCar::Update(float dt) {
 
         mAirRotation += deltaAngle;
 
-        // Backflip (clockwise in Box2D)
+        // Backflip (counter-clockwise in Box2D, positive rotation)
         if (mAirRotation >= 6.2831853f * 0.92f) {
             mFlipsCount++;
             mAirRotation -= 6.2831853f;
         }
-        // Frontflip (counter-clockwise)
+        // Frontflip (clockwise in Box2D, negative rotation)
         else if (mAirRotation <= -6.2831853f * 0.92f) {
             mFlipsCount--;
             mAirRotation += 6.2831853f;
@@ -291,9 +291,9 @@ void PlayerCar::Update(float dt) {
             mFrontJoint->EnableMotor(true);
         }
 
-        // Air control: nose down (smooth 10 N*m, only when truly airborne)
+        // Air control: gas tilts nose up (backflip, CCW, positive torque)
         if (mAirTime > 0.08f) {
-            mChassis->ApplyTorque(-AIR_PITCH_TORQUE, true);
+            mChassis->ApplyTorque(AIR_PITCH_TORQUE, true);
         }
     } else if (mBrakeActive) {
         float forwardSpeed = mChassis->GetLinearVelocity().x;
@@ -323,9 +323,9 @@ void PlayerCar::Update(float dt) {
             }
         }
 
-        // Air control: nose up backflip (smooth 10 N*m, only when truly airborne)
+        // Air control: brake tilts nose down (frontflip, CW, negative torque)
         if (mAirTime > 0.08f) {
-            mChassis->ApplyTorque(AIR_PITCH_TORQUE, true);
+            mChassis->ApplyTorque(-AIR_PITCH_TORQUE, true);
         }
     } else {
         // Coasting / Idle: disable motor so wheels rotate completely freely down hills
