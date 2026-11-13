@@ -6,7 +6,7 @@
 
 PSP_MODULE_INFO("HillClimbRacing", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
-PSP_HEAP_SIZE_KB(24 * 1024); // 24 MB user heap budget
+PSP_HEAP_SIZE_KB(-1024); // Allocate all available user partition memory minus 1 MB headroom
 #endif
 
 #include <string.h>
