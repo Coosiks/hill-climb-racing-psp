@@ -46,4 +46,8 @@ FUEL_DRAIN_DRIVE,2.20,measured,2026-11-12,Throttle active consumption per second
 TERRAIN_SEGMENT_STEP,0.50,extracted,2026-11-12,Terrain segment width
 CAMERA_LEAD_X,3.50,measured,2026-11-12,Lookahead distance in front of car
 CAMERA_SMOOTH_FACTOR,0.12,measured,2026-11-12,Exponential camera follow smoothing
+PSP_HEAP_SIZE_KB_OVERHEAD,-1024,design/TODO-TUNE,2026-11-14,Dynamic heap threshold in sce_newlib_heap_kb_size
+ITEM_DESPAWN_DISTANCE_BEHIND,40.0,design/TODO-TUNE,2026-11-14,Despawn threshold for items behind player
+TERRAIN_CHUNK_WIDTH_METERS,30.0,design/TODO-TUNE,2026-11-14,b2ChainShape chunk width
+TERRAIN_CHUNK_POOL_SLOTS,6,design/TODO-TUNE,2026-11-14,Preallocated b2ChainShape chunk pool slots
 

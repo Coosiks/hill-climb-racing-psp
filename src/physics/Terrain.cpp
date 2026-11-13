@@ -8,9 +8,8 @@ static inline float clampf(float v, float lo, float hi) {
 }
 
 Terrain::Terrain(b2World* world, StageType stageType)
-    : mWorld(world), mStageType(stageType), mPointCount(0),
-      mLastGeneratedX(0.0f), mFirstGeneratedX(0.0f),
-      mTerrainBody(NULL), mItemCount(0), mLastItemSpawnX(15.0f),
+    : mWorld(world), mStageType(stageType),
+      mRearWallBody(NULL), mItemCount(0), mLastItemSpawnX(15.0f),
       mQueueHead(0), mQueueTail(0), mQueueCount(0) {
 
     for (int i = 0; i < DEFERRED_QUEUE_CAPACITY; ++i) {
@@ -48,37 +47,40 @@ Terrain::Terrain(b2World* world, StageType stageType)
     mTexCoin500.LoadPNG("assets/Coin500.png");
     mTexFuel.LoadPNG("assets/fuel-canister.png");
 
-    // Create terrain static body
-    b2BodyDef bd;
-    bd.type = b2_staticBody;
-    bd.position.Set(0.0f, 0.0f);
-    mTerrainBody = mWorld->CreateBody(&bd);
-
-    // Initial points around spawn (-20m to +50m) at exact 0.5m segment step
-    float startX = -20.0f;
-    float endX = 50.0f;
-    float step = 0.5f;
-
-    mFirstGeneratedX = startX;
-    mLastGeneratedX = startX;
-
-    while (mLastGeneratedX <= endX && mPointCount < MAX_TERRAIN_POINTS) {
-        mPointsX[mPointCount] = mLastGeneratedX;
-        mPointsY[mPointCount] = GetHeightAtX(mLastGeneratedX);
-        mPointCount++;
-        mLastGeneratedX += step;
-    }
-
-    RebuildCollision();
+    InitChunkPool();
+    UpdateChunkWindow(0);
 }
 
 Terrain::~Terrain() {
+    // 1. Destroy chunk pool bodies
+    for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
+        if (mChunks[i].fixture && mChunks[i].body) {
+            mChunks[i].body->DestroyFixture(mChunks[i].fixture);
+            mChunks[i].fixture = NULL;
+        }
+        if (mChunks[i].body) {
+            mWorld->DestroyBody(mChunks[i].body);
+            mChunks[i].body = NULL;
+        }
+        mChunks[i].active = false;
+        mChunks[i].chunkIndex = -1;
+    }
+
+    // 2. Destroy rear wall body
+    if (mRearWallBody) {
+        mWorld->DestroyBody(mRearWallBody);
+        mRearWallBody = NULL;
+    }
+
+    // 3. Clear deferred queue
     mQueueHead = 0;
     mQueueTail = 0;
     mQueueCount = 0;
     for (int i = 0; i < DEFERRED_QUEUE_CAPACITY; ++i) {
         mDestroyQueue[i] = NULL;
     }
+
+    // 4. Destroy active item bodies
     for (int i = 0; i < mItemCount; ++i) {
         if (mItems[i].body) {
             mWorld->DestroyBody(mItems[i].body);
@@ -86,10 +88,6 @@ Terrain::~Terrain() {
         }
     }
     mItemCount = 0;
-    if (mTerrainBody) {
-        mWorld->DestroyBody(mTerrainBody);
-        mTerrainBody = NULL;
-    }
 }
 
 b2Body* Terrain::SpawnItem(float x, float y, int type) {
@@ -297,137 +295,203 @@ float Terrain::GetHeightAtX(float x) const {
     }
 }
 
-void Terrain::RebuildCollision() {
-    if (!mTerrainBody) return;
+void Terrain::InitChunkPool() {
+    // 1. Rear boundary wall: dedicated static body
+    b2BodyDef wallBd;
+    wallBd.type = b2_staticBody;
+    wallBd.position.Set(0.0f, 0.0f);
+    mRearWallBody = mWorld->CreateBody(&wallBd);
 
-    // Remove existing fixtures
-    b2Fixture* f = mTerrainBody->GetFixtureList();
-    while (f) {
-        b2Fixture* next = f->GetNext();
-        mTerrainBody->DestroyFixture(f);
-        f = next;
+    b2EdgeShape wall;
+    wall.Set(b2Vec2(-20.0f, -15.0f), b2Vec2(-20.0f, 35.0f));
+    b2FixtureDef wfd;
+    wfd.shape = &wall;
+    wfd.friction = 0.0f;
+    wfd.filter.categoryBits = CAT_TERRAIN;
+    wfd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL | CAT_DRIVER;
+    mRearWallBody->CreateFixture(&wfd);
+
+    // 2. Chunk pool: static bodies
+    b2BodyDef chunkBd;
+    chunkBd.type = b2_staticBody;
+    chunkBd.position.Set(0.0f, 0.0f);
+
+    for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
+        mChunks[i].chunkIndex = -1;
+        mChunks[i].body = mWorld->CreateBody(&chunkBd);
+        mChunks[i].fixture = NULL;
+        mChunks[i].active = false;
+        for (int v = 0; v < VERTS_PER_CHUNK; ++v) {
+            mChunks[i].vertices[v].SetZero();
+        }
+    }
+}
+
+void Terrain::GenerateChunkVertices(int chunkIndex, b2Vec2* outVerts, b2Vec2* outPrev, b2Vec2* outNext) const {
+    float startX = (float)chunkIndex * CHUNK_WIDTH_METERS;
+    for (int i = 0; i < VERTS_PER_CHUNK; ++i) {
+        float x = startX + (float)i * CHUNK_STEP_METERS;
+        outVerts[i].Set(x, GetHeightAtX(x));
+    }
+    if (outPrev) {
+        float prevX = startX - CHUNK_STEP_METERS;
+        outPrev->Set(prevX, GetHeightAtX(prevX));
+    }
+    if (outNext) {
+        float nextX = startX + (float)(VERTS_PER_CHUNK - 1) * CHUNK_STEP_METERS + CHUNK_STEP_METERS;
+        outNext->Set(nextX, GetHeightAtX(nextX));
+    }
+}
+
+void Terrain::LoadChunk(int slotIdx, int chunkIndex) {
+    TerrainChunk& slot = mChunks[slotIdx];
+    if (slot.active && slot.fixture && slot.body) {
+        slot.body->DestroyFixture(slot.fixture);
+        slot.fixture = NULL;
     }
 
-    if (mPointCount < 2) return;
+    b2Vec2 prevV, nextV;
+    GenerateChunkVertices(chunkIndex, slot.vertices, &prevV, &nextV);
 
-    float friction = GetStageFriction();
+    b2ChainShape chain;
+    chain.CreateChain(slot.vertices, VERTS_PER_CHUNK);
+    chain.SetPrevVertex(prevV);
+    chain.SetNextVertex(nextV);
 
-    // Create edge segments
-    b2EdgeShape edge;
     b2FixtureDef fd;
-    fd.shape = &edge;
-    fd.friction = friction;
+    fd.shape = &chain;
+    fd.friction = GetStageFriction();
     fd.restitution = 0.0f;
     fd.filter.categoryBits = CAT_TERRAIN;
     fd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL | CAT_DRIVER;
+    slot.fixture = slot.body->CreateFixture(&fd);
 
-    for (int i = 0; i < mPointCount - 1; ++i) {
-        b2Vec2 v1(mPointsX[i], mPointsY[i]);
-        b2Vec2 v2(mPointsX[i + 1], mPointsY[i + 1]);
-        edge.Set(v1, v2);
-        mTerrainBody->CreateFixture(&fd);
+    slot.chunkIndex = chunkIndex;
+    slot.active = true;
+}
+
+void Terrain::UnloadChunk(int slotIdx) {
+    TerrainChunk& slot = mChunks[slotIdx];
+    if (slot.active && slot.fixture && slot.body) {
+        slot.body->DestroyFixture(slot.fixture);
+        slot.fixture = NULL;
+    }
+    slot.chunkIndex = -1;
+    slot.active = false;
+}
+
+void Terrain::UpdateChunkWindow(int currentChunk) {
+    int minChunk = currentChunk - 1;
+    if (minChunk < -1) minChunk = -1; // -1 covers [-30m, 0m] behind spawn
+    int maxChunk = currentChunk + 2;
+
+    // 1. Unload chunks out of window
+    for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
+        if (mChunks[i].active) {
+            if (mChunks[i].chunkIndex < minChunk || mChunks[i].chunkIndex > maxChunk) {
+                UnloadChunk(i);
+            }
+        }
     }
 
-    // Rear boundary wall so player cannot reverse off the left edge
-    b2EdgeShape wall;
-    wall.Set(b2Vec2(mPointsX[0], -15.0f), b2Vec2(mPointsX[0], 35.0f));
-    fd.shape = &wall;
-    mTerrainBody->CreateFixture(&fd);
+    // 2. Load missing in-window chunks
+    for (int c = minChunk; c <= maxChunk; ++c) {
+        bool alreadyLoaded = false;
+        for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
+            if (mChunks[i].active && mChunks[i].chunkIndex == c) {
+                alreadyLoaded = true;
+                break;
+            }
+        }
+        if (!alreadyLoaded) {
+            int freeSlot = -1;
+            for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
+                if (!mChunks[i].active) {
+                    freeSlot = i;
+                    break;
+                }
+            }
+            if (freeSlot >= 0) {
+                LoadChunk(freeSlot, c);
+
+                // Spawn items ahead for newly loaded forward chunks
+                float chunkStart = (float)c * CHUNK_WIDTH_METERS;
+                float chunkEnd = chunkStart + CHUNK_WIDTH_METERS;
+                if (chunkEnd > mLastItemSpawnX + 30.0f) {
+                    SpawnItemsAhead(chunkStart, chunkEnd);
+                }
+            }
+        }
+    }
+}
+
+int Terrain::GetActiveChunkCount() const {
+    int count = 0;
+    for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
+        if (mChunks[i].active) count++;
+    }
+    return count;
 }
 
 void Terrain::SpawnItemsAhead(float startX, float endX) {
     if (endX - mLastItemSpawnX < 30.0f) return;
 
-    // Spawn pattern
     float spawnX = mLastItemSpawnX + 35.0f;
     mLastItemSpawnX = spawnX;
 
-    // Decide whether to spawn fuel or coin pack
     bool spawnFuel = ((int)(spawnX) % 90 < 35);
 
     if (spawnFuel && mItemCount < MAX_COLLECTIBLES) {
         float y = GetHeightAtX(spawnX) + 1.2f;
         SpawnItem(spawnX, y, 1000); // 1000 = Fuel
     } else {
-        // Spawn coin arc (3 coins)
         int coinVal = (spawnX > 300.0f) ? 100 : (spawnX > 100.0f ? 25 : 5);
         for (int k = 0; k < 3 && mItemCount < MAX_COLLECTIBLES; ++k) {
-            float cx = spawnX + k * 1.5f;
-            float cy = GetHeightAtX(cx) + 1.0f + sinf(k * 1.0f) * 0.4f;
+            float cx = spawnX + (float)k * 1.5f;
+            float cy = GetHeightAtX(cx) + 1.0f + sinf((float)k * 1.0f) * 0.4f;
             SpawnItem(cx, cy, coinVal);
         }
     }
 }
 
 void Terrain::Update(float playerX) {
-    float aheadLimit = playerX + 45.0f;
-
-    // Generate new points ahead with exact 0.5m segment step
-    float step = 0.5f;
-    bool added = false;
-    float friction = GetStageFriction();
-
-    while (mLastGeneratedX <= aheadLimit && mPointCount < MAX_TERRAIN_POINTS) {
-        mPointsX[mPointCount] = mLastGeneratedX;
-        mPointsY[mPointCount] = GetHeightAtX(mLastGeneratedX);
-        mPointCount++;
-        mLastGeneratedX += step;
-        added = true;
-
-        // Add edge fixture directly
-        if (mTerrainBody && mPointCount >= 2) {
-            b2EdgeShape edge;
-            b2Vec2 v1(mPointsX[mPointCount - 2], mPointsY[mPointCount - 2]);
-            b2Vec2 v2(mPointsX[mPointCount - 1], mPointsY[mPointCount - 1]);
-            edge.Set(v1, v2);
-
-            b2FixtureDef fd;
-            fd.shape = &edge;
-            fd.friction = friction;
-            fd.restitution = 0.0f;
-            fd.filter.categoryBits = CAT_TERRAIN;
-            fd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL | CAT_DRIVER;
-            mTerrainBody->CreateFixture(&fd);
-        }
-    }
-
-    if (added) {
-        SpawnItemsAhead(playerX, aheadLimit);
-    }
+    int currentChunk = (int)floorf(playerX / CHUNK_WIDTH_METERS);
+    UpdateChunkWindow(currentChunk);
 }
 
 void Terrain::Render(float cameraX, float cameraY) {
-    if (mPointCount < 2) return;
-
-    // Find the visible slice of terrain points on screen (fast culling)
     float minVisX = cameraX - 12.0f;
     float maxVisX = cameraX + 22.0f;
 
-    int startIdx = 0;
-    while (startIdx < mPointCount - 1 && mPointsX[startIdx + 1] < minVisX) {
-        startIdx++;
+    int startChunk = (int)floorf(minVisX / CHUNK_WIDTH_METERS);
+    int endChunk = (int)floorf(maxVisX / CHUNK_WIDTH_METERS);
+
+    int renderCount = 0;
+    for (int c = startChunk; c <= endChunk; ++c) {
+        for (int s = 0; s < NUM_CHUNK_SLOTS; ++s) {
+            if (mChunks[s].active && mChunks[s].chunkIndex == c) {
+                for (int i = 0; i < VERTS_PER_CHUNK; ++i) {
+                    if (renderCount > 0 && mRenderX[renderCount - 1] == mChunks[s].vertices[i].x) {
+                        continue; // skip duplicate border vertex
+                    }
+                    if (renderCount < MAX_RENDER_POINTS) {
+                        mRenderX[renderCount] = mChunks[s].vertices[i].x;
+                        mRenderY[renderCount] = mChunks[s].vertices[i].y;
+                        renderCount++;
+                    }
+                }
+                break;
+            }
+        }
     }
 
-    int endIdx = startIdx;
-    while (endIdx < mPointCount - 1 && mPointsX[endIdx] < maxVisX) {
-        endIdx++;
-    }
-    if (endIdx < mPointCount - 1) {
-        endIdx++; // one extra point to avoid gap at edge of screen
+    if (renderCount >= 2) {
+        float bottomY = cameraY - 14.0f;
+        Renderer2D::DrawTerrainFill(&mTexGround, mRenderX, mRenderY, renderCount, bottomY);
+        Renderer2D::DrawTerrainSurface(&mTexSurface, mRenderX, mRenderY, renderCount, 0.6f);
     }
 
-    int visibleCount = endIdx - startIdx + 1;
-    if (visibleCount < 2) return;
-
-    float bottomY = cameraY - 14.0f; // well below visible screen
-
-    // 1. Draw ground fill for visible slice only (fast & locked to world UVs)
-    Renderer2D::DrawTerrainFill(&mTexGround, &mPointsX[startIdx], &mPointsY[startIdx], visibleCount, bottomY);
-
-    // 2. Draw surface ribbon for visible slice only
-    Renderer2D::DrawTerrainSurface(&mTexSurface, &mPointsX[startIdx], &mPointsY[startIdx], visibleCount, 0.6f);
-
-    // 3. Draw Collectibles (only if within visible range)
+    // Draw Collectibles (only if within visible range)
     for (int i = 0; i < mItemCount; ++i) {
         if (!mItems[i].collected && mItems[i].x >= minVisX && mItems[i].x <= maxVisX) {
             Texture* tex = &mTexCoin5;

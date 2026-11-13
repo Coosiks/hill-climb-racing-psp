@@ -13,9 +13,22 @@ struct Collectible {
     bool collected;
 };
 
-#define MAX_TERRAIN_POINTS 8192
-#define MAX_COLLECTIBLES   64
+#define MAX_COLLECTIBLES        64
 #define DEFERRED_QUEUE_CAPACITY 64
+
+#define CHUNK_WIDTH_METERS 30.0f
+#define CHUNK_STEP_METERS  0.5f
+#define VERTS_PER_CHUNK    61 // (30 / 0.5) + 1 vertices
+#define NUM_CHUNK_SLOTS    6
+#define MAX_RENDER_POINTS  256
+
+struct TerrainChunk {
+    int chunkIndex;
+    b2Body* body;
+    b2Fixture* fixture;
+    b2Vec2 vertices[VERTS_PER_CHUNK];
+    bool active;
+};
 
 class Terrain {
 public:
@@ -35,19 +48,23 @@ public:
     int GetItemCount() const { return mItemCount; }
     const Collectible* GetItems() const { return mItems; }
 
+    int GetActiveChunkCount() const;
+    int GetTotalChunkSlots() const { return NUM_CHUNK_SLOTS; }
+    b2Body* GetRearWallBody() const { return mRearWallBody; }
+
+    void GenerateChunkVertices(int chunkIndex, b2Vec2* outVerts, b2Vec2* outPrev, b2Vec2* outNext) const;
+
 private:
     b2World* mWorld;
     StageType mStageType;
 
-    // Sliding window of generated points
-    float mPointsX[MAX_TERRAIN_POINTS];
-    float mPointsY[MAX_TERRAIN_POINTS];
-    int mPointCount;
-    float mLastGeneratedX;
-    float mFirstGeneratedX;
+    // Static chunk pool
+    TerrainChunk mChunks[NUM_CHUNK_SLOTS];
+    b2Body* mRearWallBody;
 
-    // Box2D body for terrain chain
-    b2Body* mTerrainBody;
+    // Render coordinates cache
+    float mRenderX[MAX_RENDER_POINTS];
+    float mRenderY[MAX_RENDER_POINTS];
 
     // Collectibles
     Collectible mItems[MAX_COLLECTIBLES];
@@ -69,7 +86,10 @@ private:
     Texture mTexCoin500;
     Texture mTexFuel;
 
-    void RebuildCollision();
+    void InitChunkPool();
+    void UpdateChunkWindow(int currentChunk);
+    void LoadChunk(int slotIdx, int chunkIndex);
+    void UnloadChunk(int slotIdx);
     void SpawnItemsAhead(float startX, float endX);
 };
 
