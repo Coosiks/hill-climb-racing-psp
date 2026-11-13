@@ -16,6 +16,8 @@
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
+// MODIFIED: translation-limit solver backported from Box2D 2.4.1 (see docs/VENDOR_PATCHES.md). Original Box2D (c) Erin Catto, zlib license.
+
 #include <Box2D/Dynamics/Joints/b2WheelJoint.h>
 #include <Box2D/Dynamics/b2Body.h>
 #include <Box2D/Dynamics/b2TimeStep.h>
