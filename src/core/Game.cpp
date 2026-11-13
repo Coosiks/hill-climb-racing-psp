@@ -519,26 +519,34 @@ void Game::UpdatePlaying(float frameTime) {
             if (res == 0) res = 1000000;
             double avgStepMs = (sStepCount > 0) ? (((double)sTotalStepTicks / sStepCount) * 1000.0 / res) : 0.0;
             float avgChunkMs = Terrain::GetAverageChunkGenMs();
+            float maxPerFrameMs = Terrain::GetMaxPerFrameGenMs();
+            float avgPerFrameMs = Terrain::GetAveragePerFrameGenMs();
             int chunkCount = Terrain::GetChunkGenCount();
 
             FILE* pf = fopen("perf_snapshot.txt", "w");
             if (!pf) pf = fopen("ms0:/PSP/GAME/HCR/perf_snapshot.txt", "w");
             if (pf) {
-                fprintf(pf, "=== PPSSPP PSP-1000 Performance Snapshot (T-108) ===\n");
+                fprintf(pf, "=== PPSSPP PSP-1000 Performance Snapshot (T-119) ===\n");
                 fprintf(pf, "Hardware Profile: PSP-1000 (32 MB RAM @ 333 MHz Allegrex MIPS)\n");
                 fprintf(pf, "Physics Step Avg: %.3f ms (%d steps measured)\n", avgStepMs, sStepCount);
-                fprintf(pf, "Chunk Generation Avg: %.3f ms (%d chunks measured)\n", avgChunkMs, chunkCount);
+                fprintf(pf, "Chunk Gen (Full) Avg: %.3f ms (%d chunks measured)\n", avgChunkMs, chunkCount);
+                fprintf(pf, "Per-Frame Gen Max: %.3f ms\n", maxPerFrameMs);
+                fprintf(pf, "Per-Frame Gen Avg: %.3f ms\n", avgPerFrameMs);
                 fprintf(pf, "Car Distance Reached: %.1f m\n", mMaxDistance);
                 fclose(pf);
             }
             HCR_Log("[PERF] Physics Step Avg: %.3f ms (%d steps)", avgStepMs, sStepCount);
-            HCR_Log("[PERF] Chunk Generation Avg: %.3f ms (%d chunks)", avgChunkMs, chunkCount);
+            HCR_Log("[PERF] Chunk Gen (Full) Avg: %.3f ms (%d chunks)", avgChunkMs, chunkCount);
+            HCR_Log("[PERF] Per-Frame Gen Max: %.3f ms", maxPerFrameMs);
+            HCR_Log("[PERF] Per-Frame Gen Avg: %.3f ms", avgPerFrameMs);
             HCR_Log("[PERF] Car Distance Reached: %.1f m", mMaxDistance);
             printf("==================================================\n");
-            printf("  PPSSPP PSP-1000 Performance Snapshot (T-108)\n");
-            printf("  Physics Step Avg: %.3f ms (%d steps)\n", avgStepMs, sStepCount);
-            printf("  Chunk Gen Avg:    %.3f ms (%d chunks)\n", avgChunkMs, chunkCount);
-            printf("  Car Distance:     %.1f m\n", mMaxDistance);
+            printf("  PPSSPP PSP-1000 Performance Snapshot (T-119)\n");
+            printf("  Physics Step Avg:     %.3f ms (%d steps)\n", avgStepMs, sStepCount);
+            printf("  Chunk Gen (Full) Avg: %.3f ms (%d chunks)\n", avgChunkMs, chunkCount);
+            printf("  Per-Frame Gen Max:    %.3f ms\n", maxPerFrameMs);
+            printf("  Per-Frame Gen Avg:    %.3f ms\n", avgPerFrameMs);
+            printf("  Car Distance:         %.1f m\n", mMaxDistance);
             printf("==================================================\n");
             sceKernelExitGame();
         }

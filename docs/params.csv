@@ -54,4 +54,5 @@ CAMERA_ZOOM_BASE,1.0,design/TODO-TUNE,2026-11-14,Base camera zoom level at zero 
 CAMERA_ZOOM_SPEED_FACTOR,0.005,design/TODO-TUNE,2026-11-14,Dynamic camera zoom factor proportional to speed
 CAMERA_MIN_ZOOM,0.8,design/TODO-TUNE,2026-11-14,Minimum camera zoom bound
 CAMERA_MAX_ZOOM,1.2,design/TODO-TUNE,2026-11-14,Maximum camera zoom bound
+CHUNK_GEN_VERTICES_PER_STEP,8,design/TODO-TUNE,2026-11-14,Amortized vertex generation batch size per step
 

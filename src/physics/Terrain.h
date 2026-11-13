@@ -2,6 +2,7 @@
 #define HCR_TERRAIN_H
 
 #include <Box2D/Box2D.h>
+#include <stdint.h>
 #include "core/GameConstants.h"
 #include "graphics/Texture.h"
 #include "graphics/Renderer2D.h"
@@ -21,12 +22,18 @@ struct Collectible {
 #define VERTS_PER_CHUNK    61 // (30 / 0.5) + 1 vertices
 #define NUM_CHUNK_SLOTS    6
 #define MAX_RENDER_POINTS  256
+#define CHUNK_GEN_BUDGET   8  // N vertices computed per step (design/TODO-TUNE)
 
 struct TerrainChunk {
     int chunkIndex;
     b2Body* body;
     b2Fixture* fixture;
     b2Vec2 vertices[VERTS_PER_CHUNK];
+    b2Vec2 prevVertex;
+    b2Vec2 nextVertex;
+    int verticesComputed;
+    uint64_t accumulatedTicks;
+    bool ready;
     bool active;
 };
 
@@ -49,6 +56,8 @@ public:
     const Collectible* GetItems() const { return mItems; }
 
     static float GetAverageChunkGenMs();
+    static float GetMaxPerFrameGenMs();
+    static float GetAveragePerFrameGenMs();
     static int GetChunkGenCount();
 
     int GetActiveChunkCount() const;
@@ -91,7 +100,9 @@ private:
 
     void InitChunkPool();
     void UpdateChunkWindow(int currentChunk);
-    void LoadChunk(int slotIdx, int chunkIndex);
+    void StartChunkGeneration(int slotIdx, int chunkIndex);
+    bool AdvanceGeneration(int slotIdx, int budget);
+    void CompleteChunkImmediately(int slotIdx);
     void UnloadChunk(int slotIdx);
     void SpawnItemsAhead(float startX, float endX);
 };

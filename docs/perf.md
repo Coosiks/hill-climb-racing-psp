@@ -40,18 +40,25 @@ An on-screen telemetry overlay can be toggled in debug builds (`SELECT + START`)
 
 ---
 
-## 4. PPSSPP PSP-1000 Baseline Snapshot (T-108)
+## 4. PPSSPP PSP-1000 Baseline & Amortized Snapshots (T-108, T-119)
 
 > [!WARNING]
 > **Emulation Notice:** Measurements below were captured on PPSSPP v1.20.4 in **PSP-1000 mode** (`PSPModel = 0`, 32 MB user RAM) with JIT CPU core @ 333 MHz. PPSSPP emulation timings do NOT equal real PSP hardware. Soft-double floating point operations on real Allegrex MIPS hardware are substantially more expensive. Full physical hardware profiling and budget enforcement is deferred to **T-052**.
 
-### Measured Snapshot (Automated 400-step Benchmark Run)
+### Measured Snapshot: Amortized Chunk Generation (T-119, 400-step Benchmark)
 - **Physics World Stepping (`mPhysics->Step(fixedDt)`):**
   - Average step latency: **0.239 ms** (measured over 400 steps @ 60 Hz).
-  - Progressive step latency: 0.171 ms (60 steps) $\to$ 0.204 ms (120 steps) $\to$ 0.215 ms (180 steps) $\to$ 0.228 ms (300 steps) $\to$ 0.239 ms (400 steps).
-  - Active bodies during run: 15–19 bodies (chassis, 2 wheels, head, 6 terrain chunk chain fixtures, coin/fuel sensors).
-- **Terrain Chunk Generation & Physics Chain Creation (`Terrain::LoadChunk`):**
-  - Average chunk generation latency: **10.922 ms** (measured over 6 chunks generated dynamically as car drove 55.6 m).
-  - Involves trigonometric heightfield evaluation (`cos`/`sin` double math) and Box2D `b2ChainShape` creation with `SetPrevVertex` / `SetNextVertex`.
+  - Progressive step latency: 0.169 ms (60 steps) $\to$ 0.204 ms (120 steps) $\to$ 0.214 ms (180 steps) $\to$ 0.227 ms (240 steps) $\to$ 0.227 ms (300 steps) $\to$ 0.232 ms (360 steps) $\to$ 0.239 ms (400 steps).
+  - Active bodies during run: 15–19 bodies (chassis, 2 wheels, head, 6 terrain chunk bodies, coin/fuel sensors).
+- **Amortized Chunk Generation (`Terrain::AdvanceGeneration`):**
+  - **Per-Frame Generation Latency (Max):** **1.928 ms** (eliminated the 10.9 ms single-frame spike; budget $\le 2.0$ ms).
+  - **Per-Frame Generation Latency (Avg):** **1.473 ms** (when generation slice is active).
+  - **Full Chunk Assembly Latency (Avg across slices):** **10.943 ms** (measured across 6 completed chunks).
+  - Chunk batch budget: 8 vertices per step (`CHUNK_GEN_BUDGET = 8`).
 - **Vehicle Progress:**
   - Car reached **55.6 m** in countryside stage during the 400 simulation steps.
+
+### Historical Comparison: Baseline Unamortized Generation (T-108)
+- Single-frame Chunk Generation Spike: **10.922 ms** (all 61 vertices evaluated synchronously in 1 frame).
+- Impact: Dropped frames every 30 meters on real PSP hardware.
+- Resolution in T-119: 2-phase amortized pipeline (incremental 8-vertex computation + atomic chain creation upon completion) reduced maximum per-frame latency from **10.922 ms** down to **1.928 ms** (an **82.3% reduction** in peak frame cost).

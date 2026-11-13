@@ -5,6 +5,11 @@
 
 #if defined(__PSP__)
 #include <psprtc.h>
+static u64 sTotalChunkFullGenTicks = 0;
+static int sCompletedChunkCount = 0;
+static u64 sMaxPerFrameGenTicks = 0;
+static u64 sTotalPerFrameGenTicks = 0;
+static int sPerFrameGenCount = 0;
 #endif
 
 static inline float clampf(float v, float lo, float hi) {
@@ -36,6 +41,18 @@ Terrain::Terrain(b2World* world, StageType stageType)
 
     InitChunkPool();
     UpdateChunkWindow(0);
+    // Synchronously generate initial loading window: chunks -1, 0, 1, 2
+    for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
+        if (mChunks[i].active && !mChunks[i].ready && mChunks[i].chunkIndex <= 2) {
+            CompleteChunkImmediately(i);
+        }
+    }
+#if defined(__PSP__)
+    // Reset runtime stats so synchronous startup loading is not counted
+    sMaxPerFrameGenTicks = 0;
+    sTotalPerFrameGenTicks = 0;
+    sPerFrameGenCount = 0;
+#endif
 }
 
 Terrain::~Terrain() {
@@ -304,9 +321,14 @@ void Terrain::InitChunkPool() {
         mChunks[i].body = mWorld->CreateBody(&chunkBd);
         mChunks[i].fixture = NULL;
         mChunks[i].active = false;
+        mChunks[i].ready = false;
+        mChunks[i].verticesComputed = 0;
+        mChunks[i].accumulatedTicks = 0;
         for (int v = 0; v < VERTS_PER_CHUNK; ++v) {
             mChunks[i].vertices[v].SetZero();
         }
+        mChunks[i].prevVertex.SetZero();
+        mChunks[i].nextVertex.SetZero();
     }
 }
 
@@ -326,17 +348,35 @@ void Terrain::GenerateChunkVertices(int chunkIndex, b2Vec2* outVerts, b2Vec2* ou
     }
 }
 
-#if defined(__PSP__)
-static u64 sTotalChunkTicks = 0;
-static int sChunkGenCount = 0;
-#endif
+
 
 float Terrain::GetAverageChunkGenMs() {
 #if defined(__PSP__)
-    if (sChunkGenCount <= 0) return 0.0f;
+    if (sCompletedChunkCount <= 0) return 0.0f;
     u32 res = sceRtcGetTickResolution();
     if (res == 0) res = 1000000;
-    return (float)(((double)sTotalChunkTicks / (double)sChunkGenCount) * 1000.0 / (double)res);
+    return (float)(((double)sTotalChunkFullGenTicks / (double)sCompletedChunkCount) * 1000.0 / (double)res);
+#else
+    return 0.0f;
+#endif
+}
+
+float Terrain::GetMaxPerFrameGenMs() {
+#if defined(__PSP__)
+    u32 res = sceRtcGetTickResolution();
+    if (res == 0) res = 1000000;
+    return (float)(((double)sMaxPerFrameGenTicks) * 1000.0 / (double)res);
+#else
+    return 0.0f;
+#endif
+}
+
+float Terrain::GetAveragePerFrameGenMs() {
+#if defined(__PSP__)
+    if (sPerFrameGenCount <= 0) return 0.0f;
+    u32 res = sceRtcGetTickResolution();
+    if (res == 0) res = 1000000;
+    return (float)(((double)sTotalPerFrameGenTicks / (double)sPerFrameGenCount) * 1000.0 / (double)res);
 #else
     return 0.0f;
 #endif
@@ -344,53 +384,112 @@ float Terrain::GetAverageChunkGenMs() {
 
 int Terrain::GetChunkGenCount() {
 #if defined(__PSP__)
-    return sChunkGenCount;
+    return sCompletedChunkCount;
 #else
     return 0;
 #endif
 }
 
-void Terrain::LoadChunk(int slotIdx, int chunkIndex) {
-#if defined(__PSP__)
-    u64 t0 = 0, t1 = 0;
-    sceRtcGetCurrentTick(&t0);
-#endif
+void Terrain::StartChunkGeneration(int slotIdx, int chunkIndex) {
     TerrainChunk& slot = mChunks[slotIdx];
     if (slot.active && slot.fixture && slot.body) {
         slot.body->DestroyFixture(slot.fixture);
         slot.fixture = NULL;
     }
-
-    b2Vec2 prevV, nextV;
-    GenerateChunkVertices(chunkIndex, slot.vertices, &prevV, &nextV);
-
-    b2ChainShape chain;
-    chain.CreateChain(slot.vertices, VERTS_PER_CHUNK);
-    chain.SetPrevVertex(prevV);
-    chain.SetNextVertex(nextV);
-
-    b2FixtureDef fd;
-    fd.shape = &chain;
-    fd.friction = GetStageFriction();
-    fd.restitution = 0.0f;
-    fd.filter.categoryBits = CAT_TERRAIN;
-    fd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL | CAT_DRIVER;
-    slot.fixture = slot.body->CreateFixture(&fd);
-
     slot.chunkIndex = chunkIndex;
     slot.active = true;
+    slot.ready = false;
+    slot.verticesComputed = 0;
+    slot.accumulatedTicks = 0;
+}
+
+bool Terrain::AdvanceGeneration(int slotIdx, int budget) {
+    TerrainChunk& slot = mChunks[slotIdx];
+    if (!slot.active || slot.ready) return true;
+
+#if defined(__PSP__)
+    u64 t0 = 0, t1 = 0;
+    sceRtcGetCurrentTick(&t0);
+#endif
+
+    float startX = (float)slot.chunkIndex * CHUNK_WIDTH_METERS;
+
+    // If starting vertex computation, also compute prevVertex
+    if (slot.verticesComputed == 0) {
+        float prevX = startX - CHUNK_STEP_METERS;
+        slot.prevVertex.Set(prevX, GetHeightAtX(prevX));
+    }
+
+    int endIdx = slot.verticesComputed + budget;
+    if (endIdx > VERTS_PER_CHUNK) {
+        endIdx = VERTS_PER_CHUNK;
+    }
+
+    for (int i = slot.verticesComputed; i < endIdx; ++i) {
+        float x = startX + (float)i * CHUNK_STEP_METERS;
+        slot.vertices[i].Set(x, GetHeightAtX(x));
+    }
+    slot.verticesComputed = endIdx;
+
+    if (slot.verticesComputed >= VERTS_PER_CHUNK) {
+        // Compute nextVertex
+        float nextX = startX + (float)(VERTS_PER_CHUNK - 1) * CHUNK_STEP_METERS + CHUNK_STEP_METERS;
+        slot.nextVertex.Set(nextX, GetHeightAtX(nextX));
+
+        // Atomic b2ChainShape creation + fixture
+        b2ChainShape chain;
+        chain.CreateChain(slot.vertices, VERTS_PER_CHUNK);
+        chain.SetPrevVertex(slot.prevVertex);
+        chain.SetNextVertex(slot.nextVertex);
+
+        b2FixtureDef fd;
+        fd.shape = &chain;
+        fd.friction = GetStageFriction();
+        fd.restitution = 0.0f;
+        fd.filter.categoryBits = CAT_TERRAIN;
+        fd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL | CAT_DRIVER;
+        slot.fixture = slot.body->CreateFixture(&fd);
+
+        slot.ready = true;
+
+#if defined(__PSP__)
+        sceRtcGetCurrentTick(&t1);
+        u64 sliceTicks = (t1 >= t0) ? (t1 - t0) : 0;
+        slot.accumulatedTicks += sliceTicks;
+        sTotalChunkFullGenTicks += slot.accumulatedTicks;
+        sCompletedChunkCount++;
+        u32 res = sceRtcGetTickResolution();
+        if (res == 0) res = 1000000;
+        double fullMs = ((double)slot.accumulatedTicks) * 1000.0 / (double)res;
+        printf("[PERF] Chunk %d ready! Total CPU time: %.3f ms (avg: %.3f ms over %d chunks)\n",
+               slot.chunkIndex, fullMs,
+               ((double)sTotalChunkFullGenTicks / sCompletedChunkCount) * 1000.0 / (double)res,
+               sCompletedChunkCount);
+#endif
+
+        // Spawn items ahead for newly ready chunk
+        float chunkStart = (float)slot.chunkIndex * CHUNK_WIDTH_METERS;
+        float chunkEnd = chunkStart + CHUNK_WIDTH_METERS;
+        if (chunkEnd > mLastItemSpawnX + 30.0f) {
+            SpawnItemsAhead(chunkStart, chunkEnd);
+        }
+
+        return true;
+    }
 
 #if defined(__PSP__)
     sceRtcGetCurrentTick(&t1);
-    u32 res = sceRtcGetTickResolution();
-    if (res == 0) res = 1000000;
-    u64 diff = t1 - t0;
-    sTotalChunkTicks += diff;
-    sChunkGenCount++;
-    double chunkMs = ((double)diff) * 1000.0 / (double)res;
-    printf("[PERF] Chunk %d gen: %.3f ms (avg: %.3f ms over %d chunks)\n",
-           chunkIndex, chunkMs, ((double)sTotalChunkTicks / sChunkGenCount) * 1000.0 / (double)res, sChunkGenCount);
+    u64 sliceTicks = (t1 >= t0) ? (t1 - t0) : 0;
+    slot.accumulatedTicks += sliceTicks;
 #endif
+
+    return false;
+}
+
+void Terrain::CompleteChunkImmediately(int slotIdx) {
+    TerrainChunk& slot = mChunks[slotIdx];
+    if (!slot.active || slot.ready) return;
+    AdvanceGeneration(slotIdx, VERTS_PER_CHUNK + 1);
 }
 
 void Terrain::UnloadChunk(int slotIdx) {
@@ -401,12 +500,15 @@ void Terrain::UnloadChunk(int slotIdx) {
     }
     slot.chunkIndex = -1;
     slot.active = false;
+    slot.ready = false;
+    slot.verticesComputed = 0;
+    slot.accumulatedTicks = 0;
 }
 
 void Terrain::UpdateChunkWindow(int currentChunk) {
     int minChunk = currentChunk - 1;
     if (minChunk < -1) minChunk = -1; // -1 covers [-30m, 0m] behind spawn
-    int maxChunk = currentChunk + 2;
+    int maxChunk = currentChunk + 3; // Proactive ahead chunks
 
     // 1. Unload chunks out of window
     for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
@@ -417,16 +519,16 @@ void Terrain::UpdateChunkWindow(int currentChunk) {
         }
     }
 
-    // 2. Load missing in-window chunks
+    // 2. Start missing in-window chunks
     for (int c = minChunk; c <= maxChunk; ++c) {
-        bool alreadyLoaded = false;
+        bool alreadyExists = false;
         for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
             if (mChunks[i].active && mChunks[i].chunkIndex == c) {
-                alreadyLoaded = true;
+                alreadyExists = true;
                 break;
             }
         }
-        if (!alreadyLoaded) {
+        if (!alreadyExists) {
             int freeSlot = -1;
             for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
                 if (!mChunks[i].active) {
@@ -435,14 +537,16 @@ void Terrain::UpdateChunkWindow(int currentChunk) {
                 }
             }
             if (freeSlot >= 0) {
-                LoadChunk(freeSlot, c);
+                StartChunkGeneration(freeSlot, c);
+            }
+        }
+    }
 
-                // Spawn items ahead for newly loaded forward chunks
-                float chunkStart = (float)c * CHUNK_WIDTH_METERS;
-                float chunkEnd = chunkStart + CHUNK_WIDTH_METERS;
-                if (chunkEnd > mLastItemSpawnX + 30.0f) {
-                    SpawnItemsAhead(chunkStart, chunkEnd);
-                }
+    // 3. Safeguard: ensure current and next chunk are ready
+    for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
+        if (mChunks[i].active && !mChunks[i].ready) {
+            if (mChunks[i].chunkIndex <= currentChunk + 1) {
+                CompleteChunkImmediately(i);
             }
         }
     }
@@ -480,6 +584,35 @@ void Terrain::SpawnItemsAhead(float startX, float endX) {
 void Terrain::Update(float playerX) {
     int currentChunk = (int)floorf(playerX / CHUNK_WIDTH_METERS);
     UpdateChunkWindow(currentChunk);
+
+    // Amortized generation: advance highest-priority chunk (active, !ready, lowest chunkIndex)
+    int candidateSlot = -1;
+    int lowestChunkIndex = 999999;
+    for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
+        if (mChunks[i].active && !mChunks[i].ready) {
+            if (mChunks[i].chunkIndex < lowestChunkIndex) {
+                lowestChunkIndex = mChunks[i].chunkIndex;
+                candidateSlot = i;
+            }
+        }
+    }
+
+    if (candidateSlot >= 0) {
+#if defined(__PSP__)
+        u64 t0 = 0, t1 = 0;
+        sceRtcGetCurrentTick(&t0);
+#endif
+        AdvanceGeneration(candidateSlot, CHUNK_GEN_BUDGET);
+#if defined(__PSP__)
+        sceRtcGetCurrentTick(&t1);
+        u64 frameTicks = (t1 >= t0) ? (t1 - t0) : 0;
+        if (frameTicks > sMaxPerFrameGenTicks) {
+            sMaxPerFrameGenTicks = frameTicks;
+        }
+        sTotalPerFrameGenTicks += frameTicks;
+        sPerFrameGenCount++;
+#endif
+    }
 }
 
 void Terrain::Render(float cameraX, float cameraY) {
@@ -492,7 +625,7 @@ void Terrain::Render(float cameraX, float cameraY) {
     int renderCount = 0;
     for (int c = startChunk; c <= endChunk; ++c) {
         for (int s = 0; s < NUM_CHUNK_SLOTS; ++s) {
-            if (mChunks[s].active && mChunks[s].chunkIndex == c) {
+            if (mChunks[s].active && mChunks[s].ready && mChunks[s].chunkIndex == c) {
                 for (int i = 0; i < VERTS_PER_CHUNK; ++i) {
                     if (renderCount > 0 && mRenderX[renderCount - 1] == mChunks[s].vertices[i].x) {
                         continue; // skip duplicate border vertex
