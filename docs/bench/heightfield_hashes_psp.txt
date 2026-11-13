@@ -1,0 +1,5 @@
+=== PSP Heightfield Hashes (4001 pts, 0-2000m, step 0.5m) ===
+Countryside=0x6e83945913e2d687 (match=YES)
+Desert=0x6dfb669a32592de7 (match=YES)
+Arctic=0xf7cc9dd1f3aa54b0 (match=YES)
+Moon=0x0083f35054ddbad2 (match=YES)
