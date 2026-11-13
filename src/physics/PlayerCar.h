@@ -55,7 +55,6 @@ private:
     float mEngineRev;
     bool mIsDead;
     bool mOutOfFuel;
-    float mOutOfFuelTimer;
     bool mThrottleActive;
     bool mBrakeActive;
 

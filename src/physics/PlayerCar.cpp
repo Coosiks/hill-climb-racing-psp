@@ -13,7 +13,7 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
       mChassis(NULL), mRearWheel(NULL), mFrontWheel(NULL), mDriverHead(NULL),
       mRearJoint(NULL), mFrontJoint(NULL), mNeckJoint(NULL),
       mFuel(MAX_FUEL), mEngineRev(0.0f), mIsDead(false), mOutOfFuel(false),
-      mOutOfFuelTimer(0.0f), mThrottleActive(false), mBrakeActive(false),
+      mThrottleActive(false), mBrakeActive(false),
       mThrottleRamp(0.0f), mAirTime(0.0f), mAirRotation(0.0f), mLastAngle(0.0f), mFlipsCount(0) {
 
     // Load textures
@@ -214,7 +214,6 @@ void PlayerCar::AddFuel(float amount) {
     mFuel += amount;
     if (mFuel > MAX_FUEL) mFuel = MAX_FUEL;
     mOutOfFuel = false;
-    mOutOfFuelTimer = 0.0f;
 }
 
 void PlayerCar::Update(float dt) {
@@ -345,13 +344,6 @@ void PlayerCar::Update(float dt) {
         }
     } else {
         mOutOfFuel = true;
-    }
-
-    if (mOutOfFuel) {
-        mOutOfFuelTimer += dt;
-        if (mOutOfFuelTimer >= 3.0f) {
-            Kill();
-        }
     }
 
     // 5. Engine rev modulation for sound

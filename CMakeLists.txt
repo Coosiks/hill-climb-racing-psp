@@ -53,5 +53,17 @@ add_executable(test_aircontrol
 )
 target_link_libraries(test_aircontrol box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
 
+add_executable(test_coasting
+    tools/test_coasting.cpp
+    src/physics/PlayerCar.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Renderer2D.cpp
+    src/core/Config.cpp
+    src/core/System.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_coasting box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
+
 
 

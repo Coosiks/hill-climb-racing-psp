@@ -23,6 +23,7 @@ Game::Game()
       mPhysics(NULL), mTerrain(NULL), mCar(NULL),
       mSessionCoins(0), mMaxDistance(0.0f), mGameOverReasonDriverDown(false),
       mStuntTimer(0.0f), mStuntName(NULL), mStuntCoins(0),
+      mOutOfFuelStopTimer(0.0f), mOutOfFuelFallbackTimer(0.0f),
       mCameraX(0.0f), mCameraY(0.0f), mCameraZoom(1.0f) {
 }
 
@@ -81,6 +82,8 @@ void Game::StartRace() {
     mStuntTimer = 0.0f;
     mStuntName = NULL;
     mStuntCoins = 0;
+    mOutOfFuelStopTimer = 0.0f;
+    mOutOfFuelFallbackTimer = 0.0f;
     mCameraX = 0.0f;
     mCameraY = 2.0f;
     mState = STATE_PLAYING;
@@ -375,15 +378,29 @@ void Game::UpdatePlaying() {
         mStuntTimer -= FIXED_TIMESTEP;
     }
 
-    // Check Out of Fuel
+    // Check Out of Fuel Coasting
     if (mCar->IsOutOfFuel()) {
-        mGameOverReasonDriverDown = false;
-        mState = STATE_GAMEOVER;
-        PlayerInfo::Coins += mSessionCoins;
-        if ((int)mMaxDistance > PlayerInfo::HighScores[mCurrentStage]) {
-            PlayerInfo::HighScores[mCurrentStage] = (int)mMaxDistance;
+        mOutOfFuelFallbackTimer += FIXED_TIMESTEP;
+        float speed = mCar->GetSpeedKmH() / 3.6f;
+        if (speed < 0.3f) {
+            mOutOfFuelStopTimer += FIXED_TIMESTEP;
+        } else {
+            mOutOfFuelStopTimer = 0.0f; // still moving, keep coasting
         }
-        PlayerInfo::Save();
+
+        if (mOutOfFuelStopTimer >= 1.0f || mOutOfFuelFallbackTimer >= 15.0f) {
+            mGameOverReasonDriverDown = false;
+            mState = STATE_GAMEOVER;
+            PlayerInfo::Coins += mSessionCoins;
+            if ((int)mMaxDistance > PlayerInfo::HighScores[mCurrentStage]) {
+                PlayerInfo::HighScores[mCurrentStage] = (int)mMaxDistance;
+            }
+            PlayerInfo::Save();
+            return;
+        }
+    } else {
+        mOutOfFuelStopTimer = 0.0f;
+        mOutOfFuelFallbackTimer = 0.0f;
     }
 
     // Engine Audio

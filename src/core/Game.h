@@ -48,6 +48,8 @@ private:
     float mStuntTimer;
     const char* mStuntName;
     int mStuntCoins;
+    float mOutOfFuelStopTimer;
+    float mOutOfFuelFallbackTimer;
 
     // Camera
     float mCameraX;
