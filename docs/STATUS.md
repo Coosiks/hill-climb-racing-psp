@@ -1,6 +1,6 @@
 ---
 updated: 2026-11-13
-commit: pending-T-101
+commit: 9c06ffd
 milestone: M0.2
 version: v0.1.0-beta.1
 ci: passing (verified in CI run 43502312616)
