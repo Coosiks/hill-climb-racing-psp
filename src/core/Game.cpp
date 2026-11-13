@@ -26,6 +26,58 @@ static void HCR_Log(const char* fmt, ...) {
     }
 }
 
+static uint64_t FNV1a_64(const void* data, size_t numBytes) {
+    const uint8_t* ptr = (const uint8_t*)data;
+    uint64_t hash = 14695981039346656037ULL;
+    for (size_t i = 0; i < numBytes; ++i) {
+        hash ^= ptr[i];
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+
+static void RunHeightfieldHashBenchmark() {
+    const int NUM_HASH_POINTS = 4001; // 2000m / 0.5m + 1
+    float* heightBuffer = (float*)malloc(NUM_HASH_POINTS * sizeof(float));
+    if (!heightBuffer) return;
+
+    b2World dummyWorld(b2Vec2(0.0f, -10.0f));
+    const char* stageNames[4] = { "Countryside", "Desert", "Arctic", "Moon" };
+    const uint64_t EXPECTED_STAGE_HASHES[4] = {
+        0x6e83945913e2d687ULL, // Countryside
+        0x6dfb669a32592de7ULL, // Desert
+        0xf7cc9dd1f3aa54b0ULL, // Arctic
+        0x0083f35054ddbad2ULL  // Moon
+    };
+    uint64_t stageHashes[4];
+
+    FILE* hf = fopen("heightfield_hashes_psp.txt", "w");
+    if (!hf) hf = fopen("ms0:/PSP/GAME/HCR/heightfield_hashes_psp.txt", "w");
+
+    if (hf) {
+        fprintf(hf, "=== PSP Heightfield Hashes (4001 pts, 0-2000m, step 0.5m) ===\n");
+    }
+
+    for (int s = 0; s < 4; ++s) {
+        Terrain terrain(&dummyWorld, (StageType)s);
+        for (int i = 0; i < NUM_HASH_POINTS; ++i) {
+            float x = (float)i * 0.5f;
+            heightBuffer[i] = terrain.GetHeightAtX(x);
+        }
+        stageHashes[s] = FNV1a_64(heightBuffer, NUM_HASH_POINTS * sizeof(float));
+        bool match = (stageHashes[s] == EXPECTED_STAGE_HASHES[s]);
+        printf("[HASH] Stage %-11s (4001 pts) -> FNV-1a: 0x%016llx (Match: %s)\n",
+               stageNames[s], (unsigned long long)stageHashes[s], match ? "YES" : "NO");
+        HCR_Log("[HASH] Stage %-11s (4001 pts) -> FNV-1a: 0x%016llx (Match: %s)",
+                stageNames[s], (unsigned long long)stageHashes[s], match ? "YES" : "NO");
+        if (hf) {
+            fprintf(hf, "%s=0x%016llx (match=%s)\n", stageNames[s], (unsigned long long)stageHashes[s], match ? "YES" : "NO");
+        }
+    }
+    if (hf) fclose(hf);
+    free(heightBuffer);
+}
+
 Game::Game()
     : mState(STATE_GARAGE), mCurrentStage(STAGE_COUNTRYSIDE),
       mPhysics(NULL), mTerrain(NULL), mCar(NULL),
@@ -206,6 +258,7 @@ void Game::UpdateGarage() {
             sBenchmarkMode = true;
             printf("[PERF] benchmark.txt found: enabling automated benchmark mode\n");
             HCR_Log("[PERF] benchmark.txt found: enabling automated benchmark mode");
+            RunHeightfieldHashBenchmark();
         }
     }
     if (sBenchmarkMode) {

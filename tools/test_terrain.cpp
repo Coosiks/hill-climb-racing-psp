@@ -36,6 +36,12 @@ int main() {
     assert(heightBuffer != NULL);
 
     const char* stageNames[4] = { "Countryside", "Desert", "Arctic", "Moon" };
+    const uint64_t EXPECTED_STAGE_HASHES[4] = {
+        0x6e83945913e2d687ULL, // Countryside
+        0x6dfb669a32592de7ULL, // Desert
+        0xf7cc9dd1f3aa54b0ULL, // Arctic
+        0x0083f35054ddbad2ULL  // Moon
+    };
     uint64_t stageHashes[4];
 
     b2World dummyWorld(b2Vec2(0.0f, -10.0f));
@@ -47,8 +53,9 @@ int main() {
             heightBuffer[i] = terrain.GetHeightAtX(x);
         }
         stageHashes[s] = FNV1a_64(heightBuffer, NUM_HASH_POINTS * sizeof(float));
-        printf("  Stage %-11s (4001 pts, 0-2000m) -> FNV-1a 64-bit hash: 0x%016llx\n",
-               stageNames[s], (unsigned long long)stageHashes[s]);
+        printf("  Stage %-11s (4001 pts, 0-2000m) -> FNV-1a 64-bit hash: 0x%016llx (expected: 0x%016llx)\n",
+               stageNames[s], (unsigned long long)stageHashes[s], (unsigned long long)EXPECTED_STAGE_HASHES[s]);
+        assert(stageHashes[s] == EXPECTED_STAGE_HASHES[s]);
     }
     free(heightBuffer);
     printf("  [PASS] Heightfield hashes computed deterministically!\n");
