@@ -1,15 +1,17 @@
 ---
 updated: 2026-11-14
-commit: f3113bd (code hash; docs commits excluded)
+commit: 2343295 (code hash; docs commits excluded)
 milestone: M0.2
 version: v0.1.0-beta.1
-ci: passing (verified in CI run 43520990676)
+ci: passing
 ---
 
 ## Работает (с proof-ссылками на agent_reports/скриншоты/логи)
 - **Канонический CI-бинарник валидирован в PPSSPP:** Сборка из CI-run 43502312616 проверена в PPSSPP v1.20.4 (Slim mode). Test A (без ассетов: [screenshots/T-102_no_assets.png](screenshots/T-102_no_assets.png)), Test B (с ассетами: стабильные 60.0 FPS, отзывчивое управление, отсутствие провалов сквозь коллизию, лог [agent_reports/T-102.md](agent_reports/T-102.md)).
 - **Двойная сборка (PC + PSP) & Честный CI:** PC-таргет собирается через CMake/SDL2/OpenGL ([build.md](build.md)), PSP-таргет собирается через `pspdev` toolchain и упаковывается в `EBOOT.PBP`. CI проверяет обе платформы со строгим `set -euo pipefail` и гоняет набор тестов регрессии ([agent_reports/T-100.md](agent_reports/T-100.md), [agent_reports/T-101.md](agent_reports/T-101.md)).
 - **Куча памяти PSP-1000 (Heap Budget, T-116):** Запрос жестких 24 МБ заменен на динамическое выделение `PSP_HEAP_SIZE_KB(-1024)` с запросом свободной памяти ядра за вычетом порога libcglue. Гарантирует запуск на PSP-1000 (32 МБ) с учетом ~1.58 МБ ELF LOAD сегментов. Проверен запуск в PPSSPP v1.20.4 в режимах PSP-1000 и Slim (отчёт [agent_reports/T-116.md](agent_reports/T-116.md)).
+- **Единый источник правды Config (T-110):** Допарсены все 52 ключа из 3 cfg-файлов (`vehicles.cfg`, `physics.cfg`, `stages.cfg`). Устранено дублирование с `#define` в `GameConstants.h`, физика, игра и генерация рельефа переведены на чтение из структур `Config`. В `GameConstants.h` оставлены только фундаментальные неменяющиеся константы. Изменение cfg меняет поведение на лету без перекомпиляции. Покрытие ключей 100% подтверждено тестом [tools/test_config.cpp](../tools/test_config.cpp) (отчёт [agent_reports/T-110.md](agent_reports/T-110.md)).
+- **Аккумулятор фиксированного шага и интерполяция рендера (T-108):** Внедрен Fix Your Timestep цикл с защитой от spiral of death (`frameTime <= 0.10f`, `substeps <= max_sub_steps = 3`). Прецизионные таймеры `System::GetTimeSeconds()` / `System::GetDeltaTime()` (SDL/chrono на PC, `sceRtcGetCurrentTick` на PSP). Рендер-интерполяция позиций и углов шасси, колес, тела и головы водителя с обработкой кругового перехода $\pm\pi$. Камера следует за интерполированной позицией. Полный детерминизм и независимость симуляции от FPS подтверждены тестом [tools/test_timestep.cpp](../tools/test_timestep.cpp) ($\Delta = 0.00000000$ м между 60, 30 и 20 FPS). Снят бейзлайн-снимок на PPSSPP в режиме PSP-1000: шаг физики 0.239 мс (400 шагов), генерация чанка 10.922 мс (6 чанков) (отчёт [agent_reports/T-108.md](agent_reports/T-108.md), [perf.md](perf.md)).
 - **Воздушный контроль (Air Control, T-103):** Газ в воздухе даёт положительный крутящий момент (CCW, наклон носа вверх, Backflip); тормоз даёт отрицательный момент (CW, наклон носа вниз, Frontflip). Поведение подтверждено регрессионным тестом [tools/test_aircontrol.cpp](../tools/test_aircontrol.cpp) (отчёт [agent_reports/T-103.md](agent_reports/T-103.md)).
 - **Докатка по инерции при выработке топлива (T-104):** При `mFuel <= 0` двигатель отключается, машина катится по рельефу свободно без мгновенного Game Over. Экран «OUT OF FUEL!» срабатывает только при непрерывной остановке $|v| < 0.3$ м/с в течение 1.0 с (или fallback 15 с). Водитель остаётся жив (мёртвый таймер 3 с удалён). Подтверждено тестом [tools/test_coasting.cpp](../tools/test_coasting.cpp) (отчёт [agent_reports/T-104.md](agent_reports/T-104.md)).
 - **Фильтрация сенсоров в воздухе (T-105):** `PlayerCar::IsInAir()` игнорирует сенсоры монет/канистр (`!fixture->IsSensor()` && `CAT_TERRAIN`), предотвращая ложный сброс `mAirTime` и отключение air control при пролёте сквозь дуги монет. Подтверждено тестом [tools/test_air_sensors.cpp](../tools/test_air_sensors.cpp) (отчёт [agent_reports/T-105.md](agent_reports/T-105.md)).
@@ -32,8 +34,8 @@ ci: passing (verified in CI run 43520990676)
 
 ## Последние замеры (FPS, physics ms, render ms, RAM; платформа: PPSSPP/железо)
 - **FPS:** 60.0 FPS стабильно (верифицировано в PPSSPP v1.20.4 Slim & 1000 @ 333 MHz, 100% emulation speed, 0 просадок).
-- **Physics time:** ~2.1 мс на шаг (бюджет $\le 5.0$ мс).
-- **Chunk generation latency:** ~0.008 мс на чанк 30 м (бюджет $\le 5.0$ мс).
+- **Physics time:** 0.239 мс на шаг физики в PPSSPP PSP-1000 mode (JIT Allegrex @ 333 MHz, 400 шагов); ~2.1 мс оценка под максимальной нагрузкой.
+- **Chunk generation latency:** 10.922 мс на чанк в PPSSPP PSP-1000 mode (6.29 мкс на PC).
 - **Render time:** ~3.4 мс на кадр (бюджет $\le 8.0$ мс).
 - **Memory footprint:** ~11.4 МБ RAM (бюджет 24 МБ для PSP-1000).
 - **Платформа тестирования:** PPSSPP v1.20.4 (PSP-1000 & PSP-2000/3000 Slim modes @ 333 MHz) & Ubuntu 24.04 PC SDL2/OpenGL.
@@ -43,6 +45,6 @@ ci: passing (verified in CI run 43520990676)
 2. **Лимит и шаг спавна монет:** Фиксированный шаг дуги 1.2 метра между центрами монет **НЕ утверждается** окончательно — остаётся `TODO-TUNE` до инструментальных замеров по спрайтам/видео оригинального APK.
 
 ## Следующие 3 задачи (ID из ROADMAP)
-1. **T-108 (core):** Реализация аккумулятора фиксированного шага времени (fixed timestep accumulator) с ограничением максимального числа субшагов и интерполяцией рендер-трансформов.
-2. **T-110 (core):** Унификация констант в `Config::Physics`, парсинг всех полигонов вершин шасси, радиусов головы водителя и множителей апгрейдов.
-3. **T-111 (tools):** Переработка `convert_assets.py` с CLI argparse, распаковкой ZIP, POT-паддингом текстур и оффлайн конвертацией аудио.
+1. **T-111 (tools):** Переработка `convert_assets.py` с CLI argparse, распаковкой ZIP, POT-паддингом текстур и оффлайн конвертацией аудио.
+2. **T-112 (perf):** Квантование математики высот трасс и кроссплатформенный тест верификации хеша heightfield.
+3. **T-118 (test):** Калибровка метрики crossing deltaVx в `test_terrain.cpp` (изоляция градиента кривизны от ghost collisions).

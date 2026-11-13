@@ -22,15 +22,16 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [x] **T-105 (physics):** Filter sensor contacts in `IsInAir()` to prevent coin arcs from disabling air control.
 - [x] **T-106 (physics):** Deferred item destruction queue post-step, fix duplicate collection and body memory leak.
 - [x] **T-107 (physics):** Replace `b2EdgeShape` with sliding window `b2ChainShape` chunks (30 m window).
-- [ ] **T-108 (core):** Implement fixed timestep accumulator with max substeps and render transform interpolation.
+- [x] **T-108 (core):** Implement fixed timestep accumulator with max substeps and render transform interpolation.
 - [x] **T-109 (physics):** Enable suspension travel limits (`enableLimit`, translation bounds).
-- [ ] **T-110 (core):** Unify constants into `Config::Physics`, parse all vehicle vertices, head radii, and upgrade multipliers.
+- [x] **T-110 (core):** Unify constants into `Config::Physics`, parse all vehicle vertices, head radii, and upgrade multipliers.
 - [ ] **T-111 (tools):** Rewrite `convert_assets.py` with CLI argparse, ZIP extraction, texture POT/tiling, offline audio conversion.
 - [ ] **T-112 (perf):** Quantize terrain heightfield math and add cross-platform heightfield hash verification test.
 - [ ] **T-113 (tune):** Tune stunt bonuses (TODO-TUNE), add air-time bonus and fuel capacity upgrade.
 - [ ] **T-114 (docs):** Audit params.csv classification (design vs RE), clean vendor folder, strip release binaries.
 - [ ] **T-115 (release):** Release v0.1.0-beta.2 with updated notes, changelog, and clean artifacts.
 - [x] **T-116 (core):** Fix PSP-1000 heap allocation budget: replace fixed 24 MB request with dynamic allocation (`PSP_HEAP_SIZE_KB(-1024)`).
+- [ ] **T-118 (test):** Tighten seam crossing deltaVx metric in `test_terrain.cpp` (isolate natural curvature gradient from ghost-jolt collisions).
 
 ---
 
