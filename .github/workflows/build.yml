@@ -1,0 +1,64 @@
+name: CI Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  psp-build:
+    name: PSP Target Build (PSPSDK)
+    runs-on: ubuntu-latest
+    container:
+      image: pspdev/pspdev:latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Compile PSP EBOOT.PBP
+        run: |
+          export PSPDEV=/opt/pspdev
+          export PATH=$PSPDEV/bin:$PATH
+          make -j$(nproc) 2>&1 | tee build_psp.log
+
+      - name: Upload PSP Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hcr-psp-eboot
+          path: |
+            EBOOT.PBP
+            hcr.elf
+            build_psp.log
+
+  pc-build:
+    name: PC Target Build (Linux / SDL2)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libsdl2-dev libgl-dev
+
+      - name: Configure and Compile PC Binary
+        run: |
+          cmake -B build-pc -S .
+          cmake --build build-pc -j$(nproc) 2>&1 | tee build_pc.log
+
+      - name: Run Determinism & Verification Tests
+        run: |
+          g++ -Isrc -Ivendor -Ivendor/Box2D tools/test_physics.cpp vendor/Box2D/Box2D/Common/b2Math.cpp vendor/Box2D/Box2D/Common/b2Settings.cpp -o run_tests
+          ./run_tests 2>&1 | tee test_results.log
+
+      - name: Upload PC Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hcr-pc-binary
+          path: |
+            build-pc/hcr_pc
+            build_pc.log
+            test_results.log

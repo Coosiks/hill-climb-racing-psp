@@ -1,0 +1,49 @@
+parameter,value,source,date,notes
+SCREEN_WIDTH,480,extracted,2026-11-12,PSP target resolution (original Vita 960x544 divided by 2)
+SCREEN_HEIGHT,272,extracted,2026-11-12,PSP target resolution
+PTM_RATIO,32.0,extracted,2026-11-12,Pixels per meter at 1.0x base zoom
+TIMESTEP,0.0166667,extracted,2026-11-12,Fixed 60 Hz physics step
+VELOCITY_ITERS,8,extracted,2026-11-12,Box2D velocity solver iterations
+POSITION_ITERS,3,extracted,2026-11-12,Box2D position solver iterations
+GRAVITY_COUNTRYSIDE,-10.0,extracted,2026-11-12,StageCountrySide::create (0x000d55d4)
+GRAVITY_DESERT,-10.0,extracted,2026-11-12,StageDesert::create (0x000d516c)
+GRAVITY_ARCTIC,-10.0,extracted,2026-11-12,StageArctic::create (0x000d4d6c)
+GRAVITY_MOON,-3.5,extracted,2026-11-12,StageMoon::create (0x000d4968)
+FRICTION_COUNTRYSIDE,0.60,extracted,2026-11-12,StageCountrySide::getFriction (0x000d55bc)
+FRICTION_DESERT,0.50,extracted,2026-11-12,StageDesert::getFriction (0x000d5154)
+FRICTION_ARCTIC,0.15,extracted,2026-11-12,StageArctic::getFriction (0x000d4d54)
+FRICTION_MOON,0.80,extracted,2026-11-12,StageMoon::getFriction (0x000d4950)
+COIN_MULT_COUNTRYSIDE,1.25,extracted,2026-11-12,StageCountrySide::getCoinMultiplier (0x000d55b0)
+COIN_MULT_DESERT,1.75,extracted,2026-11-12,StageDesert::getCoinMultiplier (0x000d5148)
+COIN_MULT_ARCTIC,1.95,extracted,2026-11-12,StageArctic::getCoinMultiplier (0x000d4d48)
+COIN_MULT_MOON,1.95,extracted,2026-11-12,StageMoon::getCoinMultiplier (0x000d4944)
+JEEP_CHASSIS_DENSITY,1.50,extracted,2026-11-12,PlayerCar::create (0x000d2660)
+JEEP_CHASSIS_FRICTION,0.20,extracted,2026-11-12,PlayerCar::create
+JEEP_CHASSIS_RESTITUTION,0.05,extracted,2026-11-12,PlayerCar::create
+JEEP_WHEEL_RADIUS,0.40,extracted,2026-11-12,PlayerCar::create
+JEEP_REAR_WHEEL_X,-1.15,extracted,2026-11-12,PlayerCar::create
+JEEP_REAR_WHEEL_Y,-0.50,extracted,2026-11-12,PlayerCar::create
+JEEP_FRONT_WHEEL_X,1.15,extracted,2026-11-12,PlayerCar::create
+JEEP_FRONT_WHEEL_Y,-0.50,extracted,2026-11-12,PlayerCar::create
+JEEP_WHEEL_DENSITY,0.80,extracted,2026-11-12,PlayerCar::create
+JEEP_WHEEL_BASE_FRICTION,1.20,extracted,2026-11-12,PlayerCar::create
+JEEP_WHEEL_RESTITUTION,0.05,extracted,2026-11-12,PlayerCar::create
+JEEP_BASE_MOTOR_SPEED,28.0,extracted,2026-11-12,PlayerCar::create
+JEEP_BASE_MOTOR_TORQUE,10.0,extracted,2026-11-12,PlayerCar::create (decompiled literal pool)
+JEEP_BASE_SPRING_FREQ,3.0,extracted,2026-11-12,PlayerCar::create (base frequency level 0)
+JEEP_BASE_SPRING_DAMP,0.20,extracted,2026-11-12,PlayerCar::create (soft responsive damping)
+JEEP_UPGRADE_MULT_ENGINE,1.10,extracted,2026-11-12,PlayerCar::PlayerCar (0x000d2cc4)
+JEEP_UPGRADE_MULT_SUSPENSION,1.05,extracted,2026-11-12,PlayerCar::PlayerCar
+JEEP_UPGRADE_MULT_TIRES,1.10,extracted,2026-11-12,PlayerCar::PlayerCar
+JEEP_UPGRADE_MULT_AWD,1.08,extracted,2026-11-12,PlayerCar::PlayerCar
+JEEP_AIR_PITCH_TORQUE,10.0,measured,2026-11-12,Airborne flip torque calibration
+DRIVER_HEAD_RADIUS,0.24,extracted,2026-11-12,PlayerCar::createDriver (0x000d1db4)
+DRIVER_HEAD_OFFSET_X,-0.10,extracted,2026-11-12,PlayerCar::createDriver
+DRIVER_HEAD_OFFSET_Y,0.50,extracted,2026-11-12,PlayerCar::createDriver
+MAX_FUEL,100.0,extracted,2026-11-12,Game logic constants
+FUEL_DRAIN_IDLE,0.60,measured,2026-11-12,Idle consumption per second
+FUEL_DRAIN_DRIVE,2.20,measured,2026-11-12,Throttle active consumption per second
+TERRAIN_SEGMENT_STEP,0.50,extracted,2026-11-12,Terrain segment width
+CAMERA_LEAD_X,3.50,measured,2026-11-12,Lookahead distance in front of car
+CAMERA_SMOOTH_FACTOR,0.12,measured,2026-11-12,Exponential camera follow smoothing
+

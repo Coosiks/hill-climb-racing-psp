@@ -1,0 +1,35 @@
+# Auto-detect text files and normalize line endings to LF
+* text=auto eol=lf
+
+# Explicitly mark text formats
+*.c text eol=lf
+*.cpp text eol=lf
+*.h text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.py text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+Makefile text eol=lf
+CMakeLists.txt text eol=lf
+
+# Mark binary types
+*.png binary
+*.PNG binary
+*.jpg binary
+*.jpeg binary
+*.tex binary
+*.pbp binary
+*.elf binary
+*.sfo binary
+*.bin binary
+*.dat binary
+*.ogg binary
+*.wav binary
+*.vag binary
+*.zip binary
+*.apk binary
+*.so binary

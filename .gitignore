@@ -1,0 +1,37 @@
+# Build artifacts & binaries
+build*/
+*.o
+*.a
+*.elf
+*.prx
+*.pbp
+EBOOT.PBP
+PARAM.SFO
+hcr_strip.elf
+dist/
+tools/test_*
+!tools/test_*.cpp
+!tools/test_*.c
+
+# Raw & Converted Assets (Bring Your Own APK)
+assets/
+assets_converted/
+original_apk/
+data/
+*.apk
+*.so
+libgame.so
+tools/*.asm
+
+# Save files & runtime logs
+save*.bin*
+save*.dat*
+*.bak
+hcr_log.txt
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.user
+__pycache__/
+*.pyc
