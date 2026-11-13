@@ -1,6 +1,6 @@
 ---
 updated: 2026-11-13
-commit: 665c019
+commit: b536e07
 milestone: M0
 version: v0.1.0-beta.1
 ci: passing
