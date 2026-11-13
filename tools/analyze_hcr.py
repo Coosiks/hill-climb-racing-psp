@@ -1,8 +1,9 @@
+import os
 import subprocess
 import re
 import struct
 
-so_path = '/mnt/c/Projects/hcr-psp/original_apk/lib/armeabi/libgame.so'
+so_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../original_apk/lib/armeabi/libgame.so')
 
 disasm = subprocess.check_output(['arm-linux-gnueabi-objdump', '-d', '-C', so_path]).decode(errors='ignore')
 lines = disasm.splitlines()

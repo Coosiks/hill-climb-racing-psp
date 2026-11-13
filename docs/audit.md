@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary
 
-A comprehensive code audit of the existing codebase in `c:\Projects\hcr-psp` has been conducted against the fidelity requirements of the original Hill Climb Racing (v1.0.5 / v1.18.0, Cocos2d-x + Box2D) and the hardware constraints of the PSP.
+A comprehensive code audit of the existing codebase in hill-climb-racing-psp has been conducted against the fidelity requirements of the original Hill Climb Racing (v1.0.5 / v1.18.0, Cocos2d-x + Box2D) and the hardware constraints of the PSP.
 
 While recent reverse-engineering efforts successfully extracted ground-truth physics constants and exact mathematical stage curves from `libgame.so`, the current codebase is an early monolithic prototype tightly coupled to PSP hardware registers. It lacks the dual-build PC abstraction, relies on heavy runtime decoding (PNG and OGG via `stb`), hardcodes parameters in C++ headers, and does not employ static memory pooling.
 

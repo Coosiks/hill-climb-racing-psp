@@ -1,4 +1,4 @@
-import struct, re
+import os, struct, re
 
 def f32(val):
     return struct.unpack('<f', struct.pack('<I', val))[0]
@@ -27,6 +27,7 @@ def decode_literals(filename):
         # also check if raw could be part of double
         print(f"  {hex(addr)}: 0x{raw:08x}  float={f}")
 
+tools_dir = os.path.dirname(os.path.abspath(__file__))
 for name in ["countryside", "desert", "arctic", "moon"]:
-    decode_literals(f"/mnt/c/Projects/hcr-psp/tools/{name}.asm")
+    decode_literals(os.path.join(tools_dir, f"{name}.asm"))
 

@@ -1,3 +1,4 @@
+import os
 import re
 
 def analyze(filename):
@@ -13,8 +14,9 @@ def analyze(filename):
                 calls.append((line.split(':')[0].strip(), m.group(2)))
     return calls
 
+tools_dir = os.path.dirname(os.path.abspath(__file__))
 for name in ["countryside", "desert", "arctic", "moon"]:
-    c = analyze(f"/mnt/c/Projects/hcr-psp/tools/{name}.asm")
+    c = analyze(os.path.join(tools_dir, f"{name}.asm"))
     print(f"=== {name.upper()} calls ({len(c)}) ===")
     for addr, target in c:
         print(f"  {addr}: {target}")

@@ -1,7 +1,8 @@
-import struct
+import os, struct
 
 # Let's read the literal pool of PlayerCar::create at d2c84 to d2cd0
-with open('/mnt/c/Projects/hcr-psp/original_apk/lib/armeabi/libgame.so', 'rb') as f:
+so_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../original_apk/lib/armeabi/libgame.so')
+with open(so_path, 'rb') as f:
     f.seek(0xd2c84)
     data = f.read(96)
     for i in range(0, len(data), 4):

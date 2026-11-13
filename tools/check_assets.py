@@ -39,7 +39,7 @@ files = [
     "assets/audio/click.ogg"
 ]
 
-base = "/mnt/c/Projects/hcr-psp"
+base = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 missing = [f for f in files if not os.path.isfile(os.path.join(base, f))]
 print("Missing files:", missing)
 if not missing:

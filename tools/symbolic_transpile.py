@@ -1,4 +1,4 @@
-import re, struct
+import os, re, struct
 
 def f32(val):
     val = val & 0xffffffff
@@ -10,7 +10,7 @@ def d64(lo, hi):
     return struct.unpack('<d', struct.pack('<II', lo, hi))[0]
 
 def transpile(name):
-    filename = f"/mnt/c/Projects/hcr-psp/tools/{name}.asm"
+    filename = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{name}.asm")
     with open(filename) as f:
         lines = f.readlines()
 

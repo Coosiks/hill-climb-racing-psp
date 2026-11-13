@@ -1,4 +1,4 @@
-import struct, re
+import os, struct, re
 
 def f32(val):
     return struct.unpack('<f', struct.pack('<I', val))[0]
@@ -18,8 +18,9 @@ def get_pool(filename):
             words[addr] = raw
     return lines, words
 
+tools_dir = os.path.dirname(os.path.abspath(__file__))
 for name in ["countryside", "desert", "arctic", "moon"]:
-    lines, words = get_pool(f"/mnt/c/Projects/hcr-psp/tools/{name}.asm")
+    lines, words = get_pool(os.path.join(tools_dir, f"{name}.asm"))
     print(f"\n==================== {name.upper()} ====================")
     for line in lines:
         m = re.search(r'([0-9a-f]+):\s+([0-9a-f]{8})\s+ldr\s+([a-z0-9]+),\s+\[pc,\s*#(\d+)\]', line)

@@ -1,4 +1,4 @@
-import struct
+import os, struct
 
 def f32(val):
     return struct.unpack('<f', struct.pack('<I', val))[0]
@@ -6,8 +6,9 @@ def f32(val):
 def d64(lo, hi):
     return struct.unpack('<d', struct.pack('<II', lo, hi))[0]
 
+tools_dir = os.path.dirname(os.path.abspath(__file__))
 for name in ["desert", "arctic", "moon"]:
-    path = f"/mnt/c/Projects/hcr-psp/tools/{name}.asm"
+    path = os.path.join(tools_dir, f"{name}.asm")
     with open(path) as f:
         lines = f.readlines()
     print(f"=== {name.upper()} (total lines: {len(lines)}) ===")

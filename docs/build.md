@@ -92,5 +92,5 @@ This generates `EBOOT.PBP` (signed and stripped).
 
 ### 4.2 Running in PPSSPP Emulator
 1. Open PPSSPP.
-2. Select **Load...** and navigate to `c:/Projects/hcr-psp/EBOOT.PBP`.
+2. Select **Load...** and navigate to `EBOOT.PBP`.
 3. Ensure the working directory contains `config/` and `assets/`.
