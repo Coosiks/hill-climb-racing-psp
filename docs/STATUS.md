@@ -3,7 +3,7 @@ updated: 2026-11-14
 commit: f962204 (code hash; docs commits excluded)
 milestone: M0.2 / M3 / M6
 version: v0.1.0-beta.1
-ci: passing (verified locally 12/12 regression tests passing)
+ci: passing (verified in CI run 43583968890)
 ---
 
 ## Работает (с proof-ссылками на agent_reports/скриншоты/логи)
