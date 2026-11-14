@@ -297,11 +297,11 @@ int main() {
     remove("tmp_test_vehicles.cfg");
     printf("  [PASS] vehicles.cfg: %d / %d keys fully covered!\n", numVehicleKeys - (uncoveredKeys - prevUncovered), numVehicleKeys);
 
-    // (C) stages.cfg (12 keys)
+    // (C) stages.cfg (14 keys)
     prevUncovered = uncoveredKeys;
     const char* stageKeys[] = {
         "name", "unlock_cost", "gravity", "friction", "coin_multiplier", "ground_texture", "surface_texture", "music",
-        "has_ceiling", "ceiling_offset", "fuel_interval", "has_bridges"
+        "has_ceiling", "ceiling_offset", "fuel_interval", "has_bridges", "sky_color_top", "sky_color_bottom"
     };
     int numStageKeys = sizeof(stageKeys) / sizeof(stageKeys[0]);
 
@@ -321,6 +321,8 @@ int main() {
         else if (strcmp(stageKeys[i], "ceiling_offset") == 0) fprintf(tf, "ceiling_offset = 7.2\n");
         else if (strcmp(stageKeys[i], "fuel_interval") == 0) fprintf(tf, "fuel_interval = 110.0\n");
         else if (strcmp(stageKeys[i], "has_bridges") == 0) fprintf(tf, "has_bridges = 1\n");
+        else if (strcmp(stageKeys[i], "sky_color_top") == 0) fprintf(tf, "sky_color_top = 0xFF123456\n");
+        else if (strcmp(stageKeys[i], "sky_color_bottom") == 0) fprintf(tf, "sky_color_bottom = 0xFF654321\n");
         fclose(tf);
 
         bool loaded = Config::LoadStages("tmp_test_stages.cfg");
@@ -339,6 +341,8 @@ int main() {
         else if (strcmp(stageKeys[i], "ceiling_offset") == 0) ok = feq(Config::Stages[0].ceiling_offset, 7.2f);
         else if (strcmp(stageKeys[i], "fuel_interval") == 0) ok = feq(Config::Stages[0].fuel_interval, 110.0f);
         else if (strcmp(stageKeys[i], "has_bridges") == 0) ok = (Config::Stages[0].has_bridges == 1);
+        else if (strcmp(stageKeys[i], "sky_color_top") == 0) ok = (Config::Stages[0].sky_color_top == 0xFF123456);
+        else if (strcmp(stageKeys[i], "sky_color_bottom") == 0) ok = (Config::Stages[0].sky_color_bottom == 0xFF654321);
 
         if (!ok) {
             fprintf(stderr, "FAIL: Key '%s' in stages.cfg did not update struct field!\n", stageKeys[i]);
@@ -352,7 +356,7 @@ int main() {
 
     printf("\nTotal config keys tested: %d | Uncovered keys: %d\n", totalKeysCovered, uncoveredKeys);
     TEST_CHECK(uncoveredKeys == 0, "All keys must be covered");
-    TEST_CHECK(totalKeysCovered == 78, "All 78 config keys must be covered (21 physics + 45 vehicles + 12 stages)");
+    TEST_CHECK(totalKeysCovered == 80, "All 80 config keys must be covered (21 physics + 45 vehicles + 14 stages)");
 
     // ----------------------------------------------------
     // Sub-test 3: Dynamic Behavior Change Without Recompile

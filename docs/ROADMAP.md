@@ -70,8 +70,8 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 
 ## [ ] Milestone M4: Rendering Polishing, Particles & Audio Synthesizer
 - [x] **T-040 (render):** Hardware-accelerated static sprite quad batcher in `Renderer2D` (up to 256 quads / 1536 verts) reducing text/sprite draw calls to 1 per texture.
-- [ ] **T-041 (render):** Multi-layer parallax background rendering with stage-specific skies and horizon hills.
-- [ ] **T-042 (render):** Static ring-buffer particle system for tire dust (`dirt.plist`) and snow particles (`snow.plist`).
+- [x] **T-041 (render):** Multi-layer parallax background rendering with stage-specific skies and horizon hills.
+- [x] **T-042 (render):** Static ring-buffer particle system for tire dust (`dirt.plist`) and snow particles (`snow.plist`).
 - [x] **T-043 (audio, tools):** Offline audio preprocessing pipeline in `tools/convert_assets.py` converting APK audio to canonical 16-bit PCM mono 22050Hz WAV with `--no-audio` flag.
 - [x] **T-044 (audio):** Fast zero-runtime-decode WAV loader, 16.16 fixed-point phase resampler engine loop with pitch modulation [0.50, 2.00], pause/resume semantics, and SFX mixing.
 
@@ -89,4 +89,5 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [x] **T-120 (content, re):** Vehicles & Stages 1.30.0 reverse engineering: automated extraction script `extract_1300_info.py`, disassembly dump `re_1300_dump.txt`, content registry `hcr_1300_inventory.md` for 29 vehicles and 28 stages, and RGBA5551/RGBA8888 classification in `convert_assets.py`.
 - [x] **T-121 (terrain, re):** Expand stages to 8 (`countryside`, `desert`, `arctic`, `moon`, `highway`, `cave`, `mars`, `forest`), extract height formulas from `libgame.so` 1.30.0, implement Cave ceiling with $\ge 4.5$m clearance and Driver Down neck break, add `has_ceiling`, `ceiling_offset`, `fuel_interval`, `has_bridges` to `stages.cfg` (100% config key coverage in `test_config`).
 - [x] **T-021 (physics, terrain):** Implement zero-alloc suspension bridge pool (`MAX_ACTIVE_BRIDGES = 4`, `MAX_BRIDGE_PLANKS = 12`) on Forest stage, 10 dynamic planks connected by 11 `b2RevoluteJoint` with $[-0.25, +0.25]$ rad limits, verified zero body leaks on chunk unload, batched sprite rendering via `Renderer2D::DrawSprite`.
+- [x] **T-122 (content, vehicle):** Expand vehicle roster in `config/vehicles.cfg` to 8 vehicles (`tractor`, `hippievan`, `quadbike`, `touristbus`), verified Box2D simulation masses and wheel radii, 4th upgrade slot types, and 1.30.0 unlock costs (`test_vehicles`).
 

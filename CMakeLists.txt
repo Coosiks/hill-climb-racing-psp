@@ -24,6 +24,7 @@ set(HCR_SOURCES
     src/graphics/Texture.cpp
     src/graphics/Font.cpp
     src/graphics/Renderer2D.cpp
+    src/graphics/ParticleSystem.cpp
     src/physics/PhysicsWorld.cpp
     src/physics/Terrain.cpp
     src/physics/PlayerCar.cpp
@@ -218,6 +219,21 @@ add_executable(test_stages_and_bridges
     src/audio/AudioEngine.cpp
 )
 target_link_libraries(test_stages_and_bridges box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
+add_executable(test_particles_and_game_stages
+    tools/test_particles_and_game_stages.cpp
+    src/physics/PlayerCar.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
+    src/core/Config.cpp
+    src/core/PlayerInfo.cpp
+    src/core/System.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Renderer2D.cpp
+    src/graphics/ParticleSystem.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_particles_and_game_stages box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
 
 
 

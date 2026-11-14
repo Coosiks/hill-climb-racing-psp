@@ -91,6 +91,8 @@ struct StageConfig {
     float ceiling_offset;
     float fuel_interval;
     int has_bridges;
+    uint32_t sky_color_top;
+    uint32_t sky_color_bottom;
 };
 
 class Config {

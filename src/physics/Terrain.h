@@ -88,6 +88,7 @@ public:
     b2Body* GetRearWallBody() const { return mRearWallBody; }
     int GetActiveBridgeCount() const;
     const SuspensionBridge* GetBridge(int index) const { return (index >= 0 && index < MAX_ACTIVE_BRIDGES) ? &mBridges[index] : NULL; }
+    void MaybeSpawnBridge(int slotIdx);
 
     void GenerateChunkVertices(int chunkIndex, b2Vec2* outVerts, b2Vec2* outPrev, b2Vec2* outNext) const;
 
@@ -135,7 +136,6 @@ private:
     void DestroyBridgeForChunk(int chunkIndex);
     void DestroyAllBridges();
     bool CreateBridge(int chunkIndex, float startX, float endX, float startY, float endY, b2Body* anchorBody);
-    void MaybeSpawnBridge(int slotIdx);
 
     void InitChunkPool();
     void UpdateChunkWindow(int currentChunk);

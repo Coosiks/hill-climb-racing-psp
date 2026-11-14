@@ -1,5 +1,6 @@
 #include "Game.h"
 #include "Config.h"
+#include "graphics/ParticleSystem.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -253,6 +254,9 @@ void Game::StartRace() {
     mRenderAlpha = 1.0f;
     mState = STATE_PLAYING;
 
+    ParticleSystem::Init();
+    ParticleSystem::Reset();
+
     AudioEngine::PlaySFX(SFX_CLICK);
     HCR_Log("StartRace: complete, state = STATE_PLAYING");
 }
@@ -260,6 +264,7 @@ void Game::StartRace() {
 void Game::EndRace() {
     AudioEngine::UpdateEngineSound(0.0f, false);
     mAccumulator = 0.0f;
+    ParticleSystem::Reset();
 
     if (mCar) {
         delete mCar;
@@ -783,6 +788,33 @@ void Game::UpdatePhysicsStep(float dt) {
         mOutOfFuelStopTimer = 0.0f;
         mOutOfFuelFallbackTimer = 0.0f;
     }
+
+    // Particle Emissions (Wheel Dirt & Exhaust Smoke)
+    if (mCar && !mCar->IsDriverDead()) {
+        if (mCar->IsThrottleActive()) {
+            if (mCar->IsRearWheelOnGround()) {
+                b2Vec2 rwPos = mCar->GetRearWheelBody()->GetPosition();
+                b2Vec2 rwVel = mCar->GetRearWheelBody()->GetLinearVelocity();
+                float rwRadius = (mCar->GetConfig() && mCar->GetConfig()->rear_wheel_radius > 0.0f) ?
+                                  mCar->GetConfig()->rear_wheel_radius : 0.40f;
+                ParticleSystem::EmitWheelDirt(rwPos.x, rwPos.y - rwRadius, rwVel.x, rwVel.y, mCurrentStage);
+            }
+            if (mCar->GetConfig() && mCar->GetConfig()->drive_type == 2 && mCar->IsFrontWheelOnGround()) {
+                b2Vec2 fwPos = mCar->GetFrontWheelBody()->GetPosition();
+                b2Vec2 fwVel = mCar->GetFrontWheelBody()->GetLinearVelocity();
+                float fwRadius = (mCar->GetConfig() && mCar->GetConfig()->front_wheel_radius > 0.0f) ?
+                                  mCar->GetConfig()->front_wheel_radius : 0.40f;
+                ParticleSystem::EmitWheelDirt(fwPos.x, fwPos.y - fwRadius, fwVel.x, fwVel.y, mCurrentStage);
+            }
+            // Exhaust smoke puff
+            b2Vec2 cPos = mCar->GetChassisBody()->GetPosition();
+            b2Vec2 cVel = mCar->GetChassisBody()->GetLinearVelocity();
+            float rx = (mCar->GetConfig()) ? mCar->GetConfig()->rear_wheel_offset[0] : -1.0f;
+            float ry = (mCar->GetConfig()) ? mCar->GetConfig()->rear_wheel_offset[1] + 0.2f : -0.3f;
+            ParticleSystem::EmitExhaust(cPos.x + rx, cPos.y + ry, cVel.x, cVel.y);
+        }
+    }
+    ParticleSystem::Update(dt);
 }
 
 void Game::UpdatePlaying(float frameTime) {
@@ -883,12 +915,30 @@ void Game::UpdatePlaying(float frameTime) {
 }
 
 void Game::RenderPlaying() {
+    // 0. Parallax Sky Gradient (Screen space 480x272)
+    Renderer2D::SetupScreenSpace();
+    uint32_t skyTop = 0xFFD87820;
+    uint32_t skyBot = 0xFFFFF0D0;
+    if (mCurrentStage >= 0 && mCurrentStage < Config::StageCount) {
+        skyTop = Config::Stages[mCurrentStage].sky_color_top;
+        skyBot = Config::Stages[mCurrentStage].sky_color_bottom;
+    }
+    Renderer2D::DrawGradientRect(0.0f, 0.0f, (float)PSP_SCREEN_WIDTH, (float)PSP_SCREEN_HEIGHT, skyTop, skyBot);
+
+    // Subtle parallax horizon band scrolling slower than foreground
+    float pX = -fmodf(mCameraX * 4.0f, (float)PSP_SCREEN_WIDTH);
+    uint32_t hillColor = (skyBot & 0x00FFFFFF) | 0x30000000;
+    Renderer2D::DrawFilledRect(pX, 170.0f, (float)PSP_SCREEN_WIDTH, 102.0f, hillColor);
+    Renderer2D::DrawFilledRect(pX + (float)PSP_SCREEN_WIDTH, 170.0f, (float)PSP_SCREEN_WIDTH, 102.0f, hillColor);
+
     // 1. World Rendering
     Renderer2D::SetupCamera(mCameraX, mCameraY, mCameraZoom);
 
     if (mTerrain) {
         mTerrain->Render(mCameraX, mCameraY);
     }
+
+    ParticleSystem::Render();
 
     if (mCar) {
         mCar->Render(mRenderAlpha);
@@ -966,9 +1016,20 @@ void Game::UpdateGameOver() {
 }
 
 void Game::RenderGameOver() {
+    // 0. Sky background
+    Renderer2D::SetupScreenSpace();
+    uint32_t skyTop = 0xFFD87820;
+    uint32_t skyBot = 0xFFFFF0D0;
+    if (mCurrentStage >= 0 && mCurrentStage < Config::StageCount) {
+        skyTop = Config::Stages[mCurrentStage].sky_color_top;
+        skyBot = Config::Stages[mCurrentStage].sky_color_bottom;
+    }
+    Renderer2D::DrawGradientRect(0.0f, 0.0f, (float)PSP_SCREEN_WIDTH, (float)PSP_SCREEN_HEIGHT, skyTop, skyBot);
+
     // Keep rendering world behind gameover overlay
     Renderer2D::SetupCamera(mCameraX, mCameraY, mCameraZoom);
     if (mTerrain) mTerrain->Render(mCameraX, mCameraY);
+    ParticleSystem::Render();
     if (mCar) mCar->Render();
 
     // Dark overlay banner

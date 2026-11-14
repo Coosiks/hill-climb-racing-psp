@@ -39,6 +39,8 @@ public:
     bool IsDead() const { return mIsDead; }
     bool IsDriverDead() const { return mIsDead; }
     bool IsOutOfFuel() const { return mOutOfFuel; }
+    bool IsThrottleActive() const { return mThrottleActive; }
+    bool IsBrakeActive() const { return mBrakeActive; }
     void Kill();
 
     bool IsInAir() const;

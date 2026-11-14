@@ -2,10 +2,14 @@
 updated: 2026-11-14
 milestone: M0.2 / M1 / M3 / M4 / M6
 version: v0.1.0-beta.2
-ci: passing (16 automated CI regression tests green)
+ci: passing (17 automated CI regression tests green)
 ---
 
 ## Работает (с proof-ссылками на agent_reports/скриншоты/логи)
+- **Расширение автопарка до 8 машин под 1.30.0 (T-122):** В `config/vehicles.cfg` добавлены `tractor`, `hippievan`, `quadbike`, `touristbus`. Верифицированы реальные массы Box2D симуляции (Tractor: 5.3235 кг, Hippie Van: 5.2837 кг, Quad Bike: 2.3377 кг, Tourist Bus: 9.7873 кг), радиусы колёс ($R_{rear}=0.60$ м у Tractor), 4-е слоты тюнинга (FUEL для Tractor и Hippie Van, 4WD для Quad Bike и Tourist Bus) и цены разблокировки из APK 1.30.0 (`test_vehicles`, отчёт [agent_reports/T-122.md](agent_reports/T-122.md)).
+- **Градиентный параллакс неба и цветов трасс (T-041):** В `StageConfig` добавлены `sky_color_top` и `sky_color_bottom` для всех 8 трасс. Реализован `Renderer2D::DrawGradientRect` для аппаратного рендера вертикального градиента на PSP (`GU_COLOR_8888`) и PC (OpenGL), параллакс-смещение горизонта в экранном пространстве по положению камеры `mCameraX`. 100% покрытие ключей конфига (80/80) в `test_config` (отчёт [agent_reports/T-041_T-042.md](agent_reports/T-041_T-042.md)).
+- **Zero-Alloc партикловая система пыли и дыма (T-042):** Статический кольцевой буфер `MAX_PARTICLES = 128` (0 runtime mallocs/news). Эмиттеры `EmitWheelDirt` с цветом рельефа активной трассы (земля, песок, снег, лунный реголит, асфальт, марсианская пыль) и `EmitExhaust` при нажатии газа. Все 128 частиц батчатся в 1 draw call через `Renderer2D` (отчёт [agent_reports/T-041_T-042.md](agent_reports/T-041_T-042.md)).
+- **17-й регрессионный тест в CMake + CI (test_particles_and_game_stages):** Автономный сьют из 2 подтестов (Sub-test A: конфиг 8 трасс, цвета неба, потолок Cave только на Cave, дефенсивный гейтинг мостов на не-Forest трассах; Sub-test B: кольцевой буфер `MAX_PARTICLES=128`, кламп 500 $\to$ 128, батчинг 128 спрайтов в 1 draw call, чистый декей за 35 кадров без утечек, эмиттеры Dirt и Exhaust). 100% прохождение в CMake и GitHub Actions CI.
 - **8 трасс версии 1.30.0, RE генераторов высот и потолок Cave (T-121):** Расширение пула трасс до 8 (`countryside`, `desert`, `arctic`, `moon`, `highway`, `cave`, `mars`, `forest`). RE математических формул из `libgame.so` 1.30.0 (`StageHighway` @ `0x148f0a`, `StageCave` @ `0x148776`, `StageMars` @ `0x147626`, `StageForest` @ `0x148b88`). Хеши FNV-1a первых 4 трасс сохранены на 100% бит-в-бит (`test_terrain`). Потолок Cave реализован через `b2ChainShape` (`CAT_TERRAIN`) с гарантированным зазором $\ge 4.5$ м, контакт головы водителя с потолком вызывает перелом шеи / Driver Down. Добавлены поля `has_ceiling`, `ceiling_offset`, `fuel_interval`, `has_bridges` в `StageConfig`, `Config.cpp`, `config/stages.cfg`. 100% покрытие конфига (78/78 ключей) проверено тестом `test_config` (отчёт [agent_reports/T-121.md](agent_reports/T-121.md)).
 - **Висячие мосты (Suspension Bridges) через расщелины (T-021):** Статический пул `MAX_ACTIVE_BRIDGES = 4`, `MAX_BRIDGE_PLANKS = 12`. На трассе Forest при обнаружении расщелин спавнится мост длиной 12 м (10 дощечек $1.2 \times 0.2$ м, `CAT_TERRAIN`, трение 0.70), соединенных 11 шарнирами `b2RevoluteJoint` с лимитами угла $[-0.25, +0.25]$ рад. Автомобиль устойчиво проезжает по мосту над 3.5-метровым оврагом. При выгрузке чанка все тела и шарниры уничтожаются без утечек памяти (zero body leaks). Батчинг рендеринга дощечек через `Renderer2D::DrawSprite` с поворотом на угол дощечки (отчёт [agent_reports/T-021.md](agent_reports/T-021.md)).
 - **16-й регрессионный тест в CMake + CI (test_stages_and_bridges):** Автономный сьют из 3 подтестов (Sub-test A: 8 трасс, уникальные idHash, 4 baseline хеша, детерминизм 4 новых трасс на 2000 м; Sub-test B: зазор Cave $\ge 4.5$ м и гибель водителя при ударе о потолок; Sub-test C: проезд машины по висячему мосту Forest и выгрузка чанка с удалением тел). 100% прохождение в CMake и GitHub Actions CI.
@@ -48,9 +52,7 @@ ci: passing (16 automated CI regression tests green)
 
 ## Сломано / не реализовано
 - **Статический пул аллокаций Box2D:** Box2D пока использует базовый `malloc`/`free` вместо фиксированного статического пула (задача T-010).
-- **Динамический мост:** Доски моста на joint-соединениях ещё не добавлены (задача T-022).
-- **Партикловая система:** Статический кольцевой буфер частиц для пыли и снега (задача T-042).
-- **Многослойный параллакс:** Фоновые слои неба и далёких холмов (задача T-041).
+- **Динамический подвесной мост с физическими веревками:** Усложненная кинематика подвесных канатов (задача T-022).
 
 ## Последние замеры (FPS, physics ms, render ms, RAM; платформа: PPSSPP/железо)
 - **FPS:** 60.0 FPS стабильно (верифицировано в PPSSPP v1.20.4 Slim & 1000 @ 333 MHz, 100% emulation speed, 0 просадок).

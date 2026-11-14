@@ -8,6 +8,7 @@ OBJS = \
     src/graphics/Texture.o \
     src/graphics/Font.o \
     src/graphics/Renderer2D.o \
+    src/graphics/ParticleSystem.o \
     src/physics/PhysicsWorld.o \
     src/physics/Terrain.o \
     src/physics/PlayerCar.o \

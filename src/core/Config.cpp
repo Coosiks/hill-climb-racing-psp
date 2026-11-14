@@ -319,6 +319,8 @@ bool Config::LoadStages(const char* filepath) {
                     Stages[currentStage].ceiling_offset = 6.5f;
                     Stages[currentStage].fuel_interval = 90.0f;
                     Stages[currentStage].has_bridges = 0;
+                    Stages[currentStage].sky_color_top = 0xFFD87820;
+                    Stages[currentStage].sky_color_bottom = 0xFFFFF0D0;
                 }
             }
             continue;
@@ -335,6 +337,8 @@ bool Config::LoadStages(const char* filepath) {
                 Stages[currentStage].ceiling_offset = 6.5f;
                 Stages[currentStage].fuel_interval = 90.0f;
                 Stages[currentStage].has_bridges = 0;
+                Stages[currentStage].sky_color_top = 0xFFD87820;
+                Stages[currentStage].sky_color_bottom = 0xFFFFF0D0;
             } else {
                 currentStage = 0;
             }
@@ -359,6 +363,8 @@ bool Config::LoadStages(const char* filepath) {
                 else if (strcmp(key, "ceiling_offset") == 0) s.ceiling_offset = (float)atof(val);
                 else if (strcmp(key, "fuel_interval") == 0) s.fuel_interval = (float)atof(val);
                 else if (strcmp(key, "has_bridges") == 0) s.has_bridges = atoi(val);
+                else if (strcmp(key, "sky_color_top") == 0) s.sky_color_top = (uint32_t)strtoul(val, NULL, 0);
+                else if (strcmp(key, "sky_color_bottom") == 0) s.sky_color_bottom = (uint32_t)strtoul(val, NULL, 0);
             }
         }
     }

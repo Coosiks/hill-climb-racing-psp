@@ -223,6 +223,25 @@ void Renderer2D::DrawFilledRect(float x, float y, float w, float h, unsigned int
     sceGuEnable(GU_TEXTURE_2D);
 }
 
+void Renderer2D::DrawGradientRect(float x, float y, float w, float h, unsigned int topColor, unsigned int bottomColor) {
+    FlushBatch();
+
+    sceGuDisable(GU_TEXTURE_2D);
+
+    ColorVertex2D* v = (ColorVertex2D*)sceGuGetMemory(4 * sizeof(ColorVertex2D));
+    if (v) {
+        v[0].color = topColor;    v[0].x = x;     v[0].y = y;     v[0].z = 0.0f;
+        v[1].color = topColor;    v[1].x = x + w; v[1].y = y;     v[1].z = 0.0f;
+        v[2].color = bottomColor; v[2].x = x;     v[2].y = y + h; v[2].z = 0.0f;
+        v[3].color = bottomColor; v[3].x = x + w; v[3].y = y + h; v[3].z = 0.0f;
+
+        sceGumDrawArray(GU_TRIANGLE_STRIP, GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D, 4, 0, v);
+        sDrawCallCount++;
+    }
+
+    sceGuEnable(GU_TEXTURE_2D);
+}
+
 void Renderer2D::DrawTerrainFill(Texture* groundTex, const float* pointsX, const float* pointsY, int count, float bottomY, unsigned int color) {
     if (!groundTex || count < 2) return;
 
@@ -439,6 +458,24 @@ void Renderer2D::DrawFilledRect(float x, float y, float w, float h, unsigned int
     glBegin(GL_TRIANGLE_STRIP);
     glVertex2f(x,     y);
     glVertex2f(x + w, y);
+    glVertex2f(x,     y + h);
+    glVertex2f(x + w, y + h);
+    glEnd();
+
+    glEnable(GL_TEXTURE_2D);
+    sDrawCallCount++;
+}
+
+void Renderer2D::DrawGradientRect(float x, float y, float w, float h, unsigned int topColor, unsigned int bottomColor) {
+    FlushBatch();
+
+    glDisable(GL_TEXTURE_2D);
+
+    glBegin(GL_TRIANGLE_STRIP);
+    SetGLColor(topColor);
+    glVertex2f(x,     y);
+    glVertex2f(x + w, y);
+    SetGLColor(bottomColor);
     glVertex2f(x,     y + h);
     glVertex2f(x + w, y + h);
     glEnd();

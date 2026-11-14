@@ -39,6 +39,7 @@ public:
 
     // Primitive drawing
     static void DrawFilledRect(float x, float y, float w, float h, unsigned int color);
+    static void DrawGradientRect(float x, float y, float w, float h, unsigned int topColor, unsigned int bottomColor);
 
     // Terrain rendering
     static void DrawTerrainFill(Texture* groundTex, const float* pointsX, const float* pointsY, int count, float bottomY, unsigned int color = 0xFFFFFFFF);
