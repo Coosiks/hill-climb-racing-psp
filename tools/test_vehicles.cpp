@@ -146,6 +146,23 @@ int main() {
         // coeff = 0.15 * 2500 = 375 N => clamped to 150.0 N
         TEST_CHECK(feq(df50, 150.0f, 0.1f), "Downforce must be clamped at downforce_max (150 N)");
     }
+
+    printf("\n  Authoritative Vehicle Physics Table (Box2D Simulation):\n");
+    printf("  | Vehicle ID     | idHash     | R_front | R_rear | Chassis (kg) | F-Wheel (kg) | R-Wheel (kg) | Total Mass (kg) | 4th Upgrade Type |\n");
+    printf("  | :------------- | :--------- | :------ | :----- | :----------- | :----------- | :----------- | :-------------- | :--------------- |\n");
+    for (int i = 0; i < Config::VehicleCount; ++i) {
+        VehicleConfig* vc = &Config::Vehicles[i];
+        PlayerCar pc(&world, b2Vec2(0.0f, 2.0f), 0, 0, 0, 0, vc);
+        float cm = pc.GetChassisBody()->GetMass();
+        float fm = pc.GetFrontWheelBody()->GetMass();
+        float rm = pc.GetRearWheelBody()->GetMass();
+        float hm = pc.GetDriverHeadBody() ? pc.GetDriverHeadBody()->GetMass() : 0.0f;
+        float total = cm + fm + rm + hm;
+        uint32_t vh = PlayerInfo::HashId(vc->id);
+        printf("  | %-14s | 0x%08X | %7.2f | %6.2f | %12.4f | %12.4f | %12.4f | %15.4f | %16d |\n",
+               vc->id, vh, vc->front_wheel_radius, vc->rear_wheel_radius, cm, fm, rm, total, vc->fourth_upgrade_type);
+    }
+    printf("\n");
     printf("  [PASS] Sub-test B: Box2D physical properties (radii, mass, drive type, downforce) verified!\n\n");
 
     // ----------------------------------------------------

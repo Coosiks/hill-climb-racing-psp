@@ -535,6 +535,9 @@ bool Terrain::CreateBridge(int chunkIndex, float startX, float endX, float start
 }
 
 void Terrain::MaybeSpawnBridge(int slotIdx) {
+    if (!mStageConfig || mStageConfig->has_bridges == 0) {
+        return;
+    }
     TerrainChunk& chunk = mChunks[slotIdx];
     if (chunk.chunkIndex > 0 && (chunk.chunkIndex % 4 == 1)) {
         float chunkStart = (float)chunk.chunkIndex * CHUNK_WIDTH_METERS;
