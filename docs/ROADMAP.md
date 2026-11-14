@@ -87,4 +87,6 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 
 ## [ ] Milestone M6: Content Parity 1.30.0
 - [x] **T-120 (content, re):** Vehicles & Stages 1.30.0 reverse engineering: automated extraction script `extract_1300_info.py`, disassembly dump `re_1300_dump.txt`, content registry `hcr_1300_inventory.md` for 29 vehicles and 28 stages, and RGBA5551/RGBA8888 classification in `convert_assets.py`.
+- [x] **T-121 (terrain, re):** Expand stages to 8 (`countryside`, `desert`, `arctic`, `moon`, `highway`, `cave`, `mars`, `forest`), extract height formulas from `libgame.so` 1.30.0, implement Cave ceiling with $\ge 4.5$m clearance and Driver Down neck break, add `has_ceiling`, `ceiling_offset`, `fuel_interval`, `has_bridges` to `stages.cfg` (100% config key coverage in `test_config`).
+- [x] **T-021 (physics, terrain):** Implement zero-alloc suspension bridge pool (`MAX_ACTIVE_BRIDGES = 4`, `MAX_BRIDGE_PLANKS = 12`) on Forest stage, 10 dynamic planks connected by 11 `b2RevoluteJoint` with $[-0.25, +0.25]$ rad limits, verified zero body leaks on chunk unload, batched sprite rendering via `Renderer2D::DrawSprite`.
 

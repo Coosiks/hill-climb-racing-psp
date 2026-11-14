@@ -205,6 +205,21 @@ add_executable(test_audio_and_batch
 )
 target_link_libraries(test_audio_and_batch box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
 
+add_executable(test_stages_and_bridges
+    tools/test_stages_and_bridges.cpp
+    src/physics/PlayerCar.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
+    src/core/Config.cpp
+    src/core/PlayerInfo.cpp
+    src/core/System.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Renderer2D.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_stages_and_bridges box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
+
 
 
 
