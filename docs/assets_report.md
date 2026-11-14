@@ -142,3 +142,37 @@ The offline asset converter script will:
 4. **Font Compilation:**
    - Parse `.fnt` files into compact binary glyph tables (`.fntb`) containing direct UV and metrics lookup arrays, eliminating runtime XML/text parsing.
 
+---
+
+## 7. Preprocessed Asset Pipeline Implementation (T-111)
+
+### 7.1 CLI Interface & Options
+The converter (`tools/convert_assets.py`) supports:
+```bash
+python3 tools/convert_assets.py [--apk PATH | --assets DIR] [--out DIR] [--format {5551,8888,auto}] [--no-swizzle]
+```
+- Direct APK extraction via Python `zipfile` (no manual unpacking required).
+- Canonical target output folder: `assets/`.
+- Automatic format mode (`auto`):
+  - **RGBA8888 (32bpp):** `Car.png`, `Tire.png`, `driver-body.png`, `driver-head.png`, `antenna.png`, `BridgeWoodBlock.png`.
+  - **RGBA5551 (16bpp):** Terrain ground/surface textures, collectibles (`Coin5..500`, `fuel-canister`), UI cards, buttons, fonts.
+- Oversized textures ($>512$ max dimension): Downscaled with aspect ratio preservation via Lanczos filter to fit PSP GE hardware limits (e.g., $800\times 480 \to 512\times 307$).
+- Hardware GE Swizzling: $16\times 8$-byte blocks with POT dimension padding.
+
+### 7.2 Binary `.tex` Layout
+```
+Offset  Size  Type      Field       Description
+-----------------------------------------------------------------------------------
+0x00    4     char[4]   magic       Identifier magic: "PSPT"
+0x04    2     uint16    orig_w      Original visible image width in pixels
+0x06    2     uint16    orig_h      Original visible image height in pixels
+0x08    2     uint16    pot_w       Padded power-of-two width (<= 512)
+0x0A    2     uint16    pot_h       Padded power-of-two height (<= 512)
+0x0C    2     uint16    format      Pixel storage mode: 1 = GU_PSM_5551, 3 = GU_PSM_8888
+0x0E    2     uint16    swizzled    Swizzle flag: 1 = swizzled, 0 = linear
+0x10    N     bytes     payload     Raw/swizzled pixel data (pot_w * pot_h * bpp bytes)
+```
+- Total header size: **16 bytes**.
+- Loading on PSP: Direct DMA-friendly `fread` into 16-byte aligned heap buffer (`memalign(16, size)`). Zero runtime decompression overhead (`stb_image.h` completely removed).
+
+

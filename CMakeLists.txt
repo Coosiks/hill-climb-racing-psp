@@ -138,6 +138,12 @@ add_executable(test_timestep
 )
 target_link_libraries(test_timestep box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
 
+add_executable(test_texture
+    tools/test_texture.cpp
+    src/graphics/Texture.cpp
+)
+target_link_libraries(test_texture ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
 
 
 

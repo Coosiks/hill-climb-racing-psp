@@ -55,4 +55,5 @@ CAMERA_ZOOM_SPEED_FACTOR,0.005,design/TODO-TUNE,2026-11-14,Dynamic camera zoom f
 CAMERA_MIN_ZOOM,0.8,design/TODO-TUNE,2026-11-14,Minimum camera zoom bound
 CAMERA_MAX_ZOOM,1.2,design/TODO-TUNE,2026-11-14,Maximum camera zoom bound
 CHUNK_GEN_VERTICES_PER_STEP,8,design/TODO-TUNE,2026-11-14,Amortized vertex generation batch size per step
+MAX_TEXTURE_DIMENSION_PSP,512,design/TODO-TUNE,2026-11-14,Maximum POT texture dimension supported by PSP GE
 

@@ -28,6 +28,11 @@ Terrain::Terrain(b2World* world, StageType stageType)
     }
 
     // Load textures based on stage config
+#if defined(__PSP__)
+    u32 t0 = sceKernelGetSystemTimeLow();
+#else
+    double t0 = System::GetTime();
+#endif
     int stageIdx = (mStageType >= 0 && mStageType < STAGE_COUNT) ? mStageType : STAGE_COUNTRYSIDE;
     mTexGround.LoadPNG(Config::Stages[stageIdx].ground_texture);
     mTexSurface.LoadPNG(Config::Stages[stageIdx].surface_texture);
@@ -38,6 +43,13 @@ Terrain::Terrain(b2World* world, StageType stageType)
     mTexCoin100.LoadPNG("assets/Coin100.png");
     mTexCoin500.LoadPNG("assets/Coin500.png");
     mTexFuel.LoadPNG("assets/fuel-canister.png");
+#if defined(__PSP__)
+    u32 t1 = sceKernelGetSystemTimeLow();
+    printf("[PERF_ASSETS] Terrain textures loaded in %u us (%.2f ms)\n", (unsigned int)(t1 - t0), (float)(t1 - t0) / 1000.0f);
+#else
+    double t1 = System::GetTime();
+    printf("[PERF_ASSETS] Terrain textures loaded in %.2f ms\n", (t1 - t0) * 1000.0);
+#endif
 
     InitChunkPool();
     UpdateChunkWindow(0);

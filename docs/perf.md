@@ -62,3 +62,30 @@ An on-screen telemetry overlay can be toggled in debug builds (`SELECT + START`)
 - Single-frame Chunk Generation Spike: **10.922 ms** (all 61 vertices evaluated synchronously in 1 frame).
 - Impact: Dropped frames every 30 meters on real PSP hardware.
 - Resolution in T-119: 2-phase amortized pipeline (incremental 8-vertex computation + atomic chain creation upon completion) reduced maximum per-frame latency from **10.922 ms** down to **1.928 ms** (an **82.3% reduction** in peak frame cost).
+
+---
+
+## 5. Asset Loading Latency & RAM Footprint (T-111)
+
+> [!NOTE]
+> Profiling telemetry captured in PPSSPP v1.20.4 under PSP-1000 hardware profile (`PSPModel = 0`, 32 MB user RAM @ 333 MHz Allegrex MIPS) using canonical swizzled `.tex` assets.
+
+### 5.1 Measured Loading Latency (PPSSPP PSP-1000 Mode)
+- **UI & Garage Initialization (`Game::Init`):**
+  - **415.51 ms** (415,514 $\mu$s) for 13 UI textures + BMFont table/texture.
+  - Replaces previous multi-second runtime PNG decompression stall via `stbi_load`.
+- **Race Scene Transition (`Game::StartRace`):**
+  - **Terrain Textures:** **188.08 ms** (188,079 $\mu$s) for 7 textures (`terrain-ground`, `terrain-surface`, `Coin5`, `Coin25`, `Coin100`, `Coin500`, `fuel-canister`).
+  - **PlayerCar Textures:** **66.23 ms** (66,229 $\mu$s) for 4 vehicle textures (`Car`, `Tire`, `driver-body`, `driver-head`).
+  - **Total Race Asset Load Time:** **254.31 ms** (seamless instantaneous transition).
+
+### 5.2 Code Size & Binary Footprint
+- `src/graphics/Texture.o`: Reduced from **218 KB** to **24 KB** (**89.0% reduction**) by eliminating `stb_image.h` from PSP builds.
+- Stripped ELF binary (`hcr_strip.elf`): 545,624 bytes.
+- Packaged PSP `EBOOT.PBP`: Shrunk from 581,100 bytes to 552,684 bytes (**~28.4 KB saved**).
+
+### 5.3 RAM Savings (RGBA5551 vs RGBA8888)
+- **Terrain Ground Textures ($512\times 512$):** **512 KB** (524,288 B in RGBA5551) vs 1,024 KB (1,048,576 B in RGBA8888) $\to$ **512 KB saved** per active stage.
+- **UI Stage Cards ($512\times 256$, 4 stages):** **256 KB** each (RGBA5551) vs 512 KB $\to$ **1,024 KB (1 MB) saved**.
+- **HUD & Collectibles:** $64\times 64$ icons stored in 16-bit format (8 KB vs 16 KB) $\to$ **~480 KB saved**.
+- **Total Heap Space Reclaimed:** **> 2.0 MB** (significant headroom increase on 24 MB PSP-1000 user heap).

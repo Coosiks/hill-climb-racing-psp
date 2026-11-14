@@ -38,7 +38,7 @@ Installation Steps:
 3. Use the asset converter script from the GitHub repository:
    https://github.com/Coosiks/hill-climb-racing-psp
    Run:
-     python tools/convert_assets.py --apk path/to/hcr_1.18.0.apk --out ms0:/PSP/GAME/HCR/data/
+     python3 tools/convert_assets.py --apk path/to/hcr.apk --out ms0:/PSP/GAME/HCR/assets/
 4. Launch "Hill Climb Racing" from the PSP Game -> Memory Stick menu.
 
 Note: If launched without assets, the game will safely display an on-screen prompt
@@ -59,7 +59,7 @@ explaining that asset conversion is required.
 1. Extract the tar.gz archive to a directory.
 2. Ensure SDL2 and OpenGL are installed:
    Ubuntu/Debian: sudo apt-get install libsdl2-2.0-0 libgl1-mesa-glx
-3. Place converted assets in the 'data/' folder next to the 'hcr_pc' binary.
+3. Place converted assets in the 'assets/' folder next to the 'hcr_pc' binary.
 4. Run:
    ./hcr_pc
 

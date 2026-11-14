@@ -93,9 +93,21 @@ Game::~Game() {
     AudioEngine::Shutdown();
 }
 
+#if defined(__PSP__)
+static float sAssetLoadTimeUI = 0.0f;
+static float sAssetLoadTimeTerrain = 0.0f;
+static float sAssetLoadTimeCar = 0.0f;
+#endif
+
 bool Game::Init() {
     PlayerInfo::Load();
     AudioEngine::Init();
+
+#if defined(__PSP__)
+    u32 t0 = sceKernelGetSystemTimeLow();
+#else
+    double t0 = System::GetTime();
+#endif
 
     mFont.Load("assets/fonts/gamefont.fnt", "assets/fonts/gamefont_0.png");
 
@@ -115,6 +127,16 @@ bool Game::Init() {
     mTexStageIcons[STAGE_ARCTIC].LoadPNG("assets/stage-icon-arctic.png");
     mTexStageIcons[STAGE_MOON].LoadPNG("assets/stage-icon-moon.png");
 
+#if defined(__PSP__)
+    u32 t1 = sceKernelGetSystemTimeLow();
+    sAssetLoadTimeUI = (float)(t1 - t0) / 1000.0f;
+    printf("[PERF_ASSETS] Game::Init UI textures loaded in %u us (%.2f ms)\n", (unsigned int)(t1 - t0), sAssetLoadTimeUI);
+    HCR_Log("[PERF_ASSETS] Game::Init UI textures loaded in %u us (%.2f ms)", (unsigned int)(t1 - t0), sAssetLoadTimeUI);
+#else
+    double t1 = System::GetTime();
+    printf("[PERF_ASSETS] Game::Init UI textures loaded in %.2f ms\n", (t1 - t0) * 1000.0);
+#endif
+
     mState = STATE_GARAGE;
     return true;
 }
@@ -128,16 +150,32 @@ void Game::StartRace() {
     mPhysics = new PhysicsWorld(grav, this);
 
     HCR_Log("StartRace: creating Terrain");
+#if defined(__PSP__)
+    u32 tc0 = sceKernelGetSystemTimeLow();
+#endif
     mTerrain = new Terrain(mPhysics->GetWorld(), mCurrentStage);
+#if defined(__PSP__)
+    u32 tc1 = sceKernelGetSystemTimeLow();
+    sAssetLoadTimeTerrain = (float)(tc1 - tc0) / 1000.0f;
+    HCR_Log("[PERF_ASSETS] Terrain loaded in %u us (%.2f ms)", (unsigned int)(tc1 - tc0), sAssetLoadTimeTerrain);
+#endif
     mPhysics->SetTerrain(mTerrain);
 
     HCR_Log("StartRace: creating PlayerCar");
+#if defined(__PSP__)
+    u32 tp0 = sceKernelGetSystemTimeLow();
+#endif
     b2Vec2 startPos(0.0f, 2.5f);
     mCar = new PlayerCar(mPhysics->GetWorld(), startPos,
                          PlayerInfo::EngineLevel,
                          PlayerInfo::SuspensionLevel,
                          PlayerInfo::TiresLevel,
                          PlayerInfo::AWDLevel);
+#if defined(__PSP__)
+    u32 tp1 = sceKernelGetSystemTimeLow();
+    sAssetLoadTimeCar = (float)(tp1 - tp0) / 1000.0f;
+    HCR_Log("[PERF_ASSETS] PlayerCar loaded in %u us (%.2f ms)", (unsigned int)(tp1 - tp0), sAssetLoadTimeCar);
+#endif
 
     mSessionCoins = 0;
     mMaxDistance = 0.0f;
@@ -579,8 +617,11 @@ void Game::UpdatePlaying(float frameTime) {
             FILE* pf = fopen("perf_snapshot.txt", "w");
             if (!pf) pf = fopen("ms0:/PSP/GAME/HCR/perf_snapshot.txt", "w");
             if (pf) {
-                fprintf(pf, "=== PPSSPP PSP-1000 Performance Snapshot (T-119) ===\n");
+                fprintf(pf, "=== PPSSPP PSP-1000 Performance Snapshot (T-111 & T-119) ===\n");
                 fprintf(pf, "Hardware Profile: PSP-1000 (32 MB RAM @ 333 MHz Allegrex MIPS)\n");
+                fprintf(pf, "Asset Load Time UI: %.2f ms (13 textures + font)\n", sAssetLoadTimeUI);
+                fprintf(pf, "Asset Load Time Terrain: %.2f ms (7 stage textures)\n", sAssetLoadTimeTerrain);
+                fprintf(pf, "Asset Load Time PlayerCar: %.2f ms (4 vehicle textures)\n", sAssetLoadTimeCar);
                 fprintf(pf, "Physics Step Avg: %.3f ms (%d steps measured)\n", avgStepMs, sStepCount);
                 fprintf(pf, "Chunk Gen (Full) Avg: %.3f ms (%d chunks measured)\n", avgChunkMs, chunkCount);
                 fprintf(pf, "Per-Frame Gen Max: %.3f ms\n", maxPerFrameMs);
@@ -588,6 +629,7 @@ void Game::UpdatePlaying(float frameTime) {
                 fprintf(pf, "Car Distance Reached: %.1f m\n", mMaxDistance);
                 fclose(pf);
             }
+            HCR_Log("[PERF] Asset Load UI: %.2f ms, Terrain: %.2f ms, Car: %.2f ms", sAssetLoadTimeUI, sAssetLoadTimeTerrain, sAssetLoadTimeCar);
             HCR_Log("[PERF] Physics Step Avg: %.3f ms (%d steps)", avgStepMs, sStepCount);
             HCR_Log("[PERF] Chunk Gen (Full) Avg: %.3f ms (%d chunks)", avgChunkMs, chunkCount);
             HCR_Log("[PERF] Per-Frame Gen Max: %.3f ms", maxPerFrameMs);

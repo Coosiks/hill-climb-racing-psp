@@ -38,22 +38,25 @@ int main(int argc, char* argv[]) {
     Config::LoadAll();
 
     // Check for game assets (Bring Your Own APK model)
+#if defined(__PSP__)
+    FILE* testFile = fopen("assets/Car.tex", "rb");
+#else
     FILE* testFile = fopen("assets/Car.png", "rb");
-    if (!testFile) testFile = fopen("data/Car.png", "rb");
-    if (!testFile) testFile = fopen("assets_converted/Car.tex", "rb");
+    if (!testFile) testFile = fopen("assets/Car.tex", "rb");
+#endif
     if (!testFile) {
 #if defined(__PSP__)
         pspDebugScreenInit();
         pspDebugScreenPrintf("==================================================\n");
         pspDebugScreenPrintf("          HILL CLIMB RACING PSP (BETA)\n");
         pspDebugScreenPrintf("==================================================\n\n");
-        pspDebugScreenPrintf("ERROR: Game assets not found!\n\n");
+        pspDebugScreenPrintf("ERROR: Game assets not found in 'assets/'!\n\n");
         pspDebugScreenPrintf("This is a clean-room reimplementation.\n");
         pspDebugScreenPrintf("Original game assets are NOT distributed with it.\n\n");
         pspDebugScreenPrintf("Please:\n");
-        pspDebugScreenPrintf("1. Provide your legally owned HCR APK (v1.18.0)\n");
-        pspDebugScreenPrintf("2. Run 'python tools/convert_assets.py'\n");
-        pspDebugScreenPrintf("3. Copy 'assets' or 'data' folder alongside EBOOT.PBP\n\n");
+        pspDebugScreenPrintf("1. Provide your legally owned HCR APK\n");
+        pspDebugScreenPrintf("2. Run 'python3 tools/convert_assets.py --apk <apk_path>'\n");
+        pspDebugScreenPrintf("3. Copy 'assets' folder alongside EBOOT.PBP\n\n");
         pspDebugScreenPrintf("Exiting to XMB in 10 seconds...\n");
         sceKernelDelayThread(10 * 1000 * 1000);
         sceKernelExitGame();
@@ -61,11 +64,11 @@ int main(int argc, char* argv[]) {
         printf("==================================================\n");
         printf("          HILL CLIMB RACING PC (BETA)\n");
         printf("==================================================\n\n");
-        printf("ERROR: Game assets not found!\n");
+        printf("ERROR: Game assets not found in 'assets/'!\n");
         printf("Original game assets are NOT distributed with this repository.\n\n");
         printf("Please run:\n");
-        printf("  python3 tools/convert_assets.py\n");
-        printf("with your legally owned Hill Climb Racing APK (v1.18.0).\n\n");
+        printf("  python3 tools/convert_assets.py --apk <path/to/hcr.apk>\n");
+        printf("and place assets in the 'assets/' folder.\n\n");
 #endif
         return -1;
     }

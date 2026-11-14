@@ -1,7 +1,10 @@
-=== PPSSPP PSP-1000 Performance Snapshot (T-119) ===
+=== PPSSPP PSP-1000 Performance Snapshot (T-111 & T-119) ===
 Hardware Profile: PSP-1000 (32 MB RAM @ 333 MHz Allegrex MIPS)
+Asset Load Time UI: 415.51 ms (13 textures + font)
+Asset Load Time Terrain: 188.08 ms (7 stage textures)
+Asset Load Time PlayerCar: 66.23 ms (4 vehicle textures)
 Physics Step Avg: 0.239 ms (400 steps measured)
-Chunk Gen (Full) Avg: 11.798 ms (22 chunks measured)
+Chunk Gen (Full) Avg: 11.864 ms (22 chunks measured)
 Per-Frame Gen Max: 1.929 ms
 Per-Frame Gen Avg: 1.473 ms
 Car Distance Reached: 55.6 m

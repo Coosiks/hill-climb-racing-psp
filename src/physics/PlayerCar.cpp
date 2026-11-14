@@ -18,10 +18,22 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
       mThrottleRamp(0.0f), mAirTime(0.0f), mAirRotation(0.0f), mLastAngle(0.0f), mFlipsCount(0) {
 
     // Load textures
+#if defined(__PSP__)
+    u32 t0 = sceKernelGetSystemTimeLow();
+#else
+    double t0 = System::GetTime();
+#endif
     mTexChassis.LoadPNG("assets/Car.png");
     mTexTire.LoadPNG("assets/Tire.png");
     mTexDriverBody.LoadPNG("assets/driver-body.png");
     mTexDriverHead.LoadPNG("assets/driver-head.png");
+#if defined(__PSP__)
+    u32 t1 = sceKernelGetSystemTimeLow();
+    printf("[PERF_ASSETS] PlayerCar textures loaded in %u us (%.2f ms)\n", (unsigned int)(t1 - t0), (float)(t1 - t0) / 1000.0f);
+#else
+    double t1 = System::GetTime();
+    printf("[PERF_ASSETS] PlayerCar textures loaded in %.2f ms\n", (t1 - t0) * 1000.0);
+#endif
 
     // 1. Create Chassis Body (polygon from Config::VehicleJeep)
     b2BodyDef bd;
