@@ -1,6 +1,7 @@
 #include "PlayerInfo.h"
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 SavePayload PlayerInfo::sPayload;
 bool PlayerInfo::sDirty = false;

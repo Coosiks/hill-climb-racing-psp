@@ -295,7 +295,7 @@ void Renderer2D::DrawLightCone(float originX, float originY, float angle, float 
 
     sceGuDisable(GU_TEXTURE_2D);
     sceGuEnable(GU_BLEND);
-    sceGuBlendFunc(GU_ADD, GU_SRC_ALPHA, GU_ONE, 0, 0);
+    sceGuBlendFunc(GU_ADD, GU_SRC_ALPHA, GU_FIX, 0, 0x00FFFFFF);
 
     ColorVertex2D* v = (ColorVertex2D*)sceGuGetMemory(4 * sizeof(ColorVertex2D));
     if (v) {
