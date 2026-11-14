@@ -168,16 +168,14 @@ bool Game::Init() {
     // Sync active selection with Config
     uint32_t selStage = PlayerInfo::GetSelectedStageIdHash();
     for (int i = 0; i < Config::StageCount; ++i) {
-        if (PlayerInfo::HashId(Config::Stages[i].id) == selStage ||
-            PlayerInfo::HashId(Config::Stages[i].name) == selStage) {
+        if (PlayerInfo::HashId(Config::Stages[i].id) == selStage) {
             mCurrentStage = i;
             break;
         }
     }
     uint32_t selVeh = PlayerInfo::GetSelectedVehicleIdHash();
     for (int i = 0; i < Config::VehicleCount; ++i) {
-        if (PlayerInfo::HashId(Config::Vehicles[i].id) == selVeh ||
-            PlayerInfo::HashId(Config::Vehicles[i].name) == selVeh) {
+        if (PlayerInfo::HashId(Config::Vehicles[i].id) == selVeh) {
             mCurrentVehicle = i;
             break;
         }

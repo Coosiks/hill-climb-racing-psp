@@ -266,8 +266,6 @@ void PlayerInfo::SyncToLegacy() {
 
     SavedVehicleEntry* v = GetVehicleEntry(sPayload.selectedVehicleIdHash);
     if (!v) v = GetVehicleEntry(HashId("jeep"));
-    if (!v) v = GetVehicleEntry(HashId("Hill Climber"));
-    if (!v) v = GetVehicleEntry(HashId("Jeep"));
 
     if (v) {
         EngineLevel = v->levelEngine;
@@ -279,10 +277,8 @@ void PlayerInfo::SyncToLegacy() {
     }
 
     const char* stageTags[4] = { "countryside", "desert", "arctic", "moon" };
-    const char* stageNames[4] = { "Countryside", "Desert", "Arctic", "Moon" };
     for (int i = 0; i < STAGE_COUNT; ++i) {
         SavedStageEntry* s = GetStageEntry(HashId(stageTags[i]));
-        if (!s) s = GetStageEntry(HashId(stageNames[i]));
         HighScores[i] = s ? s->bestDistance : 0;
     }
 }
@@ -399,18 +395,11 @@ bool PlayerInfo::Load(const char* basePath) {
                 v->levelTires = (uint8_t)tires;
                 v->level4th = (uint8_t)awd;
             }
-            SavedVehicleEntry* v2 = GetOrCreateVehicleEntry(HashId("Hill Climber"));
-            if (v2 && v) { *v2 = *v; v2->idHash = HashId("Hill Climber"); }
-            SavedVehicleEntry* v3 = GetOrCreateVehicleEntry(HashId("Jeep"));
-            if (v3 && v) { *v3 = *v; v3->idHash = HashId("Jeep"); }
 
             const char* stageTags[4] = { "countryside", "desert", "arctic", "moon" };
-            const char* stageNames[4] = { "Countryside", "Desert", "Arctic", "Moon" };
             for (int i = 0; i < STAGE_COUNT; ++i) {
                 SavedStageEntry* s = GetOrCreateStageEntry(HashId(stageTags[i]));
                 if (s) { s->unlocked = 1; s->bestDistance = scores[i]; }
-                SavedStageEntry* s2 = GetOrCreateStageEntry(HashId(stageNames[i]));
-                if (s2) { s2->unlocked = 1; s2->bestDistance = scores[i]; }
             }
 
             sDirty = true;
