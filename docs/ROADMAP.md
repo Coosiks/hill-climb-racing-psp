@@ -106,33 +106,30 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [x] **H12 (render):** Audit blending and texture state restoration in `Renderer2D::DrawLightCone` across PSP (`GU_ADD, GU_SRC_ALPHA, GU_FIX`) and PC (`GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA`), confirming persistent `GU_BLEND`/`GL_BLEND` activation.
 - [x] **T-130 (content, terrain):** Expand stages to 28 (`factory`, `haunted`, `northpole`, `nuclear`), achieving 100% stage content parity with 1.30.0; pure `double` height generators, bridge gating on factory, dual night+mud mechanics on haunted.
 - [x] **T-131a (content, vehicle):** Add `train` (Kiddie Express) as 25th vehicle; elongated wheelbase ($3.80$ m $> 3.40$ m), heavy chassis mass ($9.7367$ kg $> 3.4206$ kg median), BOOST 4th upgrade slot, elevated locomotive angular damping ($0.60$).
-- [ ] **Test 21:** 21st automated regression test (`test_roster28`) verifying 28 stages, 25 vehicles, FNV-1a hashes, train mass & wheelbase, and H13 regressions.
+- [x] **Test 21:** 21st automated regression test (`test_roster28`) verifying 28 stages, 25 vehicles, FNV-1a hashes, train mass & wheelbase, and H13 regressions.
 
 ---
 
-## [ ] Milestone M7: Special Vehicle Physics & Content Parity Completion
-### Batch 16 Step 0: Special Vehicle Physics Architectural Grounding
-Specialized physics architectures required for 4 non-standard vehicles that do not fit the standard two-wheel `PlayerCar` chassis-and-wheels model:
-- **Snowmobile:** Front ski steering runner with terrain edge contact vs rear continuous rubber caterpillar tread.
-  - *Unresolved Design Question 1:* Model front ski as rigid slider polygon fixture with directional friction or revolute suspension joint; model rear tread as multi-wheel chain or single long friction strip.
-- **Sleigh:** Dual sliding runners (skis) with zero rotating wheel bodies.
-  - *Unresolved Design Question 2:* Contact modeling with two low-friction edge contact pads; snow/ice friction ($\mu = 0.05$) vs terrain drag on asphalt/dirt ($\mu = 0.80$).
-- **Hovercraft:** Dynamic air cushion repulsion aerodynamics.
-  - *Unresolved Design Question 3:* Air cushion lift force implementation (raycast-based spring repulsion vs Box2D soft contact sensor); zero-friction lateral drift and air rudder turning moments.
-- **Moonlander:** Rocket thrust propulsion & reaction control system (RCS).
-  - *Unresolved Design Question 4:* Main vertical rocket engine variable impulse vector; attitude control torque jets; multi-strut landing gear shock damping on harsh terrain.
-
-*All future parameters for Batch 16 vehicles are classified as `design/TODO-TUNE` until calibrated against reference video.*
+## [x] Milestone M7: Special Vehicle Physics & Content Parity Completion
+- [x] **H14 (audit):** Audit commit reports, zero-fabrication bundle policy.
+- [x] **H15 (economy):** Desert, Arctic, Moon unlock prices aligned with APK 1.30.0 addresses.
+- [x] **T-131b (physics, vehicle):** Complete 29/29 vehicle roster (`snowmobile`, `hovercraft`, `moonlander`, `sleigh`) with specialized physics architectures (ski runners, air cushion hover, rocket thruster).
+- [x] **Test 22:** 22nd automated regression test (`test_full_parity_1300`) verifying 28 stages, 29 vehicles, special physics, and save serialization.
 
 ---
 
-## [ ] Milestone M8: Audio Routing, Music Streaming, Assets & Beta.3 Release Prep
+## [x] Milestone M8: Audio Routing, Music Streaming, Assets & Beta.3 Release Prep
 - [x] **H16 (audio):** Real-time audio routing and SFX mixing in `AudioEngine` (engine pitch, skid, coin/fuel SFX).
 - [x] **T-132 (audio):** Streaming background music architecture with 16.16 fixed-point phase accumulator resampler and loop seam handling.
 - [x] **T-133 (game, hud):** State machine pause mode (`STATE_PAUSE`), Start button toggling, and distance bonus coin awards every 100m.
+- [x] **Test 23:** 23rd automated regression test (`test_audio_pause_distance`) verifying audio routing, pause state, and distance milestone rewards.
 - [x] **H17a (assets):** Resolve stage texture paths to APK reality across 19 stages in `config/stages.cfg`; document canonical spring variant for Seasons (`terrain-seasons-spring.png`) and fallback ground textures (`cave`, `rooftops`, `construction`, `ragnarok` $\to$ `terrain-ground.png`); add comprehensive audit to `tools/convert_assets.py` enforcing 100% texture and music coverage.
 - [x] **H17b (audio):** Normalize audio path in `AudioEngine::PlayMusic`: try path as-is, fallback on `.ogg` $\to$ `.wav` replacement; verify mono 22050 Hz 16-bit PCM; document 2 generic music tracks vs per-stage music from `libgame.so` in params and roadmap.
 - [x] **H17c (audio):** Implement strict lock-free SPSC streaming ring buffer in `AudioEngine` (capacity $N-1 = 32767$, dynamic sample counting via modular distance, elimination of non-atomic `sMusicRingCount`, memory barriers via `__sync_synchronize()`, verified via 60s stress test with zero corruption).
+- [x] **T-052b (validation):** Authentic re-validation on PPSSPP with real telemetry and asset audit (0 texture load errors, fresh `perf_snapshot.txt`, 28/28 heightfield hashes `match=YES`, visual inspection suite).
+- [x] **T-115b (release):** Prepare v0.1.0-beta.3 release notes, packages (`hcr-psp-v0.1.0-beta.3.zip`, `hcr-pc-v0.1.0-beta.3-linux.tar.gz`), checksums, changelog, and documentation.
+- [ ] **Test 24:** 24th automated regression test (`test_assets_music_ring`) covering asset audit, music normalization, and lock-free SPSC buffer.
+
 
 
 

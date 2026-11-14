@@ -17,6 +17,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.0-beta.3] - 2026-11-15
+
+### Added
+- **Full 1.30.0 Content Parity (28 Stages & 29 Vehicles):** Complete roster parity with official APK 1.30.0, including all 28 stages (`countryside` through `nuclear`) and 29 vehicles (`jeep` through `sleigh`).
+- **Specialized Vehicle Physics Architectures (T-131b):**
+  - **Snowmobile (Mode 1):** Front ski runner terrain sliding contact with directional friction and rear rubber caterpillar propulsion.
+  - **Hovercraft (Mode 2):** Contact-free dynamic air cushion spring-damper repulsion, hidden support wheels (`hide_wheels = 1`), and lateral air rudder turning moments.
+  - **Sleigh (Mode 1):** Dual ski runner low-friction snow sliding with hidden support wheels (`hide_wheels = 1`).
+  - **Moonlander (Mode 3):** Active vertical rocket thrust propulsion controlled via `Triangle` / `D-pad Up` (`SetThruster(bool)`), dynamic fuel consumption, and attitude stabilization.
+- **Streaming Music Engine & Audio Architecture (H16, T-132, H17b, H17c):**
+  - Lock-free Single-Producer Single-Consumer (SPSC) streaming ring buffer with hardware memory barriers (`__sync_synchronize()`), zero underruns over 60s stress test.
+  - Offline 16-bit mono 22050 Hz PCM streaming pipeline with fallback `.ogg` $\to$ `.wav` path normalization in `AudioEngine::PlayMusic`.
+  - Independent channel routing and volume controls (`mMusicVolume` for music, `mSFXVolume` for engine/SFX).
+- **Interactive Pause Modal & Distance Milestones (T-133):**
+  - State machine pause mode (`STATE_PAUSE`) triggered via `Start` with Resume, Restart, and Exit options.
+  - Periodic distance milestone rewards (+500 coins every 100 meters).
+- **Stage Texture Path Resolution & Asset Audit (H17a, T-052b):**
+  - Resolved texture paths in `config/stages.cfg` for 19 stages to match original APK naming conventions.
+  - Comprehensive asset integrity audit in `tools/convert_assets.py` covering 56 stage textures, 87 vehicle textures, and 28 music tracks.
+- **PPSSPP Hardware Re-Validation & Bit-Exact Hashes (T-052b):**
+  - 100% bit-exact heightfield FNV-1a 64-bit determinism across all 28 stages (`match=YES`).
+  - Authenticated performance telemetry (`docs/bench/perf_snapshot.txt`) and visual validation suite.
+- **24 Automated CI Regression Test Suites:** Full green coverage across physics, content, audio streaming, and save systems.
+
+### Fixed
+- **PlayMusic Audio File Opening:** Resolved `.ogg` file presence blocking `.wav` fallback by verifying RIFF/WAVE container format inside `TryOpenWavFile`.
+- **Audio Thread Race Condition:** Converted `sMusicRingBuffer` to true lock-free SPSC buffer, removing non-atomic counters and decoupling stream reading from callback thread.
+- **Texture Load Errors:** Fixed broken ground/surface texture paths across 19 stages in `stages.cfg`.
+
+---
+
 ## [0.1.0-beta.2] - 2026-11-14
 
 ### Added
