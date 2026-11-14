@@ -31,6 +31,7 @@ public:
 
     b2Vec2 GetPosition() const;
     b2Vec2 GetInterpolatedPosition(float alpha) const;
+    float GetAngle() const { return mChassis ? mChassis->GetAngle() : 0.0f; }
     float GetSpeedKmH() const;
     float GetEngineRev() const { return mEngineRev; }
     float GetFuel() const { return mFuel; }

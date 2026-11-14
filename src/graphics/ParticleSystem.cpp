@@ -147,6 +147,24 @@ void ParticleSystem::EmitWheelDirt(float wheelX, float wheelY, float wheelVx, fl
         case STAGE_BEACH:
             dirtColor = 0xD060C0E0; // Warm sunlit dune sand
             break;
+        case STAGE_ROLLERCOASTER:
+            dirtColor = 0xD0803080; // Magenta / purple amusement sparks
+            break;
+        case STAGE_NIGHT:
+            dirtColor = 0xD0202020; // Deep midnight gloom dust
+            break;
+        case STAGE_ROOFTOPS:
+            dirtColor = 0xD0404050; // Urban brick / tar gravel
+            break;
+        case STAGE_JUNKYARD:
+            dirtColor = 0xD0203030; // Corroded rust / scrap sludge
+            break;
+        case STAGE_CONSTRUCTION:
+            dirtColor = 0xD0507090; // Concrete mortar / dust
+            break;
+        case STAGE_RAINBOW:
+            dirtColor = 0xD0D090E0; // Shimmering pastel rainbow dust
+            break;
         case STAGE_COUNTRYSIDE:
         default:
             dirtColor = 0xD0306080; // Earth brown dirt

@@ -31,6 +31,8 @@ save*.dat*
 *.bak
 hcr_log.txt
 *.csv
+review_bundle.txt
+heightfield_hashes_psp.txt
 
 # IDE & Editor files
 .vscode/

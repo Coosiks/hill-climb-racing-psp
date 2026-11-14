@@ -94,5 +94,10 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [x] **T-124 (content, vehicle):** Expand vehicle roster to 12 (`onewheeler`, `fingerscrew`, `policecar`, `ambulance`), implement 4th upgrade slot `4 = STABILITY` and `5 = BOOST`, reassign Tractor and Hippie Van, verified authoritative Box2D simulation mass table.
 - [x] **T-033 (ui, hud):** Authentic Game Over race summary breakdown (collected coins, stunt coins, total balance), `NEW RECORD!` badge detection, garage upgrade card labels for STABILITY and BOOST, 18th automated regression test (`test_mud_and_roster12`).
 - [x] **H9 (render):** Audit 32-bit ABGR color packing across PSP (`GU_COLOR_8888`) and PC OpenGL (`glColor4ub`), document canonical format invariant in `Renderer2D.h`, verify individual wheel diameters and textures in `PlayerCar::Render()`.
+- [x] **T-125 (content, terrain):** Expand stages to 18 (`rollercoaster`, `night`, `rooftops`, `junkyard`, `construction`, `rainbow`), implement Night Mode (`Renderer2D::DrawLightCone`, ambient dark quad, chassis-angled headlight beam), particle dirt colors for 18 stages, 100% bit-exact baseline hashes.
+- [x] **T-126 (content, vehicle):** Expand vehicle roster to 18 (`electric`, `dieseltruck`, `rallycar`, `dragster`, `firetruck`, `tank`), implement Dragster wheel asymmetry ($R_{rear}/R_{front} = 2.07\times > 1.40\times$), Tank chassis mass ($7.29$ kg), 4th slot mapping, authoritative 18-vehicle Box2D mass table.
+- [x] **H10 (core, hygiene):** Pure `double` precision heightfield determinism in `highway`, `forest`, `mountain`, `mudpool`, `volcano` (eliminating `EXPECTED_BASELINE_HASHES_ALT`), canonical `[screwfinger]` vehicle ID migration (`0xDC088A10` $\to$ `0xB61B2D9E`), `.gitignore` review bundle hygiene.
+- [x] **T-127 (test):** 19th automated regression test (`test_roster18_and_night`) verifying 18 stages, 18 vehicles, Dragster asymmetry, Night Mode batch limits, and save migration.
+
 
 

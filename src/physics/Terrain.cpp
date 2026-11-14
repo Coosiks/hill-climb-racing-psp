@@ -313,12 +313,15 @@ float Terrain::GetHeightAtX(float x) const {
         case STAGE_HIGHWAY: {
             // Extracted from libgame.so @ 0x148f0a (StageHighway)
             // Fast, smooth undulating asphalt waves
-            double w1 = 0.5 * sin((double)(t * 0.335f + 3.14159f) * 4.0);
-            double w2 = 1.6 * sin((double)(t * 0.09178f + 3.14159f));
-            double w3 = 1.6 * sin(0.5 * (double)(t * 0.11754f + 3.14159f));
-            float k = clampf(t * 0.001f, 0.0f, 1.0f);
-            double s = w1 * 0.4 + w2 * 0.6 + w3 * (0.5 + 0.5 * (double)k);
-            return (float)s * 1.5f;
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 0.5 * sin((td * 0.335 + 3.14159265358979323846) * 4.0);
+            double w2 = 1.6 * sin(td * 0.09178 + 3.14159265358979323846);
+            double w3 = 1.6 * sin(0.5 * (td * 0.11754 + 3.14159265358979323846));
+            double k = td * 0.001;
+            if (k < 0.0) k = 0.0;
+            if (k > 1.0) k = 1.0;
+            double s = (w1 * 0.4 + w2 * 0.6 + w3 * (0.5 + 0.5 * k)) * 1.5;
+            return (float)s;
         }
 
         case STAGE_CAVE: {
@@ -355,17 +358,17 @@ float Terrain::GetHeightAtX(float x) const {
             double w3 = cos((double)t + w2);
             double w4 = cos((double)(t * 0.515f));
             double s = w1 * 1.2 + w3 * 0.8 + w4 * 0.4;
-            float h = (float)s;
+            double h = s;
 
             // Bridge chasms every 4 chunks (120m) starting at chunk 1: span [39.0, 51.0] (10 planks x 1.2m)
             float modX = fmodf(x, 120.0f);
             if (modX < 0.0f) modX += 120.0f;
             if (x >= 30.0f && modX >= 39.0f && modX <= 51.0f) {
-                float u = (modX - 39.0f) / 12.0f;
-                float dip = sinf(u * 3.14159265f) * 3.5f;
+                double u = (double)(modX - 39.0f) / 12.0;
+                double dip = sin(u * 3.14159265358979323846) * 3.5;
                 h -= dip;
             }
-            return h;
+            return (float)h;
         }
 
         case STAGE_MOUNTAIN: {
@@ -375,17 +378,17 @@ float Terrain::GetHeightAtX(float x) const {
             double w3 = 1.2 * sin((double)(t * 0.285f));
             float k = clampf(t * 0.001f, 0.0f, 1.5f);
             double s = (w1 + w2 + w3) * (0.8 + 0.4 * (double)k);
-            float h = (float)s * 1.6f;
+            double h = s * 1.6;
 
             // Bridge chasms every 4 chunks (120m) starting at chunk 1: span [39.0, 51.0] (10 planks x 1.2m)
             float modX = fmodf(x, 120.0f);
             if (modX < 0.0f) modX += 120.0f;
             if (x >= 30.0f && modX >= 39.0f && modX <= 51.0f) {
-                float u = (modX - 39.0f) / 12.0f;
-                float dip = sinf(u * 3.14159265f) * 3.8f;
+                double u = (double)(modX - 39.0f) / 12.0;
+                double dip = sin(u * 3.14159265358979323846) * 3.8;
                 h -= dip;
             }
-            return h;
+            return (float)h;
         }
 
         case STAGE_MUDPOOL: {
@@ -394,17 +397,17 @@ float Terrain::GetHeightAtX(float x) const {
             double w2 = 1.4 * cos((double)(t * 0.175f));
             double w3 = 0.8 * sin((double)t * 0.35f + w2);
             double s = w1 + w2 * 0.7 + w3 * 0.4;
-            float h = (float)s * 1.3f;
+            double h = s * 1.3;
 
             // In mud basins [18.0, 32.0] of each 60m cycle, carve a muddy hollow depression
             float modX = fmodf(x, 60.0f);
             if (modX < 0.0f) modX += 60.0f;
             if (x >= 15.0f && modX >= 18.0f && modX <= 32.0f) {
-                float u = (modX - 18.0f) / 14.0f;
-                float dip = sinf(u * 3.14159265f) * 1.8f;
+                double u = (double)(modX - 18.0f) / 14.0;
+                double dip = sin(u * 3.14159265358979323846) * 1.8;
                 h -= dip;
             }
-            return h;
+            return (float)h;
         }
 
         case STAGE_VOLCANO: {
@@ -413,17 +416,17 @@ float Terrain::GetHeightAtX(float x) const {
             double w2 = 1.8 * sin((double)(t * 0.22f) + cos((double)(t * 0.08f)));
             double w3 = 1.0 * cos((double)(t * 0.42f));
             double s = w1 + w2 * 0.8 + w3 * 0.5;
-            float h = (float)s * 1.4f;
+            double h = s * 1.4;
 
             // Lava hollow depressions [20.0, 34.0] of each 60m cycle
             float modX = fmodf(x, 60.0f);
             if (modX < 0.0f) modX += 60.0f;
             if (x >= 15.0f && modX >= 20.0f && modX <= 34.0f) {
-                float u = (modX - 20.0f) / 14.0f;
-                float dip = sinf(u * 3.14159265f) * 1.5f;
+                double u = (double)(modX - 20.0f) / 14.0;
+                double dip = sin(u * 3.14159265358979323846) * 1.5;
                 h -= dip;
             }
-            return h;
+            return (float)h;
         }
 
         case STAGE_BEACH: {
@@ -433,6 +436,95 @@ float Terrain::GetHeightAtX(float x) const {
             double w3 = 0.7 * sin((double)(t * 0.275f));
             double s = w1 * 1.1 + w2 * 0.8 + w3 * 0.4;
             return (float)s * 1.25f;
+        }
+
+        case STAGE_ROLLERCOASTER: {
+            // Extreme undulating hills and loops-like dips
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 4.5 * sin(td * 0.085);
+            double w2 = 2.5 * cos(td * 0.165 + sin(td * 0.045));
+            double w3 = 1.8 * sin(td * 0.325);
+            double s = (w1 + w2 + w3) * 1.3;
+            return (float)s;
+        }
+
+        case STAGE_NIGHT: {
+            // Night countryside with calm, smooth rolling hills
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 2.4 * cos(td * 0.092);
+            double w2 = 1.4 * sin(td * 0.185 + 1.2);
+            double w3 = 0.8 * cos(td * 0.315);
+            double s = (w1 + w2 + w3) * 1.1;
+            return (float)s;
+        }
+
+        case STAGE_ROOFTOPS: {
+            // Flat rooftop plateaus with bridge gaps every 120m
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 1.8 * sin(td * 0.065);
+            double w2 = 1.2 * cos(td * 0.135);
+            double s = (w1 + w2) * 1.2;
+            double h = s;
+
+            // Bridge chasms every 4 chunks (120m) starting at chunk 1: span [39.0, 51.0] (10 planks x 1.2m)
+            float modX = fmodf(x, 120.0f);
+            if (modX < 0.0f) modX += 120.0f;
+            if (x >= 30.0f && modX >= 39.0f && modX <= 51.0f) {
+                double u = (double)(modX - 39.0f) / 12.0;
+                double dip = sin(u * 3.14159265358979323846) * 3.5;
+                h -= dip;
+            }
+            return (float)h;
+        }
+
+        case STAGE_JUNKYARD: {
+            // Bumpy scrap piles and mud basins
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 2.2 * sin(td * 0.088);
+            double w2 = 1.6 * cos(td * 0.195 + sin(td * 0.075));
+            double w3 = 0.9 * sin(td * 0.385);
+            double s = (w1 + w2 + w3) * 1.15;
+            double h = s;
+
+            // Mud hollow depressions [18.0, 32.0] of each 60m cycle
+            float modX = fmodf(x, 60.0f);
+            if (modX < 0.0f) modX += 60.0f;
+            if (x >= 15.0f && modX >= 18.0f && modX <= 32.0f) {
+                double u = (double)(modX - 18.0f) / 14.0;
+                double dip = sin(u * 3.14159265358979323846) * 1.6;
+                h -= dip;
+            }
+            return (float)h;
+        }
+
+        case STAGE_CONSTRUCTION: {
+            // Jagged construction mounds and bridge crossings
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 2.8 * sin(td * 0.078);
+            double w2 = 1.5 * cos(td * 0.155);
+            double w3 = 1.1 * sin(td * 0.295 + cos(td * 0.055));
+            double s = (w1 + w2 + w3) * 1.25;
+            double h = s;
+
+            // Bridge chasms every 4 chunks (120m) starting at chunk 1: span [39.0, 51.0] (10 planks x 1.2m)
+            float modX = fmodf(x, 120.0f);
+            if (modX < 0.0f) modX += 120.0f;
+            if (x >= 30.0f && modX >= 39.0f && modX <= 51.0f) {
+                double u = (double)(modX - 39.0f) / 12.0;
+                double dip = sin(u * 3.14159265358979323846) * 3.6;
+                h -= dip;
+            }
+            return (float)h;
+        }
+
+        case STAGE_RAINBOW: {
+            // Smooth, flowing harmonic waves
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 2.6 * sin(td * 0.058);
+            double w2 = 1.8 * cos(td * 0.118);
+            double w3 = 0.8 * sin(td * 0.238);
+            double s = (w1 + w2 + w3) * 1.2;
+            return (float)s;
         }
 
         case STAGE_COUNTRYSIDE:

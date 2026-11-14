@@ -123,12 +123,35 @@ STAGE_UNLOCK_COST_BEACH,1000000,extracted (1.30.0 @ 0x14cc2a),2026-11-14,Beach u
 MUDPOOL_MUD_DAMPING,2.5,design/TODO-TUNE,2026-11-14,Viscous drag coefficient in mud pools on Mudpool stage
 VOLCANO_MUD_DAMPING,1.8,design/TODO-TUNE,2026-11-14,Viscous drag coefficient in lava mud pools on Volcano stage
 VEHICLE_UNLOCK_COST_ONEWHEELER,150000,extracted (1.30.0 @ 0x0f7e85),2026-11-14,Onewheeler unlock price
-VEHICLE_UNLOCK_COST_FINGERSCREW,300000,extracted (1.30.0 @ 0x0f8755),2026-11-14,Finger Screw unlock price
+VEHICLE_UNLOCK_COST_SCREWFINGER,300000,extracted (1.30.0 @ 0x0f8755),2026-11-14,Screw Finger unlock price
 VEHICLE_UNLOCK_COST_POLICECAR,350000,extracted (1.30.0 @ 0x0f8989),2026-11-14,Police Car unlock price
 VEHICLE_UNLOCK_COST_AMBULANCE,400000,extracted (1.30.0 @ 0x0f8bbd),2026-11-14,Ambulance unlock price
 ONEWHEELER_4TH_UPGRADE_TYPE,4,design/TODO-TUNE,2026-11-14,Onewheeler 4th upgrade slot (STABILITY)
-FINGERSCREW_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Finger Screw 4th upgrade slot (4WD)
+SCREWFINGER_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Screw Finger 4th upgrade slot (4WD)
 POLICECAR_4TH_UPGRADE_TYPE,5,design/TODO-TUNE,2026-11-14,Police Car 4th upgrade slot (BOOST)
 AMBULANCE_4TH_UPGRADE_TYPE,4,design/TODO-TUNE,2026-11-14,Ambulance 4th upgrade slot (STABILITY)
+STAGE_UNLOCK_COST_ROLLERCOASTER,1200000,extracted (1.30.0 @ 0x14cd28),2026-11-14,Roller Coaster unlock price
+STAGE_UNLOCK_COST_NIGHT,1200000,extracted (1.30.0 @ 0x14cda4),2026-11-14,Night stage unlock price
+STAGE_UNLOCK_COST_ROOFTOPS,1200000,extracted (1.30.0 @ 0x14ce20),2026-11-14,Rooftops unlock price
+STAGE_UNLOCK_COST_JUNKYARD,1400000,extracted (1.30.0 @ 0x14ce9c),2026-11-14,Junkyard unlock price
+STAGE_UNLOCK_COST_CONSTRUCTION,1400000,extracted (1.30.0 @ 0x14cf18),2026-11-14,Construction unlock price
+STAGE_UNLOCK_COST_RAINBOW,1500000,extracted (1.30.0 @ 0x14cf9e),2026-11-14,Rainbow unlock price
+STAGE_NIGHT_MODE_NIGHT,1,design/TODO-TUNE,2026-11-14,Night stage dark overlay and headlight cone flag
+STAGE_GRAVITY_RAINBOW,-6.0,design/TODO-TUNE,2026-11-14,Low rainbow gravity setting
+JUNKYARD_MUD_DAMPING,2.0,design/TODO-TUNE,2026-11-14,Viscous drag coefficient in junkyard mud pools
+VEHICLE_UNLOCK_COST_ELECTRIC,450000,extracted (1.30.0 @ 0x0f8df1),2026-11-14,Electric Car unlock price
+VEHICLE_UNLOCK_COST_DIESELTRUCK,500000,extracted (1.30.0 @ 0x0f9025),2026-11-14,Super Diesel 4x4 unlock price
+VEHICLE_UNLOCK_COST_RALLYCAR,750000,extracted (1.30.0 @ 0x0f9259),2026-11-14,Rally Car unlock price
+VEHICLE_UNLOCK_COST_DRAGSTER,800000,extracted (1.30.0 @ 0x0f948d),2026-11-14,Dragster unlock price
+VEHICLE_UNLOCK_COST_FIRETRUCK,800000,extracted (1.30.0 @ 0x0f96c1),2026-11-14,Fire Truck unlock price
+VEHICLE_UNLOCK_COST_TANK,1000000,extracted (1.30.0 @ 0x0f98f5),2026-11-14,Tank unlock price
+ELECTRIC_4TH_UPGRADE_TYPE,1,design/TODO-TUNE,2026-11-14,Electric Car 4th upgrade slot (FUEL)
+DIESELTRUCK_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Super Diesel 4x4 4th upgrade slot (4WD)
+RALLYCAR_4TH_UPGRADE_TYPE,3,design/TODO-TUNE,2026-11-14,Rally Car 4th upgrade slot (DOWNFORCE)
+DRAGSTER_4TH_UPGRADE_TYPE,3,design/TODO-TUNE,2026-11-14,Dragster 4th upgrade slot (DOWNFORCE)
+FIRETRUCK_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Fire Truck 4th upgrade slot (4WD)
+TANK_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Tank 4th upgrade slot (4WD)
+DRAGSTER_FRONT_WHEEL_RADIUS,0.28,design/TODO-TUNE,2026-11-14,Dragster front wheel radius
+DRAGSTER_REAR_WHEEL_RADIUS,0.58,design/TODO-TUNE,2026-11-14,Dragster rear wheel radius (> 1.4x front)
 
 

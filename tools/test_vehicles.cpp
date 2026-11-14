@@ -27,35 +27,39 @@ int main() {
     // ----------------------------------------------------
     // Sub-test A: Config Parsing & 12 Vehicles Registry
     // ----------------------------------------------------
-    printf("[Sub-test A] Checking 12 vehicles configuration and hashes...\n");
+    printf("[Sub-test A] Checking 18 vehicles configuration and hashes...\n");
     bool loaded = Config::LoadVehicles("config/vehicles.cfg");
     if (!loaded) loaded = Config::LoadVehicles("data/vehicles.cfg");
     TEST_CHECK(loaded, "Failed to load vehicles.cfg");
-    TEST_CHECK(Config::VehicleCount >= 12, "Config::VehicleCount must be at least 12");
+    TEST_CHECK(Config::VehicleCount >= 18, "Config::VehicleCount must be at least 18");
 
-    const char* expectedIds[12] = {
+    const char* expectedIds[18] = {
         "jeep", "motocross", "monster_truck", "race_car",
         "tractor", "hippievan", "quadbike", "touristbus",
-        "onewheeler", "fingerscrew", "policecar", "ambulance"
+        "onewheeler", "screwfinger", "policecar", "ambulance",
+        "electric", "dieseltruck", "rallycar", "dragster",
+        "firetruck", "tank"
     };
-    int expectedCosts[12] = {
+    int expectedCosts[18] = {
         0, 75000, 100000, 250000,
         100000, 120000, 175000, 200000,
-        150000, 300000, 350000, 400000
+        150000, 300000, 350000, 400000,
+        450000, 500000, 750000, 800000,
+        800000, 1000000
     };
-    uint32_t hashes[12];
+    uint32_t hashes[18];
 
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < 18; ++i) {
         const VehicleConfig& v = Config::Vehicles[i];
         TEST_CHECK(strcmp(v.id, expectedIds[i]) == 0, "Vehicle ID matches expected");
         TEST_CHECK(v.unlock_cost == expectedCosts[i], "Vehicle unlock cost matches expected");
         hashes[i] = PlayerInfo::HashId(v.id);
-        printf("  Vehicle [%2d]: %-14s (hash 0x%08X, cost %6d)\n", i, v.id, hashes[i], v.unlock_cost);
+        printf("  Vehicle [%2d]: %-14s (hash 0x%08X, cost %7d)\n", i, v.id, hashes[i], v.unlock_cost);
     }
 
-    // Verify all 12 hashes are strictly unique
-    for (int i = 0; i < 12; ++i) {
-        for (int j = i + 1; j < 12; ++j) {
+    // Verify all 18 hashes are strictly unique
+    for (int i = 0; i < 18; ++i) {
+        for (int j = i + 1; j < 18; ++j) {
             TEST_CHECK(hashes[i] != hashes[j], "Vehicle hashes must be unique");
         }
     }
@@ -205,6 +209,22 @@ int main() {
         TEST_CHECK(touristbus.fourth_upgrade_type == 0, "Tourist bus 4th upgrade type == 0 (4WD)");
         TEST_CHECK(touristbus.drive_type == 2, "Tourist bus drive type == 2 (4WD)");
         TEST_CHECK(car.GetChassisBody()->GetMass() > 4.0f, "Tourist bus chassis mass must be heavy (> 4.0 kg)");
+    }
+
+    // 9. Dragster (T-126: Asymmetrical wheels and high downforce)
+    const VehicleConfig* dragster = Config::FindVehicleById("dragster");
+    TEST_CHECK(dragster != NULL, "Dragster must exist");
+    TEST_CHECK(dragster->rear_wheel_radius > dragster->front_wheel_radius * 1.4f, "Dragster wheel radius asymmetry (R_rear > 1.4 * R_front)");
+    TEST_CHECK(dragster->fourth_upgrade_type == 3, "Dragster 4th slot == 3 (DOWNFORCE)");
+    TEST_CHECK(dragster->downforce_coeff > 0.5f, "Dragster downforce coeff > 0.5");
+
+    // 10. Tank (T-126: Heavy armored chassis)
+    const VehicleConfig* tank = Config::FindVehicleById("tank");
+    TEST_CHECK(tank != NULL, "Tank must exist");
+    {
+        PlayerCar carTank(&world, b2Vec2(0.0f, 2.0f), 0, 0, 0, 0, tank);
+        TEST_CHECK(carTank.GetChassisBody()->GetMass() > 5.0f, "Tank chassis mass must be heavy (> 5.0 kg)");
+        TEST_CHECK(tank->drive_type == 2, "Tank drive type == 2 (4WD)");
     }
 
     printf("\n  Authoritative Vehicle Physics Table (Box2D Simulation):\n");

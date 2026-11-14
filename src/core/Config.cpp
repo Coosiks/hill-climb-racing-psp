@@ -323,6 +323,7 @@ bool Config::LoadStages(const char* filepath) {
                     Stages[currentStage].sky_color_bottom = 0xFFFFF0D0;
                     Stages[currentStage].has_mud_pools = 0;
                     Stages[currentStage].mud_damping = 0.0f;
+                    Stages[currentStage].is_night = 0;
                 }
             }
             continue;
@@ -343,6 +344,7 @@ bool Config::LoadStages(const char* filepath) {
                 Stages[currentStage].sky_color_bottom = 0xFFFFF0D0;
                 Stages[currentStage].has_mud_pools = 0;
                 Stages[currentStage].mud_damping = 0.0f;
+                Stages[currentStage].is_night = 0;
             } else {
                 currentStage = 0;
             }
@@ -371,6 +373,7 @@ bool Config::LoadStages(const char* filepath) {
                 else if (strcmp(key, "sky_color_bottom") == 0) s.sky_color_bottom = (uint32_t)strtoul(val, NULL, 0);
                 else if (strcmp(key, "has_mud_pools") == 0) s.has_mud_pools = atoi(val);
                 else if (strcmp(key, "mud_damping") == 0) s.mud_damping = (float)atof(val);
+                else if (strcmp(key, "is_night") == 0) s.is_night = atoi(val);
             }
         }
     }

@@ -86,6 +86,7 @@ jobs:
           ./build-pc/test_stages_and_bridges
           ./build-pc/test_particles_and_game_stages
           ./build-pc/test_mud_and_roster12
+          ./build-pc/test_roster18_and_night
 
       - name: Upload PC Artifacts
         uses: actions/upload-artifact@v4

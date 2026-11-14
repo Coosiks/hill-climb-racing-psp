@@ -95,6 +95,7 @@ struct StageConfig {
     uint32_t sky_color_bottom;
     int has_mud_pools;
     float mud_damping;
+    int is_night;
 };
 
 class Config {

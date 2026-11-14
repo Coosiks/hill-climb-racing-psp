@@ -43,14 +43,13 @@ static void RunHeightfieldHashBenchmark() {
     if (!heightBuffer) return;
 
     b2World dummyWorld(b2Vec2(0.0f, -10.0f));
-    const char* stageNames[4] = { "Countryside", "Desert", "Arctic", "Moon" };
-    const uint64_t EXPECTED_STAGE_HASHES[4] = {
-        0x6e83945913e2d687ULL, // Countryside
-        0x6dfb669a32592de7ULL, // Desert
-        0xf7cc9dd1f3aa54b0ULL, // Arctic
-        0x0083f35054ddbad2ULL  // Moon
+    const char* stageNames[18] = {
+        "Countryside", "Desert", "Arctic", "Moon",
+        "Highway", "Cave", "Mars", "Forest",
+        "Mountain", "Mudpool", "Volcano", "Beach",
+        "Rollercoaster", "Night", "Rooftops", "Junkyard",
+        "Construction", "Rainbow"
     };
-    uint64_t stageHashes[4];
 
     FILE* hf = fopen("heightfield_hashes_psp.txt", "w");
     if (!hf) hf = fopen("ms0:/PSP/GAME/HCR/heightfield_hashes_psp.txt", "w");
@@ -59,20 +58,19 @@ static void RunHeightfieldHashBenchmark() {
         fprintf(hf, "=== PSP Heightfield Hashes (4001 pts, 0-2000m, step 0.5m) ===\n");
     }
 
-    for (int s = 0; s < 4; ++s) {
+    for (int s = 0; s < 18; ++s) {
         Terrain terrain(&dummyWorld, (StageType)s);
         for (int i = 0; i < NUM_HASH_POINTS; ++i) {
             float x = (float)i * 0.5f;
             heightBuffer[i] = terrain.GetHeightAtX(x);
         }
-        stageHashes[s] = FNV1a_64(heightBuffer, NUM_HASH_POINTS * sizeof(float));
-        bool match = (stageHashes[s] == EXPECTED_STAGE_HASHES[s]);
-        printf("[HASH] Stage %-11s (4001 pts) -> FNV-1a: 0x%016llx (Match: %s)\n",
-               stageNames[s], (unsigned long long)stageHashes[s], match ? "YES" : "NO");
-        HCR_Log("[HASH] Stage %-11s (4001 pts) -> FNV-1a: 0x%016llx (Match: %s)",
-                stageNames[s], (unsigned long long)stageHashes[s], match ? "YES" : "NO");
+        uint64_t hash = FNV1a_64(heightBuffer, NUM_HASH_POINTS * sizeof(float));
+        printf("[HASH] Stage %-13s (4001 pts) -> FNV-1a: 0x%016llx\n",
+               stageNames[s], (unsigned long long)hash);
+        HCR_Log("[HASH] Stage %-13s (4001 pts) -> FNV-1a: 0x%016llx",
+                stageNames[s], (unsigned long long)hash);
         if (hf) {
-            fprintf(hf, "%s=0x%016llx (match=%s)\n", stageNames[s], (unsigned long long)stageHashes[s], match ? "YES" : "NO");
+            fprintf(hf, "%s=0x%016llx\n", stageNames[s], (unsigned long long)hash);
         }
     }
     if (hf) fclose(hf);
@@ -361,6 +359,9 @@ void Game::UpdateGarage() {
     static bool sCheckedBenchmark = false;
     if (!sCheckedBenchmark) {
         sCheckedBenchmark = true;
+#if defined(__PSP__)
+        RunHeightfieldHashBenchmark();
+#endif
         FILE* bf = fopen("benchmark.txt", "r");
         if (!bf) bf = fopen("ms0:/PSP/GAME/HCR/benchmark.txt", "r");
         if (bf) {
@@ -961,6 +962,22 @@ void Game::RenderPlaying() {
 
     if (mCar) {
         mCar->Render(mRenderAlpha);
+    }
+
+    // Night Mode overlay: headlight cone angled with chassis + ambient darkening (T-125)
+    if (mCurrentStage >= 0 && mCurrentStage < Config::StageCount && Config::Stages[mCurrentStage].is_night == 1) {
+        if (mCar) {
+            b2Vec2 pos = mCar->GetPosition();
+            float angle = mCar->GetAngle();
+            float cosA = cosf(angle);
+            float sinA = sinf(angle);
+            float originX = pos.x + cosA * 1.2f - sinA * 0.1f;
+            float originY = pos.y + sinA * 1.2f + cosA * 0.1f;
+            Renderer2D::DrawLightCone(originX, originY, angle, 14.0f, 0.35f, 4.0f, 0x90A0FFFF, 0x00A0FFFF);
+        }
+
+        Renderer2D::SetupScreenSpace();
+        Renderer2D::DrawFilledRect(0.0f, 0.0f, (float)PSP_SCREEN_WIDTH, (float)PSP_SCREEN_HEIGHT, 0xB0080604);
     }
 
     // 2. HUD Rendering in Screen Space

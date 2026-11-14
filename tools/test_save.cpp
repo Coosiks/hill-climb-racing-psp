@@ -341,11 +341,67 @@ int main() {
     printf("  Unaligned buffer read (+1 byte offset) via memcpy verified bit-exact and safe!\n");
     printf("  -> SUBTEST 7 PASSED\n\n");
 
+    // -------------------------------------------------------------
+    // Sub-test 8: Migration of legacy 'fingerscrew' (0xDC088A10) -> 'screwfinger' (0xB61B2D9E)
+    // -------------------------------------------------------------
+    printf("[SUBTEST 8] Legacy vehicle ID hash migration: fingerscrew (0xDC088A10) -> screwfinger (0xB61B2D9E)...\n");
+    CleanupTestFiles(testBase);
+
+    const uint32_t OLD_HASH = 0xDC088A10u;
+    const uint32_t NEW_HASH = 0xB61B2D9Eu;
+
+    SaveFile legacyVehicleSave;
+    memset(&legacyVehicleSave, 0, sizeof(legacyVehicleSave));
+    memcpy(legacyVehicleSave.header.magic, "HCRS", 4);
+    legacyVehicleSave.header.version = 1;
+    legacyVehicleSave.header.payloadSize = sizeof(SavePayload);
+    legacyVehicleSave.payload.coins = 550000;
+    legacyVehicleSave.payload.selectedVehicleIdHash = OLD_HASH;
+    legacyVehicleSave.payload.selectedStageIdHash = PlayerInfo::HashId("countryside");
+    legacyVehicleSave.payload.vehicleCount = 1;
+    legacyVehicleSave.payload.vehicles[0].idHash = OLD_HASH;
+    legacyVehicleSave.payload.vehicles[0].unlocked = 1;
+    legacyVehicleSave.payload.vehicles[0].levelEngine = 7;
+    legacyVehicleSave.payload.vehicles[0].levelSuspension = 8;
+    legacyVehicleSave.payload.vehicles[0].levelTires = 9;
+    legacyVehicleSave.payload.vehicles[0].level4th = 10;
+    legacyVehicleSave.header.crc32 = PlayerInfo::CalculateCRC32(&legacyVehicleSave.payload, sizeof(SavePayload));
+
+    FILE* sf = fopen(binPath, "wb");
+    assert(sf != NULL);
+    assert(fwrite(&legacyVehicleSave.header, sizeof(SaveHeader), 1, sf) == 1);
+    assert(fwrite(&legacyVehicleSave.payload, sizeof(SavePayload), 1, sf) == 1);
+    fclose(sf);
+
+    // Load must migrate OLD_HASH to NEW_HASH
+    PlayerInfo::Reset();
+    loadOk = PlayerInfo::Load(testBase);
+    assert(loadOk);
+    assert(PlayerInfo::GetSelectedVehicleIdHash() == NEW_HASH);
+    assert(PlayerInfo::IsVehicleUnlocked(NEW_HASH));
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 0) == 7);
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 1) == 8);
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 2) == 9);
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 3) == 10);
+    assert(PlayerInfo::IsDirty());
+
+    // Save and reload to ensure persisted migration
+    PlayerInfo::Save(testBase);
+    PlayerInfo::Reset();
+    loadOk = PlayerInfo::Load(testBase);
+    assert(loadOk);
+    assert(PlayerInfo::GetSelectedVehicleIdHash() == NEW_HASH);
+    assert(PlayerInfo::IsVehicleUnlocked(NEW_HASH));
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 0) == 7);
+
+    printf("  fingerscrew (0xDC088A10) successfully migrated to screwfinger (0xB61B2D9E) and persisted!\n");
+    printf("  -> SUBTEST 8 PASSED\n\n");
+
     // Cleanup
     CleanupTestFiles(testBase);
 
     printf("===================================================\n");
-    printf("ALL 7 SUB-TESTS OF test_save PASSED SUCCESSFULLY!\n");
+    printf("ALL 8 SUB-TESTS OF test_save PASSED SUCCESSFULLY!\n");
     printf("===================================================\n");
     return 0;
 }

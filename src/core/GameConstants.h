@@ -24,19 +24,25 @@ enum CollisionCategory {
 
 // Stages
 enum StageType {
-    STAGE_COUNTRYSIDE = 0,
-    STAGE_DESERT      = 1,
-    STAGE_ARCTIC      = 2,
-    STAGE_MOON        = 3,
-    STAGE_HIGHWAY     = 4,
-    STAGE_CAVE        = 5,
-    STAGE_MARS        = 6,
-    STAGE_FOREST      = 7,
-    STAGE_MOUNTAIN    = 8,
-    STAGE_MUDPOOL     = 9,
-    STAGE_VOLCANO     = 10,
-    STAGE_BEACH       = 11,
-    STAGE_COUNT       = 12
+    STAGE_COUNTRYSIDE   = 0,
+    STAGE_DESERT        = 1,
+    STAGE_ARCTIC        = 2,
+    STAGE_MOON          = 3,
+    STAGE_HIGHWAY       = 4,
+    STAGE_CAVE          = 5,
+    STAGE_MARS          = 6,
+    STAGE_FOREST        = 7,
+    STAGE_MOUNTAIN      = 8,
+    STAGE_MUDPOOL       = 9,
+    STAGE_VOLCANO       = 10,
+    STAGE_BEACH         = 11,
+    STAGE_ROLLERCOASTER = 12,
+    STAGE_NIGHT         = 13,
+    STAGE_ROOFTOPS      = 14,
+    STAGE_JUNKYARD      = 15,
+    STAGE_CONSTRUCTION  = 16,
+    STAGE_RAINBOW       = 17,
+    STAGE_COUNT         = 18
 };
 
 // Upgrade pricing: Cost = 1000 * (level + 1)^2

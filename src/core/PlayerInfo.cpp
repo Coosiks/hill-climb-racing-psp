@@ -279,7 +279,9 @@ void PlayerInfo::SyncToLegacy() {
     const char* stageTags[STAGE_COUNT] = {
         "countryside", "desert", "arctic", "moon",
         "highway", "cave", "mars", "forest",
-        "mountain", "mudpool", "volcano", "beach"
+        "mountain", "mudpool", "volcano", "beach",
+        "rollercoaster", "night", "rooftops", "junkyard",
+        "construction", "rainbow"
     };
     for (int i = 0; i < STAGE_COUNT; ++i) {
         SavedStageEntry* s = GetStageEntry(HashId(stageTags[i]));
@@ -308,7 +310,9 @@ void PlayerInfo::SyncFromLegacy() {
     const char* stageTags[STAGE_COUNT] = {
         "countryside", "desert", "arctic", "moon",
         "highway", "cave", "mars", "forest",
-        "mountain", "mudpool", "volcano", "beach"
+        "mountain", "mudpool", "volcano", "beach",
+        "rollercoaster", "night", "rooftops", "junkyard",
+        "construction", "rainbow"
     };
     for (int i = 0; i < STAGE_COUNT; ++i) {
         SavedStageEntry* s = GetOrCreateStageEntry(HashId(stageTags[i]));
@@ -356,19 +360,33 @@ bool PlayerInfo::Load(const char* basePath) {
 
     // 1. Try primary binary save
     SavePayload loadedPayload;
+    bool loaded = false;
     if (ReadSaveFile(binPath, &loadedPayload)) {
         sPayload = loadedPayload;
         sDirty = false;
-        SyncToLegacy();
-        return true;
-    }
-
-    // 2. Try backup save if primary missing or corrupted
-    if (ReadSaveFile(bakPath, &loadedPayload)) {
+        loaded = true;
+    } else if (ReadSaveFile(bakPath, &loadedPayload)) {
         sPayload = loadedPayload;
         sDirty = true; // Mark dirty so primary save will be re-created on next save point
-        SyncToLegacy();
+        loaded = true;
         printf("[SAVE] Primary save missing or corrupted. Recovered from %s\n", bakPath);
+    }
+
+    if (loaded) {
+        // H10.4 migration: fingerscrew (0xDC088A10) -> screwfinger (0xB61B2D9E)
+        const uint32_t OLD_FINGERSCREW_HASH = 0xDC088A10u;
+        const uint32_t NEW_SCREWFINGER_HASH = 0xB61B2D9Eu;
+        if (sPayload.selectedVehicleIdHash == OLD_FINGERSCREW_HASH) {
+            sPayload.selectedVehicleIdHash = NEW_SCREWFINGER_HASH;
+            sDirty = true;
+        }
+        for (uint16_t i = 0; i < sPayload.vehicleCount; ++i) {
+            if (sPayload.vehicles[i].idHash == OLD_FINGERSCREW_HASH) {
+                sPayload.vehicles[i].idHash = NEW_SCREWFINGER_HASH;
+                sDirty = true;
+            }
+        }
+        SyncToLegacy();
         return true;
     }
 

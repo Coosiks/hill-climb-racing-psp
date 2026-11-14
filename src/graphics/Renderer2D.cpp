@@ -242,6 +242,43 @@ void Renderer2D::DrawGradientRect(float x, float y, float w, float h, unsigned i
     sceGuEnable(GU_TEXTURE_2D);
 }
 
+void Renderer2D::DrawLightCone(float originX, float originY, float angle, float length, float startWidth, float endWidth, unsigned int innerColor, unsigned int outerColor) {
+    FlushBatch();
+
+    sceGuDisable(GU_TEXTURE_2D);
+
+    float cosA = cosf(angle);
+    float sinA = sinf(angle);
+    float perpX = -sinA;
+    float perpY = cosA;
+
+    float p0x = originX + perpX * (startWidth * 0.5f);
+    float p0y = originY + perpY * (startWidth * 0.5f);
+    float p1x = originX - perpX * (startWidth * 0.5f);
+    float p1y = originY - perpY * (startWidth * 0.5f);
+
+    float endCenterX = originX + cosA * length;
+    float endCenterY = originY + sinA * length;
+
+    float p2x = endCenterX + perpX * (endWidth * 0.5f);
+    float p2y = endCenterY + perpY * (endWidth * 0.5f);
+    float p3x = endCenterX - perpX * (endWidth * 0.5f);
+    float p3y = endCenterY - perpY * (endWidth * 0.5f);
+
+    ColorVertex2D* v = (ColorVertex2D*)sceGuGetMemory(4 * sizeof(ColorVertex2D));
+    if (v) {
+        v[0].color = innerColor; v[0].x = p0x; v[0].y = p0y; v[0].z = 0.0f;
+        v[1].color = innerColor; v[1].x = p1x; v[1].y = p1y; v[1].z = 0.0f;
+        v[2].color = outerColor; v[2].x = p2x; v[2].y = p2y; v[2].z = 0.0f;
+        v[3].color = outerColor; v[3].x = p3x; v[3].y = p3y; v[3].z = 0.0f;
+
+        sceGumDrawArray(GU_TRIANGLE_STRIP, GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D, 4, 0, v);
+        sDrawCallCount++;
+    }
+
+    sceGuEnable(GU_TEXTURE_2D);
+}
+
 void Renderer2D::DrawTerrainFill(Texture* groundTex, const float* pointsX, const float* pointsY, int count, float bottomY, unsigned int color) {
     if (!groundTex || count < 2) return;
 
@@ -478,6 +515,42 @@ void Renderer2D::DrawGradientRect(float x, float y, float w, float h, unsigned i
     SetGLColor(bottomColor);
     glVertex2f(x,     y + h);
     glVertex2f(x + w, y + h);
+    glEnd();
+
+    glEnable(GL_TEXTURE_2D);
+    sDrawCallCount++;
+}
+
+void Renderer2D::DrawLightCone(float originX, float originY, float angle, float length, float startWidth, float endWidth, unsigned int innerColor, unsigned int outerColor) {
+    FlushBatch();
+
+    glDisable(GL_TEXTURE_2D);
+
+    float cosA = cosf(angle);
+    float sinA = sinf(angle);
+    float perpX = -sinA;
+    float perpY = cosA;
+
+    float p0x = originX + perpX * (startWidth * 0.5f);
+    float p0y = originY + perpY * (startWidth * 0.5f);
+    float p1x = originX - perpX * (startWidth * 0.5f);
+    float p1y = originY - perpY * (startWidth * 0.5f);
+
+    float endCenterX = originX + cosA * length;
+    float endCenterY = originY + sinA * length;
+
+    float p2x = endCenterX + perpX * (endWidth * 0.5f);
+    float p2y = endCenterY + perpY * (endWidth * 0.5f);
+    float p3x = endCenterX - perpX * (endWidth * 0.5f);
+    float p3y = endCenterY - perpY * (endWidth * 0.5f);
+
+    glBegin(GL_TRIANGLE_STRIP);
+    SetGLColor(innerColor);
+    glVertex2f(p0x, p0y);
+    glVertex2f(p1x, p1y);
+    SetGLColor(outerColor);
+    glVertex2f(p2x, p2y);
+    glVertex2f(p3x, p3y);
     glEnd();
 
     glEnable(GL_TEXTURE_2D);
