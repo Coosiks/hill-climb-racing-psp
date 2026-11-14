@@ -1,14 +1,17 @@
 ---
 updated: 2026-11-14
-commit: 98dd21e (code hash; docs commits excluded)
-milestone: M0.2 / M3 / M6
-version: v0.1.0-beta.1
-ci: passing (verified in CI run 43591247303)
+milestone: M0.2 / M1 / M3 / M6 (Release v0.1.0-beta.2)
+version: v0.1.0-beta.2
+ci: passing (14 automated CI regression tests green)
 ---
 
 ## Работает (с proof-ссылками на agent_reports/скриншоты/логи)
+- **Релиз v0.1.0-beta.2 (T-115):** Полный официальный пре-релиз с поддержкой APK 1.30.0, 4 машинами, 3-вкладочным гаражом, бинарными сейвами с CRC32, физикой шеи водителя и трюковыми бонусами. Опубликован на GitHub Releases со скачиваемыми архивами PSP (`EBOOT.PBP`) и PC (`hcr_pc`), точными SHA-256 суммами и закрытием исторической Errata beta.1 (отчёт [agent_reports/T-115.md](agent_reports/T-115.md)).
+- **Полная система трюковых бонусов и 14-й автотест в CI (T-113):** Начисление монет и показ анимированных HUD-баннеров за Air Time ($\ge 1.0$ с, $+250$ монет/с), Wheelie ($\ge 1.5$ с балансирования на заднем колесе, $+500$ монет) и Backflip/Frontflip ($+1000$ монет). Все трюковые монеты сохраняются в прогресс заезда. Написан 14-й регрессионный тест [tools/test_tricks_and_driver.cpp](../tools/test_tricks_and_driver.cpp) с 3/3 пройденными подтестами (отчёт [agent_reports/T-113.md](agent_reports/T-113.md)).
+- **Физика шарнира шеи водителя и Driver Down (T-015):** Динамическое круглое тело головы ($r=0.24$ м, `CAT_DRIVER`), шарнир `b2RevoluteJoint` с угловыми лимитами $[-0.60, +0.60]$ рад и возвращающей PD-пружиной (10.0 Н*м/рад). Ослабление мотора до 0.5 Н*м при аварии для реалистичного ragdoll-эффекта. Контакт с твёрдым рельефом (`CAT_TERRAIN`, `!isSensor`) вызывает немедленный `DRIVER DOWN!` и Game Over, при этом сенсоры монет и топлива не убивают водителя (отчёт [agent_reports/T-015.md](agent_reports/T-015.md)).
+- **Аудит консистентности хешей FNV-1a (H5):** Унификация всех строковых идентификаторов трасс и машин в `PlayerInfo` и `Game` на канонические lowercase `id` (`"jeep"`, `"countryside"`), очистка миграции legacy-сейвов от невалидных строковых ключей.
 - **Канонический CI-бинарник валидирован в PPSSPP:** Сборка из CI-run 43502312616 проверена в PPSSPP v1.20.4 (Slim mode). Test A (без ассетов: [screenshots/T-102_no_assets.png](screenshots/T-102_no_assets.png)), Test B (с ассетами: стабильные 60.0 FPS, отзывчивое управление, отсутствие провалов сквозь коллизию, лог [agent_reports/T-102.md](agent_reports/T-102.md)).
-- **Двойная сборка (PC + PSP) & Честный CI:** PC-таргет собирается через CMake/SDL2/OpenGL ([build.md](build.md)), PSP-таргет собирается через `pspdev` toolchain и упаковывается в `EBOOT.PBP`. CI проверяет обе платформы со строгим `set -euo pipefail` и гоняет 13 тестов регрессии (`test_physics`, `test_aircontrol`, `test_coasting`, `test_air_sensors`, `test_suspension`, `test_items`, `test_terrain`, `test_config`, `test_timestep`, `test_texture`, `test_save`, `test_garage`, `test_vehicles`) ([agent_reports/T-100.md](agent_reports/T-100.md), [agent_reports/T-101.md](agent_reports/T-101.md), [agent_reports/T-030.md](agent_reports/T-030.md), [agent_reports/T-031.md](agent_reports/T-031.md), [agent_reports/T-032.md](agent_reports/T-032.md)).
+- **Двойная сборка (PC + PSP) & Честный CI:** PC-таргет собирается через CMake/SDL2/OpenGL ([build.md](build.md)), PSP-таргет собирается через `pspdev` toolchain и упаковывается в `EBOOT.PBP`. CI проверяет обе платформы со строгим `set -euo pipefail` и гоняет 14 тестов регрессии (`test_physics`, `test_aircontrol`, `test_coasting`, `test_air_sensors`, `test_suspension`, `test_items`, `test_terrain`, `test_config`, `test_timestep`, `test_texture`, `test_save`, `test_garage`, `test_vehicles`, `test_tricks_and_driver`) ([agent_reports/T-100.md](agent_reports/T-100.md), [agent_reports/T-101.md](agent_reports/T-101.md), [agent_reports/T-030.md](agent_reports/T-030.md), [agent_reports/T-031.md](agent_reports/T-031.md), [agent_reports/T-032.md](agent_reports/T-032.md), [agent_reports/T-113.md](agent_reports/T-113.md)).
 - **Архитектура мульти-машин и первые 4 авто под 1.30.0 (T-032):** Полностью data-driven архитектура в `PlayerCar` с поддержкой до 64 машин. Первые 4 канонических авто из APK 1.30.0: Jeep (AWD, $r=0.40$ м), Motocross Bike (RWD, $r=0.45$ м, Air Control upgrade), Monster Truck (AWD, $r=0.65$ м, высокий крутящий момент), Race Car (RWD, асимметричные радиусы $r_{front}=0.36$ м, $r_{rear}=0.42$ м, Downforce upgrade $F_y \le 150.0$ Н). Динамические вкладки слотов тюнинга (`4WD`, `FUEL`, `AIR CTRL`, `DOWNFORCE`) и превью в Гараже. Все 70 ключей конфигурации и 13 регрессионных тестов подтверждены (отчёт [agent_reports/T-032.md](agent_reports/T-032.md)).
 - **Инвентаризация и реверс APK 1.30.0 (T-120):** Автоматический разбор `libgame.so` скриптом `tools/extract_1300_info.py`. Создан полный реестр 29 машин и 28 трасс [docs/hcr_1300_inventory.md](hcr_1300_inventory.md), точный дамп дизассемблирования x86 [docs/bench/re_1300_dump.txt](bench/re_1300_dump.txt) с адресами цен разблокировки, классификация RGBA5551/RGBA8888 для всех 939 PNG в `tools/convert_assets.py` (отчёт [agent_reports/T-120.md](agent_reports/T-120.md)).
 - **Фиксация инварианта выравнивания MIPS Allegrex (H4):** Статические проверки `static_assert(offsetof(...) % 4 == 0)` для всех 32-битных полей структур сейва (`SavedVehicleEntry`, `SavedStageEntry`, `SavePayload`) в `PlayerInfo.h`, синхронизация лимитов `SAVE_MAX_VEHICLES = 64` и `SAVE_MAX_STAGES = 64` с `Config.h`, тест десериализации невыровненного буфера (Sub-test 7 в [tools/test_save.cpp](../tools/test_save.cpp), отчёт [agent_reports/H4.md](agent_reports/H4.md)).
@@ -56,6 +59,6 @@ ci: passing (verified in CI run 43591247303)
 2. **Лимит и шаг спавна монет:** Фиксированный шаг дуги 1.2 метра между центрами монет **НЕ утверждается** окончательно — остаётся `TODO-TUNE` до инструментальных замеров по спрайтам/видео оригинального APK.
 
 ## Следующие 3 задачи (ID из ROADMAP)
-1. **T-115 (release):** Выпуск релиза v0.1.0-beta.2 с актуализированными ноутами, чейнджлогом и чистыми EBOOT/PC артефактами.
-2. **T-113 (tune):** Настройка бонусов за трюки (TODO-TUNE), добавление бонуса за время в воздухе.
-3. **T-010 (physics):** Реализация zero-allocation статического пула памяти для Box2D (Milestone M1).
+1. **T-010 (physics):** Реализация zero-allocation статического пула памяти для Box2D (Milestone M1).
+2. **T-011 (vehicle):** Калибровка распределения масс и момента инерции шасси Jeep по декомпилированным данным.
+3. **T-022 (terrain):** Динамический подвесной мост из досок на joint-соединениях (Milestone M2).

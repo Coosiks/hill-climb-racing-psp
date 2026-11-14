@@ -27,14 +27,15 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [x] **T-110 (core):** Unify constants into `Config::Physics`, parse all vehicle vertices, head radii, and upgrade multipliers.
 - [x] **T-111 (tools, render):** Rewrite `convert_assets.py` with CLI argparse, ZIP extraction, POT padding, Lanczos downscale >512, swizzled .tex pipeline and loader, eliminating runtime PNG decompression on PSP.
 - [x] **T-112 (core):** Cross-platform heightfield determinism: verified bit-exact match between glibc and newlib soft-float (4 stages, 0-2000m, 4001 pts).
-- [ ] **T-113 (tune):** Tune stunt bonuses (TODO-TUNE), add air-time bonus and fuel capacity upgrade.
+- [x] **T-113 (game, economy):** Implement complete trick bonus suite (Air Time, Wheelie, Flips) and 14th automated CI regression test (`test_tricks_and_driver`).
 - [x] **T-114 (docs, vendor):** Prune unused Box2D samples/docs, audit params.csv classification, close M0 documentation debt (`T-002_to_T-005_summary.md`).
-- [ ] **T-115 (release):** Release v0.1.0-beta.2 with updated notes, changelog, and clean artifacts (next release milestone).
+- [x] **T-115 (release):** Release v0.1.0-beta.2 with updated notes, changelog, and clean artifacts (next release milestone).
 - [x] **T-116 (core):** Fix PSP-1000 heap allocation budget: replace fixed 24 MB request with dynamic allocation (`PSP_HEAP_SIZE_KB(-1024)`).
 - [ ] **T-118 (test):** Tighten seam crossing deltaVx metric in `test_terrain.cpp` (isolate natural curvature gradient from ghost-jolt collisions).
 - [x] **T-119 (perf):** Amortize terrain chunk generation into 8-vertex slices per step, eliminating the 10.9 ms frame spike on PSP-1000.
 - [x] **H3 (evidence):** Commit authentic PSP benchmark telemetry outputs (`heightfield_hashes_psp.txt` & `perf_snapshot.txt`) to `docs/bench/`.
 - [x] **H4 (save):** Enforce MIPS Allegrex 4-byte natural alignment static assertions in `PlayerInfo.h`, sync 64-capacity limits, and fix T-030 report errata.
+- [x] **H5 (audit):** Audit FNV-1a 32-bit ID hash consistency across save and config systems, canonicalizing to lowercase string IDs.
 
 ---
 
@@ -44,7 +45,7 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [ ] **T-012 (vehicle):** Implement exact wheel joint suspension damping, spring frequency scaling, and travel limits.
 - [ ] **T-013 (vehicle):** Implement speed-dependent motor torque curve and free-wheeling idle behavior.
 - [ ] **T-014 (vehicle):** Implement in-air angular pitch torque (wheelie & backflip air control) calibrated against 60 FPS reference video.
-- [ ] **T-015 (vehicle):** Replicate driver ragdoll physics (head revolute joint, neck spring constraint, terrain collision instant-loss condition).
+- [x] **T-015 (vehicle, physics):** Replicate driver ragdoll physics (head revolute joint, neck spring constraint, terrain collision instant-loss condition).
 - [ ] **T-016 (perf, tune):** PC in-game telemetry overlay with live parameter sliders and metrics export (`docs/perf.md`).
 - [ ] **T-017 (tune):** Execute formal 0–100 m, max slope, and flip duration calibration protocol (`docs/params.csv`).
 
