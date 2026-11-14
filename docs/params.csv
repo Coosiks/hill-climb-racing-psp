@@ -103,5 +103,18 @@ CAVE_CEILING_OFFSET,6.5,design/TODO-TUNE,2026-11-14,Cave stage nominal ceiling v
 CAVE_MIN_CLEARANCE,4.5,design/TODO-TUNE,2026-11-14,Cave stage guaranteed minimum vertical clearance between floor and ceiling
 HIGHWAY_FUEL_INTERVAL,120.0,design/TODO-TUNE,2026-11-14,Distance interval in meters between fuel canisters on Highway
 FOREST_HAS_BRIDGES,1,design/TODO-TUNE,2026-11-14,Flag enabling suspension bridges on Forest stage
+VEHICLE_UNLOCK_COST_TRACTOR,100000,extracted (1.30.0 @ 0x0f7a1d),2026-11-14,Tractor unlock price
+VEHICLE_UNLOCK_COST_HIPPIEVAN,120000,extracted (1.30.0 @ 0x0f7c51),2026-11-14,Hippie Van unlock price
+VEHICLE_UNLOCK_COST_QUADBIKE,175000,extracted (1.30.0 @ 0x0f80b9),2026-11-14,Quad Bike unlock price
+VEHICLE_UNLOCK_COST_TOURISTBUS,200000,extracted (1.30.0 @ 0x0f82ed),2026-11-14,Tourist Bus unlock price
+TRACTOR_FRONT_WHEEL_RADIUS,0.35,design/TODO-TUNE,2026-11-14,Tractor small front steering wheel radius
+TRACTOR_REAR_WHEEL_RADIUS,0.60,design/TODO-TUNE,2026-11-14,Tractor large rear drive wheel radius
+TRACTOR_4TH_UPGRADE_MAPPING,1,design/TODO-TUNE,2026-11-14,Mapping original STABILITY upgrade to FUEL (type 1)
+HIPPIEVAN_WHEEL_RADIUS,0.40,design/TODO-TUNE,2026-11-14,Hippie van symmetric wheel radius
+HIPPIEVAN_4TH_UPGRADE_MAPPING,1,design/TODO-TUNE,2026-11-14,Mapping original BOOST upgrade to FUEL (type 1)
+QUADBIKE_WHEEL_RADIUS,0.42,design/TODO-TUNE,2026-11-14,Quad bike 4WD wheel radius
+QUADBIKE_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Quad bike 4WD torque distribution ratio
+TOURISTBUS_WHEEL_RADIUS,0.44,design/TODO-TUNE,2026-11-14,Tourist bus heavy wheel radius
+TOURISTBUS_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Tourist bus 4WD torque distribution ratio
 
 

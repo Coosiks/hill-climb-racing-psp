@@ -25,49 +25,53 @@ int main() {
     printf("========================================================\n\n");
 
     // ----------------------------------------------------
-    // Sub-test A: Config Parsing & 4 Vehicles Registry
+    // Sub-test A: Config Parsing & 8 Vehicles Registry
     // ----------------------------------------------------
-    printf("[Sub-test A] Checking 4 vehicles configuration and hashes...\n");
+    printf("[Sub-test A] Checking 8 vehicles configuration and hashes...\n");
     bool loaded = Config::LoadVehicles("config/vehicles.cfg");
     if (!loaded) loaded = Config::LoadVehicles("data/vehicles.cfg");
     TEST_CHECK(loaded, "Failed to load vehicles.cfg");
-    TEST_CHECK(Config::VehicleCount >= 4, "Config::VehicleCount must be at least 4");
+    TEST_CHECK(Config::VehicleCount >= 8, "Config::VehicleCount must be at least 8");
 
-    const VehicleConfig& jeep = Config::Vehicles[0];
-    const VehicleConfig& motocross = Config::Vehicles[1];
-    const VehicleConfig& monster = Config::Vehicles[2];
-    const VehicleConfig& racecar = Config::Vehicles[3];
+    const char* expectedIds[8] = {
+        "jeep", "motocross", "monster_truck", "race_car",
+        "tractor", "hippievan", "quadbike", "touristbus"
+    };
+    int expectedCosts[8] = {
+        0, 75000, 100000, 250000,
+        100000, 120000, 175000, 200000
+    };
+    uint32_t hashes[8];
 
-    TEST_CHECK(strcmp(jeep.id, "jeep") == 0, "Vehicle 0 ID must be jeep");
-    TEST_CHECK(strcmp(motocross.id, "motocross") == 0, "Vehicle 1 ID must be motocross");
-    TEST_CHECK(strcmp(monster.id, "monster_truck") == 0, "Vehicle 2 ID must be monster_truck");
-    TEST_CHECK(strcmp(racecar.id, "race_car") == 0, "Vehicle 3 ID must be race_car");
+    for (int i = 0; i < 8; ++i) {
+        const VehicleConfig& v = Config::Vehicles[i];
+        TEST_CHECK(strcmp(v.id, expectedIds[i]) == 0, "Vehicle ID matches expected");
+        TEST_CHECK(v.unlock_cost == expectedCosts[i], "Vehicle unlock cost matches expected");
+        hashes[i] = PlayerInfo::HashId(v.id);
+        printf("  Vehicle [%d]: %-14s (hash 0x%08X, cost %6d)\n", i, v.id, hashes[i], v.unlock_cost);
+    }
 
-    uint32_t h0 = PlayerInfo::HashId(jeep.id);
-    uint32_t h1 = PlayerInfo::HashId(motocross.id);
-    uint32_t h2 = PlayerInfo::HashId(monster.id);
-    uint32_t h3 = PlayerInfo::HashId(racecar.id);
+    // Verify all 8 hashes are strictly unique
+    for (int i = 0; i < 8; ++i) {
+        for (int j = i + 1; j < 8; ++j) {
+            TEST_CHECK(hashes[i] != hashes[j], "Vehicle hashes must be unique");
+        }
+    }
 
-    printf("  Vehicles: [0] %s (hash 0x%08X), [1] %s (hash 0x%08X), [2] %s (hash 0x%08X), [3] %s (hash 0x%08X)\n",
-           jeep.id, h0, motocross.id, h1, monster.id, h2, racecar.id, h3);
-
-    // Verify unique hashes
-    TEST_CHECK(h0 != h1 && h0 != h2 && h0 != h3, "Jeep hash must be unique");
-    TEST_CHECK(h1 != h2 && h1 != h3, "Motocross hash must be unique");
-    TEST_CHECK(h2 != h3, "Monster truck hash must be unique");
-
-    // Unlock costs
-    TEST_CHECK(jeep.unlock_cost == 0, "Jeep unlock cost == 0");
-    TEST_CHECK(motocross.unlock_cost == 75000, "Motocross unlock cost == 75000");
-    TEST_CHECK(monster.unlock_cost == 100000, "Monster truck unlock cost == 100000");
-    TEST_CHECK(racecar.unlock_cost == 250000, "Race car unlock cost == 250000");
-
-    // Textures
-    TEST_CHECK(strcmp(jeep.body_texture, "assets/Car.png") == 0, "Jeep body texture");
-    TEST_CHECK(strcmp(motocross.body_texture, "assets/bike-motocross.png") == 0, "Motocross body texture");
-    TEST_CHECK(strcmp(monster.body_texture, "assets/car-monster.png") == 0, "Monster truck body texture");
-    TEST_CHECK(strcmp(racecar.body_texture, "assets/car-racecar.png") == 0, "Race car body texture");
-    printf("  [PASS] Sub-test A: 4 vehicles parsed, unique hashes and textures verified!\n\n");
+    // Textures verification
+    TEST_CHECK(strcmp(Config::Vehicles[0].body_texture, "assets/Car.png") == 0, "Jeep body texture");
+    TEST_CHECK(strcmp(Config::Vehicles[1].body_texture, "assets/bike-motocross.png") == 0, "Motocross body texture");
+    TEST_CHECK(strcmp(Config::Vehicles[2].body_texture, "assets/car-monster.png") == 0, "Monster truck body texture");
+    TEST_CHECK(strcmp(Config::Vehicles[3].body_texture, "assets/car-racecar.png") == 0, "Race car body texture");
+    TEST_CHECK(strcmp(Config::Vehicles[4].body_texture, "assets/car-tractor.png") == 0, "Tractor body texture");
+    TEST_CHECK(strcmp(Config::Vehicles[4].wheel_texture, "assets/car-tractor-tire.png") == 0, "Tractor wheel texture");
+    TEST_CHECK(strcmp(Config::Vehicles[5].body_texture, "assets/car-hippievan-chassis.png") == 0, "Hippievan body texture");
+    TEST_CHECK(strcmp(Config::Vehicles[5].wheel_texture, "assets/car-hippievan-tire.png") == 0, "Hippievan wheel texture");
+    TEST_CHECK(strcmp(Config::Vehicles[6].body_texture, "assets/car-quadbike.png") == 0, "Quadbike body texture");
+    TEST_CHECK(strcmp(Config::Vehicles[6].wheel_texture, "assets/Tire.png") == 0, "Quadbike wheel texture");
+    TEST_CHECK(strcmp(Config::Vehicles[7].body_texture, "assets/car-touristbus.png") == 0, "Touristbus body texture");
+    TEST_CHECK(strcmp(Config::Vehicles[7].wheel_texture, "assets/Tire.png") == 0, "Touristbus wheel texture");
+    printf("  [PASS] Sub-test A: 8 vehicles parsed, unique hashes and textures verified!\n\n");
 
     // ----------------------------------------------------
     // Sub-test B: Box2D Physical Properties Per Car
@@ -75,6 +79,15 @@ int main() {
     printf("[Sub-test B] Verifying Box2D physical properties per vehicle...\n");
     b2Vec2 gravity(0.0f, -9.8f);
     b2World world(gravity);
+
+    const VehicleConfig& jeep = Config::Vehicles[0];
+    const VehicleConfig& motocross = Config::Vehicles[1];
+    const VehicleConfig& monster = Config::Vehicles[2];
+    const VehicleConfig& racecar = Config::Vehicles[3];
+    const VehicleConfig& tractor = Config::Vehicles[4];
+    const VehicleConfig& hippievan = Config::Vehicles[5];
+    const VehicleConfig& quadbike = Config::Vehicles[6];
+    const VehicleConfig& touristbus = Config::Vehicles[7];
 
     // 1. Jeep
     {
@@ -147,6 +160,51 @@ int main() {
         TEST_CHECK(feq(df50, 150.0f, 0.1f), "Downforce must be clamped at downforce_max (150 N)");
     }
 
+    // 5. Tractor
+    {
+        PlayerCar car(&world, b2Vec2(0.0f, 2.0f), 0, 0, 0, 0, &tractor);
+        b2CircleShape* rwShape = (b2CircleShape*)car.GetRearWheelBody()->GetFixtureList()->GetShape();
+        b2CircleShape* fwShape = (b2CircleShape*)car.GetFrontWheelBody()->GetFixtureList()->GetShape();
+        TEST_CHECK(feq(rwShape->m_radius, 0.60f), "Tractor rear wheel radius == 0.60 (oversized)");
+        TEST_CHECK(feq(fwShape->m_radius, 0.35f), "Tractor front wheel radius == 0.35 (small front)");
+        TEST_CHECK(tractor.fourth_upgrade_type == 1, "Tractor 4th upgrade type == 1 (FUEL)");
+        TEST_CHECK(tractor.drive_type == 0, "Tractor drive type == 0 (RWD)");
+    }
+
+    // 6. Hippie Van
+    {
+        PlayerCar car(&world, b2Vec2(0.0f, 2.0f), 0, 0, 0, 0, &hippievan);
+        b2CircleShape* rwShape = (b2CircleShape*)car.GetRearWheelBody()->GetFixtureList()->GetShape();
+        b2CircleShape* fwShape = (b2CircleShape*)car.GetFrontWheelBody()->GetFixtureList()->GetShape();
+        TEST_CHECK(feq(rwShape->m_radius, 0.40f), "Hippie van wheel radius == 0.40");
+        TEST_CHECK(feq(fwShape->m_radius, 0.40f), "Hippie van wheel radius == 0.40");
+        TEST_CHECK(hippievan.fourth_upgrade_type == 1, "Hippie van 4th upgrade type == 1 (FUEL)");
+        TEST_CHECK(hippievan.drive_type == 0, "Hippie van drive type == 0 (RWD)");
+    }
+
+    // 7. Quad Bike
+    {
+        PlayerCar car(&world, b2Vec2(0.0f, 2.0f), 0, 0, 0, 0, &quadbike);
+        b2CircleShape* rwShape = (b2CircleShape*)car.GetRearWheelBody()->GetFixtureList()->GetShape();
+        b2CircleShape* fwShape = (b2CircleShape*)car.GetFrontWheelBody()->GetFixtureList()->GetShape();
+        TEST_CHECK(feq(rwShape->m_radius, 0.42f), "Quad bike wheel radius == 0.42");
+        TEST_CHECK(feq(fwShape->m_radius, 0.42f), "Quad bike wheel radius == 0.42");
+        TEST_CHECK(quadbike.fourth_upgrade_type == 0, "Quad bike 4th upgrade type == 0 (4WD)");
+        TEST_CHECK(quadbike.drive_type == 2, "Quad bike drive type == 2 (4WD)");
+    }
+
+    // 8. Tourist Bus
+    {
+        PlayerCar car(&world, b2Vec2(0.0f, 2.0f), 0, 0, 0, 0, &touristbus);
+        b2CircleShape* rwShape = (b2CircleShape*)car.GetRearWheelBody()->GetFixtureList()->GetShape();
+        b2CircleShape* fwShape = (b2CircleShape*)car.GetFrontWheelBody()->GetFixtureList()->GetShape();
+        TEST_CHECK(feq(rwShape->m_radius, 0.44f), "Tourist bus wheel radius == 0.44");
+        TEST_CHECK(feq(fwShape->m_radius, 0.44f), "Tourist bus wheel radius == 0.44");
+        TEST_CHECK(touristbus.fourth_upgrade_type == 0, "Tourist bus 4th upgrade type == 0 (4WD)");
+        TEST_CHECK(touristbus.drive_type == 2, "Tourist bus drive type == 2 (4WD)");
+        TEST_CHECK(car.GetChassisBody()->GetMass() > 4.0f, "Tourist bus chassis mass must be heavy (> 4.0 kg)");
+    }
+
     printf("\n  Authoritative Vehicle Physics Table (Box2D Simulation):\n");
     printf("  | Vehicle ID     | idHash     | R_front | R_rear | Chassis (kg) | F-Wheel (kg) | R-Wheel (kg) | Total Mass (kg) | 4th Upgrade Type |\n");
     printf("  | :------------- | :--------- | :------ | :----- | :----------- | :----------- | :----------- | :-------------- | :--------------- |\n");
@@ -170,6 +228,11 @@ int main() {
     // ----------------------------------------------------
     printf("[Sub-test C] Verifying independent upgrades per vehicle...\n");
     PlayerInfo::Reset();
+    uint32_t h0 = hashes[0];
+    uint32_t h1 = hashes[1];
+    uint32_t h3 = hashes[3];
+    uint32_t h4 = hashes[4];
+
     PlayerInfo::UnlockVehicle(h1); // Motocross
 
     PlayerInfo::SetVehicleUpgrade(h1, 0, 7); // Motocross Engine lvl 7
@@ -182,6 +245,12 @@ int main() {
     // Check Motocross upgrades
     TEST_CHECK(PlayerInfo::GetVehicleUpgrade(h1, 0) == 7, "Motocross engine must be at lvl 7");
     TEST_CHECK(PlayerInfo::GetVehicleUpgrade(h1, 3) == 4, "Motocross Air Control must be at lvl 4");
+
+    // Check Tractor independent upgrade
+    PlayerInfo::UnlockVehicle(h4); // Tractor
+    PlayerInfo::SetVehicleUpgrade(h4, 0, 10);
+    TEST_CHECK(PlayerInfo::GetVehicleUpgrade(h4, 0) == 10, "Tractor engine must be at lvl 10");
+    TEST_CHECK(PlayerInfo::GetVehicleUpgrade(h0, 0) == 0, "Jeep engine must remain at lvl 0");
 
     // Check that PlayerCar applies scaled air control torque
     PlayerCar upgradedMoto(&world, b2Vec2(0.0f, 2.0f), 7, 0, 0, 4, &motocross);
