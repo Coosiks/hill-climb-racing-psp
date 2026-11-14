@@ -1,6 +1,6 @@
 ---
 updated: 2026-11-14
-commit: 06afed3 (code hash; docs commits excluded)
+commit: 4847cfc (code hash; docs commits excluded)
 milestone: M0.2
 version: v0.1.0-beta.1
 ci: passing (verified in CI run 43529596774)
