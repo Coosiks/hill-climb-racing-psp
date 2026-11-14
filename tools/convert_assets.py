@@ -13,6 +13,9 @@ import zipfile
 import shutil
 import argparse
 import io
+import subprocess
+import wave
+import tempfile
 from PIL import Image
 
 PSP_TEX_MAGIC = b'PSPT'
@@ -20,6 +23,89 @@ FORMAT_RGBA5650 = 0
 FORMAT_RGBA5551 = 1
 FORMAT_RGBA4444 = 2
 FORMAT_RGBA8888 = 3
+
+def convert_audio_to_wav(data_or_path, dst_wav_path, target_rate=22050):
+    """Converts input audio (bytes or file) to 16-bit PCM mono WAV at target_rate."""
+    os.makedirs(os.path.dirname(dst_wav_path), exist_ok=True)
+    temp_input = None
+    if isinstance(data_or_path, (bytes, bytearray)):
+        with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as tf:
+            tf.write(data_or_path)
+            temp_input = tf.name
+        src_path = temp_input
+    else:
+        src_path = data_or_path
+
+    success = False
+    temp_wav = dst_wav_path + ".tmp.wav"
+    try:
+        # 1. Try ffmpeg if available
+        cmd = ["ffmpeg", "-y", "-i", src_path, "-ar", str(target_rate), "-ac", "1", "-c:a", "pcm_s16le", dst_wav_path]
+        res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if res.returncode == 0 and os.path.exists(dst_wav_path) and os.path.getsize(dst_wav_path) > 44:
+            success = True
+    except Exception:
+        pass
+
+    if not success:
+        try:
+            # 2. Try oggdec if available
+            cmd = ["oggdec", "-o", temp_wav, src_path]
+            res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if res.returncode == 0 and os.path.exists(temp_wav):
+                with wave.open(temp_wav, "rb") as r:
+                    nchannels = r.getnchannels()
+                    sampwidth = r.getsampwidth()
+                    framerate = r.getframerate()
+                    nframes = r.getnframes()
+                    raw = r.readframes(nframes)
+                
+                # Convert to mono 16-bit
+                samples = []
+                fmt = "<h" if sampwidth == 2 else "<b"
+                step = sampwidth * nchannels
+                for i in range(0, len(raw), step):
+                    ch_sum = 0
+                    for ch in range(nchannels):
+                        val = struct.unpack_from(fmt, raw, i + ch * sampwidth)[0]
+                        ch_sum += val
+                    samples.append(int(ch_sum / nchannels))
+                
+                # Resample to target_rate if needed
+                if framerate != target_rate and len(samples) > 1:
+                    ratio = float(target_rate) / float(framerate)
+                    new_len = int(len(samples) * ratio)
+                    resampled = []
+                    for ni in range(new_len):
+                        src_idx = ni / ratio
+                        i0 = int(src_idx)
+                        i1 = min(i0 + 1, len(samples) - 1)
+                        frac = src_idx - i0
+                        s = int(samples[i0] * (1.0 - frac) + samples[i1] * frac)
+                        resampled.append(s)
+                    samples = resampled
+                
+                with wave.open(dst_wav_path, "wb") as w:
+                    w.setnchannels(1)
+                    w.setsampwidth(2)
+                    w.setframerate(target_rate)
+                    out_bytes = struct.pack(f"<{len(samples)}h", *samples)
+                    w.writeframes(out_bytes)
+                success = True
+        except Exception:
+            pass
+        finally:
+            if os.path.exists(temp_wav):
+                try: os.remove(temp_wav)
+                except Exception: pass
+
+    if temp_input and os.path.exists(temp_input):
+        try: os.remove(temp_input)
+        except Exception: pass
+
+    if not success:
+        print(f"  [WARNING] Could not decode/convert {os.path.basename(src_path)} to 22050Hz WAV (no ffmpeg/oggdec).")
+    return success
 
 def next_pot(x):
     p = 1
@@ -134,17 +220,19 @@ def get_target_format(filename, cli_format):
     # Default: 5551 for terrain ground/surface, pedals, buttons, fonts
     return FORMAT_RGBA5551
 
-def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode="auto", swizzle=True):
+def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode="auto", swizzle=True, convert_audio=True):
     print("==================================================")
     print("   Hill Climb Racing: Asset Preprocessing Pipeline")
     print("==================================================")
     print(f"Output directory: {out_dir}")
     print(f"Format mode:      {format_mode}")
     print(f"Swizzling:        {'Enabled (PSP GE)' if swizzle else 'Disabled (Linear)'}")
+    print(f"Audio conversion: {'Enabled (16-bit PCM 22050Hz)' if convert_audio else 'Disabled'}")
 
     os.makedirs(out_dir, exist_ok=True)
     manifest = []
     processed_count = 0
+    audio_count = 0
 
     if apk_path:
         print(f"Source APK:       {apk_path}")
@@ -182,6 +270,15 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
                         "size": fsize
                     })
                     processed_count += 1
+                elif entry.lower().endswith((".ogg", ".wav", ".mp3")):
+                    os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+                    with open(dst_path, "wb") as f:
+                        f.write(data)
+                    if convert_audio:
+                        wav_path = os.path.splitext(dst_path)[0] + ".wav"
+                        if convert_audio_to_wav(data, wav_path):
+                            audio_count += 1
+                    processed_count += 1
                 else:
                     os.makedirs(os.path.dirname(dst_path), exist_ok=True)
                     with open(dst_path, "wb") as f:
@@ -217,6 +314,15 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
                         "size": fsize
                     })
                     processed_count += 1
+                elif f.lower().endswith((".ogg", ".wav", ".mp3")):
+                    if src_path != dst_path:
+                        os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+                        shutil.copy2(src_path, dst_path)
+                    if convert_audio:
+                        wav_path = os.path.splitext(dst_path)[0] + ".wav"
+                        if convert_audio_to_wav(src_path, wav_path):
+                            audio_count += 1
+                    processed_count += 1
                 else:
                     if src_path != dst_path:
                         os.makedirs(os.path.dirname(dst_path), exist_ok=True)
@@ -225,16 +331,19 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
 
     print(f"\nProcessing complete! Successfully processed {processed_count} files into '{out_dir}'.")
     print(f"Converted {len(manifest)} textures to PSP-native swizzled .tex format.")
+    if convert_audio:
+        print(f"Converted {audio_count} audio files to canonical 22050Hz 16-bit PCM WAV.")
     return manifest
 
 def main():
-    parser = argparse.ArgumentParser(description="Hill Climb Racing - Asset Converter & Preprocessor (T-111)")
+    parser = argparse.ArgumentParser(description="Hill Climb Racing - Asset Converter & Preprocessor (T-111 & T-043)")
     input_group = parser.add_mutually_exclusive_group(required=False)
     input_group.add_argument("--apk", type=str, help="Path to original Hill Climb Racing APK (e.g. hcr_1.0.5.apk)")
     input_group.add_argument("--assets", type=str, help="Path to raw/source assets directory")
     parser.add_argument("--out", type=str, default="assets", help="Output directory for canonical assets (default: assets)")
     parser.add_argument("--format", choices=["5551", "8888", "auto"], default="auto", help="Texture format (default: auto)")
     parser.add_argument("--no-swizzle", action="store_true", help="Disable PSP GE hardware texture swizzling")
+    parser.add_argument("--no-audio", action="store_true", help="Disable audio conversion to 22050Hz WAV")
 
     args = parser.parse_args()
 
@@ -259,7 +368,8 @@ def main():
         assets_dir=assets_dir,
         out_dir=args.out,
         format_mode=args.format,
-        swizzle=not args.no_swizzle
+        swizzle=not args.no_swizzle,
+        convert_audio=not args.no_audio
     )
 
 if __name__ == '__main__':

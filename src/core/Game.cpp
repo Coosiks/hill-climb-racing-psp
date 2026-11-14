@@ -337,6 +337,7 @@ void Game::Run() {
                 break;
         }
 
+        Renderer2D::EndFrame();
         System::EndFrame();
     }
 }
@@ -466,7 +467,7 @@ void Game::UpdateGarage() {
                 PlayerInfo::AddCoins(-cost);
                 PlayerInfo::SetVehicleUpgrade(vHash, slotToUpgrade, curLevel + 1);
                 PlayerInfo::Save();
-                AudioEngine::PlaySFX(SFX_CLICK);
+                AudioEngine::PlaySFX(SFX_UPGRADE);
             }
         }
     }
@@ -813,7 +814,8 @@ void Game::UpdatePlaying(float frameTime) {
 
     // Engine Audio
     if (mCar) {
-        AudioEngine::UpdateEngineSound(mCar->GetEngineRev(), true);
+        bool carActive = !mCar->IsDead() && !mCar->IsOutOfFuel();
+        AudioEngine::UpdateEngineSound(mCar->GetEngineRev(), carActive, frameTime);
     }
 
     // Camera follow (tracks interpolated car position for jitter-free smoothness)
