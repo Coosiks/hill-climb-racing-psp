@@ -91,6 +91,7 @@ jobs:
           ./build-pc/test_roster24
           ./build-pc/test_roster28
           ./build-pc/test_full_parity_1300
+          ./build-pc/test_audio_pause_bonus
 
       - name: Upload PC Artifacts
         uses: actions/upload-artifact@v4

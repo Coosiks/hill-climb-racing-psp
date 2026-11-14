@@ -32,11 +32,12 @@ public:
     virtual void OnCoinCollected(int value);
     virtual void OnFuelCollected();
 
-    // Race management & testability helpers (T-033)
+    // Race management & testability helpers (T-033, T-133)
     void StartRace();
     void EndRace();
     void CommitRaceResults();
     void UpdatePhysicsStep(float dt);
+    void UpdatePause();
 
     int GetRaceCollectedCoins() const { return mRaceCollectedCoins; }
     int GetRaceTrickBonusCoins() const { return mRaceTrickBonusCoins; }
@@ -123,7 +124,6 @@ private:
     void UpdatePlaying(float frameTime);
     void RenderPlaying();
 
-    void UpdatePause();
     void RenderPause();
 
     void UpdateGameOver();

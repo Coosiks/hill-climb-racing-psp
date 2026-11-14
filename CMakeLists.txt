@@ -320,6 +320,23 @@ add_executable(test_full_parity_1300
 )
 target_link_libraries(test_full_parity_1300 box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
 
+add_executable(test_audio_pause_bonus
+    tools/test_audio_pause_bonus.cpp
+    src/core/Config.cpp
+    src/core/PlayerInfo.cpp
+    src/core/System.cpp
+    src/core/Game.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
+    src/physics/PlayerCar.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Font.cpp
+    src/graphics/Renderer2D.cpp
+    src/graphics/ParticleSystem.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_audio_pause_bonus box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
 
 
 
