@@ -98,6 +98,22 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [x] **T-126 (content, vehicle):** Expand vehicle roster to 18 (`electric`, `dieseltruck`, `rallycar`, `dragster`, `firetruck`, `tank`), implement Dragster wheel asymmetry ($R_{rear}/R_{front} = 2.07\times > 1.40\times$), Tank chassis mass ($7.29$ kg), 4th slot mapping, authoritative 18-vehicle Box2D mass table.
 - [x] **H10 (core, hygiene):** Pure `double` precision heightfield determinism in `highway`, `forest`, `mountain`, `mudpool`, `volcano` (eliminating `EXPECTED_BASELINE_HASHES_ALT`), canonical `[screwfinger]` vehicle ID migration (`0xDC088A10` $\to$ `0xB61B2D9E`), `.gitignore` review bundle hygiene.
 - [x] **T-127 (test):** 19th automated regression test (`test_roster18_and_night`) verifying 18 stages, 18 vehicles, Dragster asymmetry, Night Mode batch limits, and save migration.
+- [x] **H11 (core, render, save):** Save migration deduplication merging old `0xDC088A10` into canonical `0xB61B2D9E` (`vehicleCount--`, `fmaxf` levels), Night Mode render layer ordering (ambient darkening FIRST, additive headlight cone SECOND), world-to-screen camera projection in `Renderer2D::DrawLightCone`, honest batch/draw call metrics (`sBatchedQuadCount = 0`, `sDrawCallCount = 2`).
+- [x] **T-128 (content, terrain):** Expand stages to 24 (`seasons`, `bootcamp`, `xmas`, `alienplanet`, `arcticcave`, `ragnarok`), pure `double` height generators, Arctic Cave ceiling collision, Ragnarok mud pools, dirt particle colors, 100% bit-exact frozen heightfield determinism for stages 0..17.
+- [x] **T-129 (content, vehicle):** Expand vehicle roster to 24 (`dunebuggy`, `superoffroad`, `truck`, `minibike`, `bigfinger`, `hotrod`), 4th upgrade slot mapping (AWD, DOWNFORCE, AIR_CONTROL, BOOST), authoritative 24-vehicle Box2D physical mass table, APK 1.30.0 unlock costs.
+- [x] **T-130 (test):** 20th automated regression test (`test_roster24`) verifying 24 stages, 24 vehicles, save migration deduplication, Night Mode screen coordinates, and layer ordering.
+
+---
+
+## [ ] Milestone: Special Vehicle Physics (Deferred)
+Specialized physics architectures required for 5 non-standard vehicles that do not fit the standard two-wheel `PlayerCar` chassis-and-wheels model:
+- **Snowmobile:** Front ski steering joint with variable friction, rear continuous rubber tread/caterpillar contact model (`b2WheelJoint` chain or multi-contact track patch).
+- **Hovercraft:** Cushion thruster aerodynamics with downward air cushion repulsion force, zero wheel friction, lateral drift dynamics, and steering air rudders.
+- **Sleigh:** Dual sliding runners (skis) with low-friction edge contacts, terrain contour conformity, and absence of wheel rotation.
+- **Train (Locomotive & Carriages):** Multi-body articulated carriage train linked by `b2DistanceJoint` / `b2RevoluteJoint` couplers, multi-axle rail-wheel contacts, and distributed mass physics.
+- **Moonlander:** Multi-directional vector rocket thrusters, main engine vertical impulse, reaction control system (RCS) attitude thrusters, and landing gear shock struts.
+
+*Note: The remaining 4 stages (`factory`, `haunted`, `northpole`, `nuclear`) are scheduled for the next content parity batch.*
 
 
 

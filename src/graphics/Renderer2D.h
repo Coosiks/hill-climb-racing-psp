@@ -39,6 +39,10 @@ public:
     static void Init();
     static void SetupCamera(float camX, float camY, float zoom = 1.0f);
     static void SetupScreenSpace();
+    static float GetCameraX();
+    static float GetCameraY();
+    static float GetCameraZoom();
+    static void WorldToScreen(float wx, float wy, float* outSx, float* outSy);
 
     // Sprite drawing (automatically batched)
     static void DrawSprite(Texture* tex, float worldX, float worldY, float width, float height, float angle = 0.0f, unsigned int color = 0xFFFFFFFF);
@@ -70,6 +74,9 @@ private:
     static int sBatchQuadCount;
     static int sDrawCallCount;
     static int sBatchedQuadCount;
+    static float sCameraX;
+    static float sCameraY;
+    static float sCameraZoom;
 
     static void AddQuadToBatch(Texture* tex,
                                float x0, float y0, float u0, float v0,

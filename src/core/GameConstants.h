@@ -42,7 +42,13 @@ enum StageType {
     STAGE_JUNKYARD      = 15,
     STAGE_CONSTRUCTION  = 16,
     STAGE_RAINBOW       = 17,
-    STAGE_COUNT         = 18
+    STAGE_SEASONS       = 18,
+    STAGE_BOOTCAMP      = 19,
+    STAGE_XMAS          = 20,
+    STAGE_ALIENPLANET   = 21,
+    STAGE_ARCTICCAVE    = 22,
+    STAGE_RAGNAROK      = 23,
+    STAGE_COUNT         = 24
 };
 
 // Upgrade pricing: Cost = 1000 * (level + 1)^2

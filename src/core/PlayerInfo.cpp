@@ -281,7 +281,8 @@ void PlayerInfo::SyncToLegacy() {
         "highway", "cave", "mars", "forest",
         "mountain", "mudpool", "volcano", "beach",
         "rollercoaster", "night", "rooftops", "junkyard",
-        "construction", "rainbow"
+        "construction", "rainbow", "seasons", "bootcamp",
+        "xmas", "alienplanet", "arcticcave", "ragnarok"
     };
     for (int i = 0; i < STAGE_COUNT; ++i) {
         SavedStageEntry* s = GetStageEntry(HashId(stageTags[i]));
@@ -312,7 +313,8 @@ void PlayerInfo::SyncFromLegacy() {
         "highway", "cave", "mars", "forest",
         "mountain", "mudpool", "volcano", "beach",
         "rollercoaster", "night", "rooftops", "junkyard",
-        "construction", "rainbow"
+        "construction", "rainbow", "seasons", "bootcamp",
+        "xmas", "alienplanet", "arcticcave", "ragnarok"
     };
     for (int i = 0; i < STAGE_COUNT; ++i) {
         SavedStageEntry* s = GetOrCreateStageEntry(HashId(stageTags[i]));
@@ -373,17 +375,47 @@ bool PlayerInfo::Load(const char* basePath) {
     }
 
     if (loaded) {
-        // H10.4 migration: fingerscrew (0xDC088A10) -> screwfinger (0xB61B2D9E)
+        // H10.4 & H11 migration: fingerscrew (0xDC088A10) -> screwfinger (0xB61B2D9E)
         const uint32_t OLD_FINGERSCREW_HASH = 0xDC088A10u;
         const uint32_t NEW_SCREWFINGER_HASH = 0xB61B2D9Eu;
         if (sPayload.selectedVehicleIdHash == OLD_FINGERSCREW_HASH) {
             sPayload.selectedVehicleIdHash = NEW_SCREWFINGER_HASH;
             sDirty = true;
         }
+
         for (uint16_t i = 0; i < sPayload.vehicleCount; ++i) {
             if (sPayload.vehicles[i].idHash == OLD_FINGERSCREW_HASH) {
-                sPayload.vehicles[i].idHash = NEW_SCREWFINGER_HASH;
-                sDirty = true;
+                // Check if canonical NEW_SCREWFINGER_HASH slot already exists
+                int canonicalIdx = -1;
+                for (uint16_t k = 0; k < sPayload.vehicleCount; ++k) {
+                    if (sPayload.vehicles[k].idHash == NEW_SCREWFINGER_HASH && k != i) {
+                        canonicalIdx = (int)k;
+                        break;
+                    }
+                }
+
+                if (canonicalIdx != -1) {
+                    // Case b: Both slots exist -> merge into canonical slot, remove old slot
+                    SavedVehicleEntry& dst = sPayload.vehicles[canonicalIdx];
+                    const SavedVehicleEntry& src = sPayload.vehicles[i];
+                    if (src.unlocked) dst.unlocked = 1;
+                    if (src.levelEngine > dst.levelEngine) dst.levelEngine = src.levelEngine;
+                    if (src.levelSuspension > dst.levelSuspension) dst.levelSuspension = src.levelSuspension;
+                    if (src.levelTires > dst.levelTires) dst.levelTires = src.levelTires;
+                    if (src.level4th > dst.level4th) dst.level4th = src.level4th;
+
+                    // Remove old slot i by shifting tail
+                    for (uint16_t j = i; j + 1 < sPayload.vehicleCount; ++j) {
+                        sPayload.vehicles[j] = sPayload.vehicles[j + 1];
+                    }
+                    sPayload.vehicleCount--;
+                    sDirty = true;
+                    --i; // Re-evaluate current slot index after tail shift
+                } else {
+                    // Case a: Only old slot exists -> simply rename idHash
+                    sPayload.vehicles[i].idHash = NEW_SCREWFINGER_HASH;
+                    sDirty = true;
+                }
             }
         }
         SyncToLegacy();

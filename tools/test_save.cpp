@@ -394,7 +394,73 @@ int main() {
     assert(PlayerInfo::IsVehicleUnlocked(NEW_HASH));
     assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 0) == 7);
 
-    printf("  fingerscrew (0xDC088A10) successfully migrated to screwfinger (0xB61B2D9E) and persisted!\n");
+    printf("  [8A] Single old hash: fingerscrew (0xDC088A10) successfully migrated to screwfinger (0xB61B2D9E) and persisted!\n");
+
+    // Case 8B: Save contains BOTH old (0xDC088A10) and canonical (0xB61B2D9E) hashes -> deduplicate & merge
+    printf("  [8B] Deduplication: Save with BOTH hashes merges max levels and decrements vehicleCount...\n");
+    CleanupTestFiles(testBase);
+
+    SaveFile dualVehicleSave;
+    memset(&dualVehicleSave, 0, sizeof(dualVehicleSave));
+    memcpy(dualVehicleSave.header.magic, "HCRS", 4);
+    dualVehicleSave.header.version = 1;
+    dualVehicleSave.header.payloadSize = sizeof(SavePayload);
+    dualVehicleSave.payload.coins = 600000;
+    dualVehicleSave.payload.selectedVehicleIdHash = OLD_HASH;
+    dualVehicleSave.payload.selectedStageIdHash = PlayerInfo::HashId("countryside");
+    dualVehicleSave.payload.vehicleCount = 2;
+
+    // Slot 0: Old hash with some higher levels
+    dualVehicleSave.payload.vehicles[0].idHash = OLD_HASH;
+    dualVehicleSave.payload.vehicles[0].unlocked = 0;
+    dualVehicleSave.payload.vehicles[0].levelEngine = 5;
+    dualVehicleSave.payload.vehicles[0].levelSuspension = 14; // higher
+    dualVehicleSave.payload.vehicles[0].levelTires = 3;
+    dualVehicleSave.payload.vehicles[0].level4th = 12; // higher
+
+    // Slot 1: Canonical hash with other higher levels & unlocked
+    dualVehicleSave.payload.vehicles[1].idHash = NEW_HASH;
+    dualVehicleSave.payload.vehicles[1].unlocked = 1; // unlocked
+    dualVehicleSave.payload.vehicles[1].levelEngine = 11; // higher
+    dualVehicleSave.payload.vehicles[1].levelSuspension = 6;
+    dualVehicleSave.payload.vehicles[1].levelTires = 9; // higher
+    dualVehicleSave.payload.vehicles[1].level4th = 4;
+
+    dualVehicleSave.header.crc32 = PlayerInfo::CalculateCRC32(&dualVehicleSave.payload, sizeof(SavePayload));
+
+    sf = fopen(binPath, "wb");
+    assert(sf != NULL);
+    assert(fwrite(&dualVehicleSave.header, sizeof(SaveHeader), 1, sf) == 1);
+    assert(fwrite(&dualVehicleSave.payload, sizeof(SavePayload), 1, sf) == 1);
+    fclose(sf);
+
+    // Load must merge slot 0 into slot 1, delete duplicate slot, and decrement vehicleCount to 1
+    PlayerInfo::Reset();
+    loadOk = PlayerInfo::Load(testBase);
+    assert(loadOk);
+    assert(PlayerInfo::GetSelectedVehicleIdHash() == NEW_HASH);
+    assert(PlayerInfo::GetPayload().vehicleCount == 1);
+    assert(PlayerInfo::GetVehicleEntry(OLD_HASH) == NULL);
+    assert(PlayerInfo::GetVehicleEntry(NEW_HASH) != NULL);
+    assert(PlayerInfo::IsVehicleUnlocked(NEW_HASH) == true);
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 0) == 11); // max(5, 11)
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 1) == 14); // max(14, 6)
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 2) == 9);  // max(3, 9)
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 3) == 12); // max(12, 4)
+    assert(PlayerInfo::IsDirty());
+
+    // Save and reload to verify persisted deduplication
+    PlayerInfo::Save(testBase);
+    PlayerInfo::Reset();
+    loadOk = PlayerInfo::Load(testBase);
+    assert(loadOk);
+    assert(PlayerInfo::GetPayload().vehicleCount == 1);
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 0) == 11);
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 1) == 14);
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 2) == 9);
+    assert(PlayerInfo::GetVehicleUpgrade(NEW_HASH, 3) == 12);
+
+    printf("  Dual hash deduplication verified: vehicleCount decremented to 1, max levels and unlock merged!\n");
     printf("  -> SUBTEST 8 PASSED\n\n");
 
     // Cleanup

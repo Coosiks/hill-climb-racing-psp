@@ -7,6 +7,26 @@ Texture* Renderer2D::sBatchTexture = NULL;
 int Renderer2D::sBatchQuadCount = 0;
 int Renderer2D::sDrawCallCount = 0;
 int Renderer2D::sBatchedQuadCount = 0;
+float Renderer2D::sCameraX = 0.0f;
+float Renderer2D::sCameraY = 0.0f;
+float Renderer2D::sCameraZoom = 1.0f;
+
+float Renderer2D::GetCameraX() {
+    return sCameraX;
+}
+
+float Renderer2D::GetCameraY() {
+    return sCameraY;
+}
+
+float Renderer2D::GetCameraZoom() {
+    return sCameraZoom;
+}
+
+void Renderer2D::WorldToScreen(float wx, float wy, float* outSx, float* outSy) {
+    if (outSx) *outSx = PSP_SCREEN_WIDTH * 0.5f + (wx - sCameraX) * (PTM_RATIO * sCameraZoom);
+    if (outSy) *outSy = PSP_SCREEN_HEIGHT * 0.5f - (wy - sCameraY) * (PTM_RATIO * sCameraZoom);
+}
 
 void Renderer2D::ResetMetrics() {
     sDrawCallCount = 0;
@@ -91,6 +111,10 @@ void Renderer2D::Init() {
 
 void Renderer2D::SetupCamera(float camX, float camY, float zoom) {
     FlushBatch();
+
+    sCameraX = camX;
+    sCameraY = camY;
+    sCameraZoom = zoom;
 
     sceGumMatrixMode(GU_PROJECTION);
     sceGumLoadIdentity();
@@ -245,8 +269,6 @@ void Renderer2D::DrawGradientRect(float x, float y, float w, float h, unsigned i
 void Renderer2D::DrawLightCone(float originX, float originY, float angle, float length, float startWidth, float endWidth, unsigned int innerColor, unsigned int outerColor) {
     FlushBatch();
 
-    sceGuDisable(GU_TEXTURE_2D);
-
     float cosA = cosf(angle);
     float sinA = sinf(angle);
     float perpX = -sinA;
@@ -265,17 +287,28 @@ void Renderer2D::DrawLightCone(float originX, float originY, float angle, float 
     float p3x = endCenterX - perpX * (endWidth * 0.5f);
     float p3y = endCenterY - perpY * (endWidth * 0.5f);
 
+    float s0x, s0y, s1x, s1y, s2x, s2y, s3x, s3y;
+    WorldToScreen(p0x, p0y, &s0x, &s0y);
+    WorldToScreen(p1x, p1y, &s1x, &s1y);
+    WorldToScreen(p2x, p2y, &s2x, &s2y);
+    WorldToScreen(p3x, p3y, &s3x, &s3y);
+
+    sceGuDisable(GU_TEXTURE_2D);
+    sceGuEnable(GU_BLEND);
+    sceGuBlendFunc(GU_ADD, GU_SRC_ALPHA, GU_ONE, 0, 0);
+
     ColorVertex2D* v = (ColorVertex2D*)sceGuGetMemory(4 * sizeof(ColorVertex2D));
     if (v) {
-        v[0].color = innerColor; v[0].x = p0x; v[0].y = p0y; v[0].z = 0.0f;
-        v[1].color = innerColor; v[1].x = p1x; v[1].y = p1y; v[1].z = 0.0f;
-        v[2].color = outerColor; v[2].x = p2x; v[2].y = p2y; v[2].z = 0.0f;
-        v[3].color = outerColor; v[3].x = p3x; v[3].y = p3y; v[3].z = 0.0f;
+        v[0].color = innerColor; v[0].x = s0x; v[0].y = s0y; v[0].z = 0.0f;
+        v[1].color = innerColor; v[1].x = s1x; v[1].y = s1y; v[1].z = 0.0f;
+        v[2].color = outerColor; v[2].x = s2x; v[2].y = s2y; v[2].z = 0.0f;
+        v[3].color = outerColor; v[3].x = s3x; v[3].y = s3y; v[3].z = 0.0f;
 
         sceGumDrawArray(GU_TRIANGLE_STRIP, GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D, 4, 0, v);
         sDrawCallCount++;
     }
 
+    sceGuBlendFunc(GU_ADD, GU_SRC_ALPHA, GU_ONE_MINUS_SRC_ALPHA, 0, 0);
     sceGuEnable(GU_TEXTURE_2D);
 }
 
@@ -376,6 +409,10 @@ void Renderer2D::Init() {
 
 void Renderer2D::SetupCamera(float camX, float camY, float zoom) {
     FlushBatch();
+
+    sCameraX = camX;
+    sCameraY = camY;
+    sCameraZoom = zoom;
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -524,8 +561,6 @@ void Renderer2D::DrawGradientRect(float x, float y, float w, float h, unsigned i
 void Renderer2D::DrawLightCone(float originX, float originY, float angle, float length, float startWidth, float endWidth, unsigned int innerColor, unsigned int outerColor) {
     FlushBatch();
 
-    glDisable(GL_TEXTURE_2D);
-
     float cosA = cosf(angle);
     float sinA = sinf(angle);
     float perpX = -sinA;
@@ -544,15 +579,26 @@ void Renderer2D::DrawLightCone(float originX, float originY, float angle, float 
     float p3x = endCenterX - perpX * (endWidth * 0.5f);
     float p3y = endCenterY - perpY * (endWidth * 0.5f);
 
+    float s0x, s0y, s1x, s1y, s2x, s2y, s3x, s3y;
+    WorldToScreen(p0x, p0y, &s0x, &s0y);
+    WorldToScreen(p1x, p1y, &s1x, &s1y);
+    WorldToScreen(p2x, p2y, &s2x, &s2y);
+    WorldToScreen(p3x, p3y, &s3x, &s3y);
+
+    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
     glBegin(GL_TRIANGLE_STRIP);
     SetGLColor(innerColor);
-    glVertex2f(p0x, p0y);
-    glVertex2f(p1x, p1y);
+    glVertex2f(s0x, s0y);
+    glVertex2f(s1x, s1y);
     SetGLColor(outerColor);
-    glVertex2f(p2x, p2y);
-    glVertex2f(p3x, p3y);
+    glVertex2f(s2x, s2y);
+    glVertex2f(s3x, s3y);
     glEnd();
 
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_TEXTURE_2D);
     sDrawCallCount++;
 }

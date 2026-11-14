@@ -25,31 +25,35 @@ int main() {
     printf("========================================================\n\n");
 
     // ----------------------------------------------------
-    // Sub-test A: Config Parsing & 12 Vehicles Registry
+    // Sub-test A: Config Parsing & 24 Vehicles Registry
     // ----------------------------------------------------
-    printf("[Sub-test A] Checking 18 vehicles configuration and hashes...\n");
+    printf("[Sub-test A] Checking 24 vehicles configuration and hashes...\n");
     bool loaded = Config::LoadVehicles("config/vehicles.cfg");
     if (!loaded) loaded = Config::LoadVehicles("data/vehicles.cfg");
     TEST_CHECK(loaded, "Failed to load vehicles.cfg");
-    TEST_CHECK(Config::VehicleCount >= 18, "Config::VehicleCount must be at least 18");
+    TEST_CHECK(Config::VehicleCount >= 24, "Config::VehicleCount must be at least 24");
 
-    const char* expectedIds[18] = {
+    const char* expectedIds[24] = {
         "jeep", "motocross", "monster_truck", "race_car",
         "tractor", "hippievan", "quadbike", "touristbus",
         "onewheeler", "screwfinger", "policecar", "ambulance",
         "electric", "dieseltruck", "rallycar", "dragster",
-        "firetruck", "tank"
+        "firetruck", "tank",
+        "dunebuggy", "superoffroad", "truck", "minibike",
+        "bigfinger", "hotrod"
     };
-    int expectedCosts[18] = {
+    int expectedCosts[24] = {
         0, 75000, 100000, 250000,
         100000, 120000, 175000, 200000,
         150000, 300000, 350000, 400000,
         450000, 500000, 750000, 800000,
-        800000, 1000000
+        800000, 1000000,
+        800000, 1000000, 1000000, 1000000,
+        1200000, 1500000
     };
-    uint32_t hashes[18];
+    uint32_t hashes[24];
 
-    for (int i = 0; i < 18; ++i) {
+    for (int i = 0; i < 24; ++i) {
         const VehicleConfig& v = Config::Vehicles[i];
         TEST_CHECK(strcmp(v.id, expectedIds[i]) == 0, "Vehicle ID matches expected");
         TEST_CHECK(v.unlock_cost == expectedCosts[i], "Vehicle unlock cost matches expected");
@@ -57,9 +61,9 @@ int main() {
         printf("  Vehicle [%2d]: %-14s (hash 0x%08X, cost %7d)\n", i, v.id, hashes[i], v.unlock_cost);
     }
 
-    // Verify all 18 hashes are strictly unique
-    for (int i = 0; i < 18; ++i) {
-        for (int j = i + 1; j < 18; ++j) {
+    // Verify all 24 hashes are strictly unique
+    for (int i = 0; i < 24; ++i) {
+        for (int j = i + 1; j < 24; ++j) {
             TEST_CHECK(hashes[i] != hashes[j], "Vehicle hashes must be unique");
         }
     }
@@ -77,7 +81,7 @@ int main() {
     TEST_CHECK(strcmp(Config::Vehicles[6].wheel_texture, "assets/Tire.png") == 0, "Quadbike wheel texture");
     TEST_CHECK(strcmp(Config::Vehicles[7].body_texture, "assets/car-touristbus.png") == 0, "Touristbus body texture");
     TEST_CHECK(strcmp(Config::Vehicles[7].wheel_texture, "assets/Tire.png") == 0, "Touristbus wheel texture");
-    printf("  [PASS] Sub-test A: 8 vehicles parsed, unique hashes and textures verified!\n\n");
+    printf("  [PASS] Sub-test A: %d vehicles parsed, unique hashes and textures verified!\n\n", Config::VehicleCount);
 
     // ----------------------------------------------------
     // Sub-test B: Box2D Physical Properties Per Car
@@ -228,8 +232,8 @@ int main() {
     }
 
     printf("\n  Authoritative Vehicle Physics Table (Box2D Simulation):\n");
-    printf("  | Vehicle ID     | idHash     | R_front | R_rear | Chassis (kg) | F-Wheel (kg) | R-Wheel (kg) | Total Mass (kg) | 4th Upgrade Type |\n");
-    printf("  | :------------- | :--------- | :------ | :----- | :----------- | :----------- | :----------- | :-------------- | :--------------- |\n");
+    printf("  | Vehicle ID     | idHash     | R_front | R_rear | F-Wheel (kg) | R-Wheel (kg) | Chassis (kg) | Head (kg) | Total Mass (kg) | 4th Upgrade Type |\n");
+    printf("  | :------------- | :--------- | :------ | :----- | :----------- | :----------- | :----------- | :-------- | :-------------- | :--------------- |\n");
     for (int i = 0; i < Config::VehicleCount; ++i) {
         VehicleConfig* vc = &Config::Vehicles[i];
         PlayerCar pc(&world, b2Vec2(0.0f, 2.0f), 0, 0, 0, 0, vc);
@@ -239,8 +243,8 @@ int main() {
         float hm = pc.GetDriverHeadBody() ? pc.GetDriverHeadBody()->GetMass() : 0.0f;
         float total = cm + fm + rm + hm;
         uint32_t vh = PlayerInfo::HashId(vc->id);
-        printf("  | %-14s | 0x%08X | %7.2f | %6.2f | %12.4f | %12.4f | %12.4f | %15.4f | %16d |\n",
-               vc->id, vh, vc->front_wheel_radius, vc->rear_wheel_radius, cm, fm, rm, total, vc->fourth_upgrade_type);
+        printf("  | %-14s | 0x%08X | %7.2f | %6.2f | %12.4f | %12.4f | %12.4f | %9.4f | %15.4f | %16d |\n",
+               vc->id, vh, vc->front_wheel_radius, vc->rear_wheel_radius, fm, rm, cm, hm, total, vc->fourth_upgrade_type);
     }
     printf("\n");
     printf("  [PASS] Sub-test B: Box2D physical properties (radii, mass, drive type, downforce) verified!\n\n");

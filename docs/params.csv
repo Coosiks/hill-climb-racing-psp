@@ -155,3 +155,23 @@ DRAGSTER_FRONT_WHEEL_RADIUS,0.28,design/TODO-TUNE,2026-11-14,Dragster front whee
 DRAGSTER_REAR_WHEEL_RADIUS,0.58,design/TODO-TUNE,2026-11-14,Dragster rear wheel radius (> 1.4x front)
 
 
+STAGE_UNLOCK_COST_SEASONS,50000,extracted (1.30.0 @ 0x14c407),2026-11-14,Seasons unlock price
+STAGE_UNLOCK_COST_BOOTCAMP,200000,extracted (1.30.0 @ 0x14c6ef),2026-11-14,Bootcamp unlock price
+STAGE_UNLOCK_COST_XMAS,300000,extracted (1.30.0 @ 0x14c84a),2026-11-14,Xmas unlock price
+STAGE_UNLOCK_COST_ALIENPLANET,750000,extracted (1.30.0 @ 0x14c8c6),2026-11-14,Alien Planet unlock price
+STAGE_UNLOCK_COST_ARCTICCAVE,800000,extracted (1.30.0 @ 0x14c942),2026-11-14,Arctic Cave unlock price
+STAGE_UNLOCK_COST_RAGNAROK,1000000,extracted (1.30.0 @ 0x14cab6),2026-11-14,Ragnarok unlock price
+STAGE_HAS_CEILING_ARCTICCAVE,1,design/TODO-TUNE,2026-11-14,Arctic Cave ceiling collision flag
+STAGE_HAS_MUD_POOLS_RAGNAROK,1,design/TODO-TUNE,2026-11-14,Ragnarok mud pools flag
+VEHICLE_UNLOCK_COST_DUNEBUGGY,800000,extracted (1.30.0 @ 0x0fa1c5),2026-11-14,Dune Buggy unlock price
+VEHICLE_UNLOCK_COST_SUPEROFFROAD,1000000,extracted (1.30.0 @ 0x0f9d5d),2026-11-14,Super Offroad unlock price
+VEHICLE_UNLOCK_COST_TRUCK,1000000,extracted (1.30.0 @ 0x0f9f91),2026-11-14,Truck unlock price
+VEHICLE_UNLOCK_COST_MINIBIKE,1000000,extracted (1.30.0 @ 0x0fa62d),2026-11-14,Minibike unlock price
+VEHICLE_UNLOCK_COST_BIGFINGER,1200000,extracted (1.30.0 @ 0x0fa861),2026-11-14,Big Finger unlock price
+VEHICLE_UNLOCK_COST_HOTROD,1500000,extracted (1.30.0 @ 0x0faefd),2026-11-14,Hot Rod unlock price
+DUNEBUGGY_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Dune Buggy 4th upgrade slot (4WD)
+SUPEROFFROAD_4TH_UPGRADE_TYPE,3,design/TODO-TUNE,2026-11-14,Super Offroad 4th upgrade slot (DOWNFORCE)
+TRUCK_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Truck 4th upgrade slot (4WD)
+MINIBIKE_4TH_UPGRADE_TYPE,2,design/TODO-TUNE,2026-11-14,Minibike 4th upgrade slot (AIR_CONTROL)
+BIGFINGER_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Big Finger 4th upgrade slot (4WD)
+HOTROD_4TH_UPGRADE_TYPE,5,design/TODO-TUNE,2026-11-14,Hot Rod 4th upgrade slot (BOOST)

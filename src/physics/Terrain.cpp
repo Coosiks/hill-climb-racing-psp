@@ -527,6 +527,76 @@ float Terrain::GetHeightAtX(float x) const {
             return (float)s;
         }
 
+        case STAGE_SEASONS: {
+            // Gentle rolling hills with seasonal harmonics
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 2.2 * cos(td * 0.082);
+            double w2 = 1.3 * sin(td * 0.174 + 0.8);
+            double w3 = 0.7 * cos(td * 0.285);
+            double s = (w1 + w2 + w3) * 1.05;
+            return (float)s;
+        }
+
+        case STAGE_BOOTCAMP: {
+            // Training jumps and stepped terraces
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 2.5 * sin(td * 0.075);
+            double w2 = 1.6 * cos(td * 0.165 + sin(td * 0.065));
+            double w3 = 1.0 * sin(td * 0.325);
+            double s = (w1 + w2 + w3) * 1.2;
+            return (float)s;
+        }
+
+        case STAGE_XMAS: {
+            // Smooth snowy dunes and valleys
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 2.7 * sin(td * 0.062);
+            double w2 = 1.4 * cos(td * 0.142 + 1.1);
+            double w3 = 0.6 * sin(td * 0.265);
+            double s = (w1 + w2 + w3) * 1.1;
+            return (float)s;
+        }
+
+        case STAGE_ALIENPLANET: {
+            // Low gravity undulating alien craters and strange peaks
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 3.2 * sin(td * 0.052);
+            double w2 = 2.1 * cos(td * 0.125 + cos(td * 0.045));
+            double w3 = 1.2 * sin(td * 0.245);
+            double s = (w1 + w2 + w3) * 1.3;
+            return (float)s;
+        }
+
+        case STAGE_ARCTICCAVE: {
+            // Bumpy ice cave floor
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 2.0 * cos(td * 0.072);
+            double w2 = 1.2 * sin(td * 0.162 + 0.5);
+            double w3 = 0.7 * cos(td * 0.335);
+            double s = (w1 + w2 + w3) * 1.0;
+            return (float)s;
+        }
+
+        case STAGE_RAGNAROK: {
+            // Steep volcanic jagged peaks and lava mud hollows
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 3.4 * sin(td * 0.085);
+            double w2 = 2.2 * cos(td * 0.182 + sin(td * 0.075));
+            double w3 = 1.3 * sin(td * 0.365);
+            double s = (w1 + w2 + w3) * 1.35;
+            double h = s;
+
+            // Lava mud basins [18.0, 32.0] of each 60m cycle
+            float modX = fmodf(x, 60.0f);
+            if (modX < 0.0f) modX += 60.0f;
+            if (x >= 15.0f && modX >= 18.0f && modX <= 32.0f) {
+                double u = (double)(modX - 18.0f) / 14.0;
+                double dip = sin(u * 3.14159265358979323846) * 1.8;
+                h -= dip;
+            }
+            return (float)h;
+        }
+
         case STAGE_COUNTRYSIDE:
         default: {
             double w1 = 2.0 * cos((double)(t * 0.10f));

@@ -43,12 +43,13 @@ static void RunHeightfieldHashBenchmark() {
     if (!heightBuffer) return;
 
     b2World dummyWorld(b2Vec2(0.0f, -10.0f));
-    const char* stageNames[18] = {
+    const char* stageNames[24] = {
         "Countryside", "Desert", "Arctic", "Moon",
         "Highway", "Cave", "Mars", "Forest",
         "Mountain", "Mudpool", "Volcano", "Beach",
         "Rollercoaster", "Night", "Rooftops", "Junkyard",
-        "Construction", "Rainbow"
+        "Construction", "Rainbow", "Seasons", "Bootcamp",
+        "Xmas", "Alienplanet", "Arcticcave", "Ragnarok"
     };
 
     FILE* hf = fopen("heightfield_hashes_psp.txt", "w");
@@ -58,7 +59,7 @@ static void RunHeightfieldHashBenchmark() {
         fprintf(hf, "=== PSP Heightfield Hashes (4001 pts, 0-2000m, step 0.5m) ===\n");
     }
 
-    for (int s = 0; s < 18; ++s) {
+    for (int s = 0; s < 24; ++s) {
         Terrain terrain(&dummyWorld, (StageType)s);
         for (int i = 0; i < NUM_HASH_POINTS; ++i) {
             float x = (float)i * 0.5f;
@@ -964,8 +965,11 @@ void Game::RenderPlaying() {
         mCar->Render(mRenderAlpha);
     }
 
-    // Night Mode overlay: headlight cone angled with chassis + ambient darkening (T-125)
+    // Night Mode overlay: ambient darkening FIRST, then headlight cone on top (H11 / T-125)
     if (mCurrentStage >= 0 && mCurrentStage < Config::StageCount && Config::Stages[mCurrentStage].is_night == 1) {
+        Renderer2D::SetupScreenSpace();
+        Renderer2D::DrawFilledRect(0.0f, 0.0f, (float)PSP_SCREEN_WIDTH, (float)PSP_SCREEN_HEIGHT, 0xB0080604);
+
         if (mCar) {
             b2Vec2 pos = mCar->GetPosition();
             float angle = mCar->GetAngle();
@@ -975,9 +979,6 @@ void Game::RenderPlaying() {
             float originY = pos.y + sinA * 1.2f + cosA * 0.1f;
             Renderer2D::DrawLightCone(originX, originY, angle, 14.0f, 0.35f, 4.0f, 0x90A0FFFF, 0x00A0FFFF);
         }
-
-        Renderer2D::SetupScreenSpace();
-        Renderer2D::DrawFilledRect(0.0f, 0.0f, (float)PSP_SCREEN_WIDTH, (float)PSP_SCREEN_HEIGHT, 0xB0080604);
     }
 
     // 2. HUD Rendering in Screen Space

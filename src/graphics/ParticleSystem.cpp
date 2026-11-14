@@ -165,6 +165,24 @@ void ParticleSystem::EmitWheelDirt(float wheelX, float wheelY, float wheelVx, fl
         case STAGE_RAINBOW:
             dirtColor = 0xD0D090E0; // Shimmering pastel rainbow dust
             break;
+        case STAGE_SEASONS:
+            dirtColor = 0xD0306850; // Forest green / autumn earth
+            break;
+        case STAGE_BOOTCAMP:
+            dirtColor = 0xD0405830; // Olive army drill dust
+            break;
+        case STAGE_XMAS:
+            dirtColor = 0xD0F0F8FF; // Bright white snow dust
+            break;
+        case STAGE_ALIENPLANET:
+            dirtColor = 0xD0903080; // Violet extraterrestrial dust
+            break;
+        case STAGE_ARCTICCAVE:
+            dirtColor = 0xD0D0E8FF; // Ice cavern crystals
+            break;
+        case STAGE_RAGNAROK:
+            dirtColor = 0xD02020A0; // Volcanic ash & embers
+            break;
         case STAGE_COUNTRYSIDE:
         default:
             dirtColor = 0xD0306080; // Earth brown dirt
