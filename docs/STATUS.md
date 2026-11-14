@@ -1,6 +1,6 @@
 ---
 updated: 2026-11-14
-commit: 639b96c (code hash; docs commits excluded)
+commit: 06afed3 (code hash; docs commits excluded)
 milestone: M0.2
 version: v0.1.0-beta.1
 ci: passing (verified in CI run 43529596774)
@@ -8,7 +8,9 @@ ci: passing (verified in CI run 43529596774)
 
 ## Работает (с proof-ссылками на agent_reports/скриншоты/логи)
 - **Канонический CI-бинарник валидирован в PPSSPP:** Сборка из CI-run 43502312616 проверена в PPSSPP v1.20.4 (Slim mode). Test A (без ассетов: [screenshots/T-102_no_assets.png](screenshots/T-102_no_assets.png)), Test B (с ассетами: стабильные 60.0 FPS, отзывчивое управление, отсутствие провалов сквозь коллизию, лог [agent_reports/T-102.md](agent_reports/T-102.md)).
-- **Двойная сборка (PC + PSP) & Честный CI:** PC-таргет собирается через CMake/SDL2/OpenGL ([build.md](build.md)), PSP-таргет собирается через `pspdev` toolchain и упаковывается в `EBOOT.PBP`. CI проверяет обе платформы со строгим `set -euo pipefail` и гоняет набор тестов регрессии ([agent_reports/T-100.md](agent_reports/T-100.md), [agent_reports/T-101.md](agent_reports/T-101.md)).
+- **Двойная сборка (PC + PSP) & Честный CI:** PC-таргет собирается через CMake/SDL2/OpenGL ([build.md](build.md)), PSP-таргет собирается через `pspdev` toolchain и упаковывается в `EBOOT.PBP`. CI проверяет обе платформы со строгим `set -euo pipefail` и гоняет 10 тестов регрессии ([agent_reports/T-100.md](agent_reports/T-100.md), [agent_reports/T-101.md](agent_reports/T-101.md)).
+- **Препроцессированный пайплайн текстур и загрузчик .tex (T-111):** Убран runtime PNG-декодер `stb_image.h` из PSP-сборки (`Texture.o` сократился с 218 КБ до 24 КБ, экономия 89%). Конвертер `tools/convert_assets.py` с CLI argparse распаковывает APK напрямую, даунскейлит оверсайз-текстуры $>512$ с сохранением пропорций (Lanczos), свиззлит блоки $16\times 8$ байт для аппаратного GE PSP, упаковывает в бинарный `.tex` с 16-байт заголовком `PSPT`. Авто-форматы: 8888 для машины/колес/кузова, 5551 для terrain/HUD/шрифтов. В `Texture::Bind` передаются `GU_PSM_5551`/`8888` и флаг `swizzled` в `sceGuTexMode`. Пути к ассетам унифицированы на канонический `assets/` (прозрачный маппинг `.png` $\to$ `.tex` на PSP, удалены references к `data/` и `assets_converted/`). Регрессионный тест [tools/test_texture.cpp](../tools/test_texture.cpp) проверяет 100% roundtrip свиззлинга/десвиззлинга. Замеры в PPSSPP (PSP-1000): загрузка UI текстур 415.51 мс, terrain 188.08 мс, car 66.23 мс (всего 254.31 мс при старте гонки). Экономия RAM за счет 5551: более 2.0 МБ heap (отчёт [agent_reports/T-111.md](agent_reports/T-111.md), [perf.md](perf.md)).
+- **Аутентичные доказательства бенчмарков PSP (H3):** Закоммичены исходные файлы телеметрии `heightfield_hashes_psp.txt` (все 4 трассы `match=YES`) и `perf_snapshot.txt` в `docs/bench/` без личных путей (отчёт [agent_reports/H3.md](agent_reports/H3.md)).
 - **Амортизация генерации чанков (T-119):** Монолитная генерация чанков разделена на инкрементальное вычисление по 8 вершин за шаг физики (`CHUNK_GEN_BUDGET = 8`) и атомарное создание `b2ChainShape` + fixture по готовности 61 вершины. Проактивное скользящее окно $[C-1, C+3]$ с запасом 2 готовых чанка впереди исключает коллизионные провалы. Пиковая стоимость генерации в кадре в PPSSPP (PSP-1000) снижена с **10.922 мс** до **1.928 мс** (в среднем 1.473 мс), исключив просадку 60 FPS (отчёт [agent_reports/T-119.md](agent_reports/T-119.md), [perf.md](perf.md)).
 - **Кросс-платформенный детерминизм высот (T-112):** Проведено сравнение 64-битных FNV-1a хешей heightfield по 4 базовым трассам (4,001 точка, 0–2,000 м) между PC (Linux glibc x86_64) и PSP (newlib soft-float MIPS). Хеши совпали бит-в-бит для всех 4 трасс (Countryside: `0x6e83945913e2d687`, Desert: `0x6dfb669a32592de7`, Arctic: `0xf7cc9dd1f3aa54b0`, Moon: `0x0083f35054ddbad2`), квантование не потребовалось. Детерминизм зафиксирован регрессионными assertions в [tools/test_terrain.cpp](../tools/test_terrain.cpp) и бенчмарк-раннере (отчёт [agent_reports/T-112.md](agent_reports/T-112.md)).
 - **Куча памяти PSP-1000 (Heap Budget, T-116):** Запрос жестких 24 МБ заменен на динамическое выделение `PSP_HEAP_SIZE_KB(-1024)` с запросом свободной памяти ядра за вычетом порога libcglue. Гарантирует запуск на PSP-1000 (32 МБ) с учетом ~1.58 МБ ELF LOAD сегментов. Проверен запуск в PPSSPP v1.20.4 в режимах PSP-1000 и Slim (отчёт [agent_reports/T-116.md](agent_reports/T-116.md)).
@@ -36,10 +38,11 @@ ci: passing (verified in CI run 43529596774)
 
 ## Последние замеры (FPS, physics ms, render ms, RAM; платформа: PPSSPP/железо)
 - **FPS:** 60.0 FPS стабильно (верифицировано в PPSSPP v1.20.4 Slim & 1000 @ 333 MHz, 100% emulation speed, 0 просадок).
+- **Asset loading latency:** 415.51 мс (UI + font), 254.31 мс (active stage: terrain 188.08 мс + car 66.23 мс) в PPSSPP PSP-1000 mode.
 - **Physics time:** 0.239 мс на шаг физики в PPSSPP PSP-1000 mode (JIT Allegrex @ 333 MHz, 400 шагов); ~2.1 мс оценка под максимальной нагрузкой.
-- **Chunk generation latency:** 10.922 мс на чанк в PPSSPP PSP-1000 mode (6.29 мкс на PC).
+- **Chunk generation latency:** 1.473 мс средняя за кадр, 1.929 мс пиковая (амортизация T-119).
 - **Render time:** ~3.4 мс на кадр (бюджет $\le 8.0$ мс).
-- **Memory footprint:** ~11.4 МБ RAM (бюджет 24 МБ для PSP-1000).
+- **Memory footprint:** Сэкономлено > 2.0 МБ heap за счет формата RGBA5551; объект `Texture.o` сокращен с 218 КБ до 24 КБ (-89%).
 - **Платформа тестирования:** PPSSPP v1.20.4 (PSP-1000 & PSP-2000/3000 Slim modes @ 333 MHz) & Ubuntu 24.04 PC SDL2/OpenGL.
 
 ## Блокеры и ответы на вопросы ревьюера
@@ -47,6 +50,6 @@ ci: passing (verified in CI run 43529596774)
 2. **Лимит и шаг спавна монет:** Фиксированный шаг дуги 1.2 метра между центрами монет **НЕ утверждается** окончательно — остаётся `TODO-TUNE` до инструментальных замеров по спрайтам/видео оригинального APK.
 
 ## Следующие 3 задачи (ID из ROADMAP)
-1. **T-111 (tools):** Переработка `convert_assets.py` с CLI argparse, распаковкой ZIP, POT-паддингом текстур и оффлайн конвертацией аудио.
-2. **T-112 (perf):** Квантование математики высот трасс и кроссплатформенный тест верификации хеша heightfield.
+1. **T-113 (tune):** Настройка бонусов за трюки (TODO-TUNE), добавление бонуса за время в воздухе и апгрейда бака топлива.
+2. **T-114 (docs):** Аудит классификации params.csv (design vs RE), чистка вендорных папок, стрип релизных бинарников.
 3. **T-118 (test):** Калибровка метрики crossing deltaVx в `test_terrain.cpp` (изоляция градиента кривизны от ghost collisions).
