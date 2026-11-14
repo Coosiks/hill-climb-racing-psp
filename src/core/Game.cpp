@@ -53,6 +53,37 @@ static void RunHeightfieldHashBenchmark() {
         "Factory", "Haunted", "Northpole", "Nuclear"
     };
 
+    const uint64_t EXPECTED_STAGE_HASHES[28] = {
+        0x6e83945913e2d687ULL, // 0: Countryside
+        0x6dfb669a32592de7ULL, // 1: Desert
+        0xf7cc9dd1f3aa54b0ULL, // 2: Arctic
+        0x0083f35054ddbad2ULL, // 3: Moon
+        0x79cb14fc941aed46ULL, // 4: Highway
+        0x4b3f21147a6045caULL, // 5: Cave
+        0x307e7d5f71ea2410ULL, // 6: Mars
+        0xabd7ad1150f9fbf7ULL, // 7: Forest
+        0x3f496da68e62c7ecULL, // 8: Mountain
+        0x12fd17d4ac8a936dULL, // 9: Mudpool
+        0x50aa43daaf13ada2ULL, // 10: Volcano
+        0xd9e985e660616346ULL, // 11: Beach
+        0xa8fd4bb25c7067d8ULL, // 12: Rollercoaster
+        0x8177c160f2e579b9ULL, // 13: Night
+        0x721cab00477aa490ULL, // 14: Rooftops
+        0x168b4778e4ccfc72ULL, // 15: Junkyard
+        0x53ed7a75b127d093ULL, // 16: Construction
+        0xcd88490d45999148ULL, // 17: Rainbow
+        0x11b9b29b0a89ed3dULL, // 18: Seasons
+        0x7b7829e20dedb615ULL, // 19: Bootcamp
+        0x4dee6c89fff49f7cULL, // 20: Xmas
+        0xb6d53b9c59560286ULL, // 21: Alienplanet
+        0xbf1efe0cf6e33ddeULL, // 22: Arcticcave
+        0x7701828bb20753abULL, // 23: Ragnarok
+        0x5f7b940443dc8475ULL, // 24: Factory
+        0x34068b9f4f6d3417ULL, // 25: Haunted
+        0x56a8242ec2790a3eULL, // 26: Northpole
+        0x733d9464a31061d6ULL  // 27: Nuclear
+    };
+
     FILE* hf = fopen("heightfield_hashes_psp.txt", "w");
     if (!hf) hf = fopen("ms0:/PSP/GAME/HCR/heightfield_hashes_psp.txt", "w");
 
@@ -67,12 +98,13 @@ static void RunHeightfieldHashBenchmark() {
             heightBuffer[i] = terrain.GetHeightAtX(x);
         }
         uint64_t hash = FNV1a_64(heightBuffer, NUM_HASH_POINTS * sizeof(float));
-        printf("[HASH] Stage %-13s (4001 pts) -> FNV-1a: 0x%016llx\n",
-               stageNames[s], (unsigned long long)hash);
-        HCR_Log("[HASH] Stage %-13s (4001 pts) -> FNV-1a: 0x%016llx",
-                stageNames[s], (unsigned long long)hash);
+        bool match = (hash == EXPECTED_STAGE_HASHES[s]);
+        printf("[HASH] Stage %-13s (4001 pts) -> FNV-1a: 0x%016llx (match=%s)\n",
+               stageNames[s], (unsigned long long)hash, match ? "YES" : "NO");
+        HCR_Log("[HASH] Stage %-13s (4001 pts) -> FNV-1a: 0x%016llx (match=%s)",
+                stageNames[s], (unsigned long long)hash, match ? "YES" : "NO");
         if (hf) {
-            fprintf(hf, "%s=0x%016llx\n", stageNames[s], (unsigned long long)hash);
+            fprintf(hf, "%s=0x%016llx (match=%s)\n", stageNames[s], (unsigned long long)hash, match ? "YES" : "NO");
         }
     }
     if (hf) fclose(hf);
