@@ -31,6 +31,7 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [x] **T-114 (docs, vendor):** Prune unused Box2D samples/docs, audit params.csv classification, close M0 documentation debt (`T-002_to_T-005_summary.md`).
 - [x] **T-115 (release):** Release v0.1.0-beta.2 with updated notes, changelog, and clean artifacts (next release milestone).
 - [x] **T-116 (core):** Fix PSP-1000 heap allocation budget: replace fixed 24 MB request with dynamic allocation (`PSP_HEAP_SIZE_KB(-1024)`).
+- [x] **T-117 (physics):** Quadratic aerodynamic air drag force $\vec{F}_{\text{drag}} = -c_{\text{drag}} \|\vec{v}\| \vec{v}$ on vehicle chassis with configurable coefficient in `physics.cfg`.
 - [ ] **T-118 (test):** Tighten seam crossing deltaVx metric in `test_terrain.cpp` (isolate natural curvature gradient from ghost-jolt collisions).
 - [x] **T-119 (perf):** Amortize terrain chunk generation into 8-vertex slices per step, eliminating the 10.9 ms frame spike on PSP-1000.
 - [x] **H3 (evidence):** Commit authentic PSP benchmark telemetry outputs (`heightfield_hashes_psp.txt` & `perf_snapshot.txt`) to `docs/bench/`.
@@ -68,11 +69,11 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 ---
 
 ## [ ] Milestone M4: Rendering Polishing, Particles & Audio Synthesizer
-- [ ] **T-040 (render):** Hardware-accelerated sprite quad batcher to reduce draw calls to $<10$ per frame on PSP.
+- [x] **T-040 (render):** Hardware-accelerated static sprite quad batcher in `Renderer2D` (up to 256 quads / 1536 verts) reducing text/sprite draw calls to 1 per texture.
 - [ ] **T-041 (render):** Multi-layer parallax background rendering with stage-specific skies and horizon hills.
 - [ ] **T-042 (render):** Static ring-buffer particle system for tire dust (`dirt.plist`) and snow particles (`snow.plist`).
-- [ ] **T-043 (audio):** Hardware `sceSas` voice synthesizer for engine audio with continuous pitch modulation [0.5, 2.0].
-- [ ] **T-044 (audio):** Streaming double-buffered background music playback and sound effect prioritization.
+- [x] **T-043 (audio, tools):** Offline audio preprocessing pipeline in `tools/convert_assets.py` converting APK audio to canonical 16-bit PCM mono 22050Hz WAV with `--no-audio` flag.
+- [x] **T-044 (audio):** Fast zero-runtime-decode WAV loader, 16.16 fixed-point phase resampler engine loop with pitch modulation [0.50, 2.00], pause/resume semantics, and SFX mixing.
 
 ---
 

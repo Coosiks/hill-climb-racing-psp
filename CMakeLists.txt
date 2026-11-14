@@ -192,6 +192,20 @@ add_executable(test_tricks_and_driver
 )
 target_link_libraries(test_tricks_and_driver box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
 
+add_executable(test_audio_and_batch
+    tools/test_audio_and_batch.cpp
+    src/physics/PlayerCar.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
+    src/core/Config.cpp
+    src/core/PlayerInfo.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Renderer2D.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_audio_and_batch box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
+
 
 
 
