@@ -175,3 +175,11 @@ TRUCK_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Truck 4th upgrade slot (4WD
 MINIBIKE_4TH_UPGRADE_TYPE,2,design/TODO-TUNE,2026-11-14,Minibike 4th upgrade slot (AIR_CONTROL)
 BIGFINGER_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Big Finger 4th upgrade slot (4WD)
 HOTROD_4TH_UPGRADE_TYPE,5,design/TODO-TUNE,2026-11-14,Hot Rod 4th upgrade slot (BOOST)
+STAGE_UNLOCK_COST_FACTORY,1000000,extracted (1.30.0 @ 0x14cca6),2026-11-14,Factory unlock price
+STAGE_UNLOCK_COST_HAUNTED,1500000,extracted (1.30.0 @ 0x14d081),2026-11-14,Haunted unlock price
+STAGE_UNLOCK_COST_NORTHPOLE,1500000,extracted (1.30.0 @ 0x14d0fd),2026-11-14,North Pole unlock price
+STAGE_UNLOCK_COST_NUCLEAR,1500000,extracted (1.30.0 @ 0x14d179),2026-11-14,Nuclear Plant unlock price
+STAGE_HAS_BRIDGES_FACTORY,1,design/TODO-TUNE,2026-11-14,Factory bridges flag
+STAGE_IS_NIGHT_HAUNTED,1,design/TODO-TUNE,2026-11-14,Haunted night mode flag
+STAGE_HAS_MUD_POOLS_HAUNTED,1,design/TODO-TUNE,2026-11-14,Haunted mud pools flag
+STAGE_HAS_MUD_POOLS_NUCLEAR,1,design/TODO-TUNE,2026-11-14,Nuclear Plant mud pools flag

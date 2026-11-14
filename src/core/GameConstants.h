@@ -48,7 +48,11 @@ enum StageType {
     STAGE_ALIENPLANET   = 21,
     STAGE_ARCTICCAVE    = 22,
     STAGE_RAGNAROK      = 23,
-    STAGE_COUNT         = 24
+    STAGE_FACTORY       = 24,
+    STAGE_HAUNTED       = 25,
+    STAGE_NORTHPOLE     = 26,
+    STAGE_NUCLEAR       = 27,
+    STAGE_COUNT         = 28
 };
 
 // Upgrade pricing: Cost = 1000 * (level + 1)^2

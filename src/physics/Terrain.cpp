@@ -597,6 +597,76 @@ float Terrain::GetHeightAtX(float x) const {
             return (float)h;
         }
 
+        case STAGE_FACTORY: {
+            // Industrial stepped conveyors and bridge spans
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 2.4 * sin(td * 0.078);
+            double w2 = 1.5 * cos(td * 0.168 + 0.5);
+            double w3 = 0.9 * sin(td * 0.315);
+            double s = (w1 + w2 + w3) * 1.15;
+            double h = s;
+
+            // Bridge chasms every 4 chunks (120m) starting at chunk 1: span [39.0, 51.0]
+            float modX = fmodf(x, 120.0f);
+            if (modX < 0.0f) modX += 120.0f;
+            if (x >= 30.0f && modX >= 39.0f && modX <= 51.0f) {
+                double u = (double)(modX - 39.0f) / 12.0;
+                double dip = sin(u * 3.14159265358979323846) * 3.8;
+                h -= dip;
+            }
+            return (float)h;
+        }
+
+        case STAGE_HAUNTED: {
+            // Eerie spooky cemetery ridges and dark swamp basins
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 2.8 * cos(td * 0.072);
+            double w2 = 1.7 * sin(td * 0.155 + 1.2);
+            double w3 = 0.8 * cos(td * 0.295);
+            double s = (w1 + w2 + w3) * 1.2;
+            double h = s;
+
+            // Swamp mud basins [18.0, 32.0] of each 60m cycle
+            float modX = fmodf(x, 60.0f);
+            if (modX < 0.0f) modX += 60.0f;
+            if (x >= 15.0f && modX >= 18.0f && modX <= 32.0f) {
+                double u = (double)(modX - 18.0f) / 14.0;
+                double dip = sin(u * 3.14159265358979323846) * 1.8;
+                h -= dip;
+            }
+            return (float)h;
+        }
+
+        case STAGE_NORTHPOLE: {
+            // Glacial snow dunes and icy slopes
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 3.1 * sin(td * 0.065);
+            double w2 = 1.6 * cos(td * 0.138 + 0.7);
+            double w3 = 0.7 * sin(td * 0.275);
+            double s = (w1 + w2 + w3) * 1.1;
+            return (float)s;
+        }
+
+        case STAGE_NUCLEAR: {
+            // Irradiated crater wasteland and toxic slime sumps
+            double td = (double)x * 1.5 + 10.0;
+            double w1 = 3.2 * cos(td * 0.080);
+            double w2 = 2.0 * sin(td * 0.170 + sin(td * 0.070));
+            double w3 = 1.1 * cos(td * 0.340);
+            double s = (w1 + w2 + w3) * 1.25;
+            double h = s;
+
+            // Toxic slime sumps [18.0, 32.0] of each 60m cycle
+            float modX = fmodf(x, 60.0f);
+            if (modX < 0.0f) modX += 60.0f;
+            if (x >= 15.0f && modX >= 18.0f && modX <= 32.0f) {
+                double u = (double)(modX - 18.0f) / 14.0;
+                double dip = sin(u * 3.14159265358979323846) * 1.8;
+                h -= dip;
+            }
+            return (float)h;
+        }
+
         case STAGE_COUNTRYSIDE:
         default: {
             double w1 = 2.0 * cos((double)(t * 0.10f));

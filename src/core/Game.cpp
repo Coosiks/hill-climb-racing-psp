@@ -43,13 +43,14 @@ static void RunHeightfieldHashBenchmark() {
     if (!heightBuffer) return;
 
     b2World dummyWorld(b2Vec2(0.0f, -10.0f));
-    const char* stageNames[24] = {
+    const char* stageNames[28] = {
         "Countryside", "Desert", "Arctic", "Moon",
         "Highway", "Cave", "Mars", "Forest",
         "Mountain", "Mudpool", "Volcano", "Beach",
         "Rollercoaster", "Night", "Rooftops", "Junkyard",
         "Construction", "Rainbow", "Seasons", "Bootcamp",
-        "Xmas", "Alienplanet", "Arcticcave", "Ragnarok"
+        "Xmas", "Alienplanet", "Arcticcave", "Ragnarok",
+        "Factory", "Haunted", "Northpole", "Nuclear"
     };
 
     FILE* hf = fopen("heightfield_hashes_psp.txt", "w");
@@ -59,7 +60,7 @@ static void RunHeightfieldHashBenchmark() {
         fprintf(hf, "=== PSP Heightfield Hashes (4001 pts, 0-2000m, step 0.5m) ===\n");
     }
 
-    for (int s = 0; s < 24; ++s) {
+    for (int s = 0; s < 28; ++s) {
         Terrain terrain(&dummyWorld, (StageType)s);
         for (int i = 0; i < NUM_HASH_POINTS; ++i) {
             float x = (float)i * 0.5f;

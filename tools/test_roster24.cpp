@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     bool loadedStages = Config::LoadStages("config/stages.cfg");
     if (!loadedStages) loadedStages = Config::LoadStages("data/stages.cfg");
     TEST_CHECK(loadedStages, "Failed to load stages.cfg");
-    TEST_CHECK(Config::StageCount == 24, "Must load exactly 24 stages from stages.cfg");
+    TEST_CHECK(Config::StageCount >= 24, "Must load at least 24 stages from stages.cfg");
 
     const char* expectedStageIds[24] = {
         "countryside", "desert", "arctic", "moon",

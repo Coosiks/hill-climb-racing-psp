@@ -183,6 +183,18 @@ void ParticleSystem::EmitWheelDirt(float wheelX, float wheelY, float wheelVx, fl
         case STAGE_RAGNAROK:
             dirtColor = 0xD02020A0; // Volcanic ash & embers
             break;
+        case STAGE_FACTORY:
+            dirtColor = 0xD0506070; // Industrial soot / steel dust
+            break;
+        case STAGE_HAUNTED:
+            dirtColor = 0xD0201828; // Spooky cemetery soil / dark swamp mire
+            break;
+        case STAGE_NORTHPOLE:
+            dirtColor = 0xD0F5FAFF; // Glacial blue-white powder snow
+            break;
+        case STAGE_NUCLEAR:
+            dirtColor = 0xD0208030; // Irradiated radioactive toxic sludge
+            break;
         case STAGE_COUNTRYSIDE:
         default:
             dirtColor = 0xD0306080; // Earth brown dirt

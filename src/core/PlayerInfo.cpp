@@ -19,7 +19,8 @@ static const char* const kStageTags[] = {
     "mountain", "mudpool", "volcano", "beach",
     "rollercoaster", "night", "rooftops", "junkyard",
     "construction", "rainbow", "seasons", "bootcamp",
-    "xmas", "alienplanet", "arcticcave", "ragnarok"
+    "xmas", "alienplanet", "arcticcave", "ragnarok",
+    "factory", "haunted", "northpole", "nuclear"
 };
 static_assert(sizeof(kStageTags)/sizeof(kStageTags[0]) == STAGE_COUNT, "kStageTags count must match STAGE_COUNT");
 
