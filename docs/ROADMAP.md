@@ -131,6 +131,7 @@ Specialized physics architectures required for 4 non-standard vehicles that do n
 - [x] **T-132 (audio):** Streaming background music architecture with 16.16 fixed-point phase accumulator resampler and loop seam handling.
 - [x] **T-133 (game, hud):** State machine pause mode (`STATE_PAUSE`), Start button toggling, and distance bonus coin awards every 100m.
 - [x] **H17a (assets):** Resolve stage texture paths to APK reality across 19 stages in `config/stages.cfg`; document canonical spring variant for Seasons (`terrain-seasons-spring.png`) and fallback ground textures (`cave`, `rooftops`, `construction`, `ragnarok` $\to$ `terrain-ground.png`); add comprehensive audit to `tools/convert_assets.py` enforcing 100% texture and music coverage.
+- [x] **H17b (audio):** Normalize audio path in `AudioEngine::PlayMusic`: try path as-is, fallback on `.ogg` $\to$ `.wav` replacement; verify mono 22050 Hz 16-bit PCM; document 2 generic music tracks vs per-stage music from `libgame.so` in params and roadmap.
 
 
 

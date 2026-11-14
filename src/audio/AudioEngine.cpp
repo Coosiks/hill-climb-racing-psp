@@ -660,6 +660,18 @@ void AudioEngine::UpdateMusicStream() {
     }
 }
 
+static FILE* TryOpenWavFile(const char* path) {
+    if (!path || path[0] == '\0') return NULL;
+    FILE* fp = fopen(path, "rb");
+    if (!fp) return NULL;
+    char hdr[12];
+    if (fread(hdr, 1, 12, fp) == 12 && memcmp(hdr, "RIFF", 4) == 0 && memcmp(hdr + 8, "WAVE", 4) == 0) {
+        return fp;
+    }
+    fclose(fp);
+    return NULL;
+}
+
 bool AudioEngine::PlayMusic(const char* filepath) {
     if (!filepath || filepath[0] == '\0') {
         StopMusic();
@@ -672,30 +684,30 @@ bool AudioEngine::PlayMusic(const char* filepath) {
 
     StopMusic();
 
-    FILE* f = fopen(filepath, "rb");
+    FILE* f = TryOpenWavFile(filepath);
     if (!f) {
-        char altPath[160];
+        char altPath[256];
         strncpy(altPath, filepath, sizeof(altPath) - 1);
         altPath[sizeof(altPath) - 1] = '\0';
         char* ext = strrchr(altPath, '.');
         if (ext && strcmp(ext, ".ogg") == 0) {
             strcpy(ext, ".wav");
-            f = fopen(altPath, "rb");
+            f = TryOpenWavFile(altPath);
         } else if (ext && strcmp(ext, ".wav") == 0) {
             strcpy(ext, ".ogg");
-            f = fopen(altPath, "rb");
+            f = TryOpenWavFile(altPath);
         }
     }
 #if defined(__PSP__)
     if (!f) {
-        char msPath[192];
+        char msPath[256];
         snprintf(msPath, sizeof(msPath), "ms0:/PSP/GAME/HCR/%s", filepath);
-        f = fopen(msPath, "rb");
+        f = TryOpenWavFile(msPath);
         if (!f) {
             char* ext = strrchr(msPath, '.');
             if (ext && strcmp(ext, ".ogg") == 0) {
                 strcpy(ext, ".wav");
-                f = fopen(msPath, "rb");
+                f = TryOpenWavFile(msPath);
             }
         }
     }
@@ -705,13 +717,7 @@ bool AudioEngine::PlayMusic(const char* filepath) {
         return false;
     }
 
-    // Parse WAV header (RIFF PCM)
-    char header[12];
-    if (fread(header, 1, 12, f) != 12 || memcmp(header, "RIFF", 4) != 0 || memcmp(header + 8, "WAVE", 4) != 0) {
-        fclose(f);
-        return false;
-    }
-
+    // Parse WAV header chunks (f is positioned at offset 12, after "RIFF....WAVE")
     int channels = 0;
     int sampleRate = 0;
     int bitsPerSample = 0;
@@ -747,7 +753,7 @@ bool AudioEngine::PlayMusic(const char* filepath) {
         fseek(f, chunkDataPos + chunkSize, SEEK_SET);
     }
 
-    if (channels <= 0 || sampleRate <= 0 || bitsPerSample != 16 || dataBytes <= 0) {
+    if (channels != 1 || sampleRate <= 0 || bitsPerSample != 16 || dataBytes <= 0) {
         fclose(f);
         return false;
     }

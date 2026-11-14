@@ -211,3 +211,4 @@ STAGE_CAVE_GROUND_FALLBACK,assets/terrain-ground.png,design/TODO-TUNE,2026-11-15
 STAGE_ROOFTOPS_GROUND_FALLBACK,assets/terrain-ground.png,design/TODO-TUNE,2026-11-15,Fallback ground texture for rooftops (building-01-roof for surface)
 STAGE_CONSTRUCTION_GROUND_FALLBACK,assets/terrain-ground.png,design/TODO-TUNE,2026-11-15,Fallback ground texture for construction (construction-building1-roof for surface)
 STAGE_RAGNAROK_GROUND_FALLBACK,assets/terrain-ground.png,design/TODO-TUNE,2026-11-15,Fallback ground texture for ragnarok (terrain-troll-fur for surface)
+AUDIO_MUSIC_GENERIC_ROUTING,2_tracks,design/TODO-TUNE,2026-11-15,All 28 stages routed to bgmusic00.ogg/bgmusic01.ogg; extracting distinct per-stage tracks from libgame.so deferred post-1.30.0
