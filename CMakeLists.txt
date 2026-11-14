@@ -45,6 +45,8 @@ target_link_libraries(test_physics box2d m pthread)
 
 add_executable(test_aircontrol
     tools/test_aircontrol.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
     src/physics/PlayerCar.cpp
     src/graphics/Texture.cpp
     src/graphics/Renderer2D.cpp
@@ -56,6 +58,8 @@ target_link_libraries(test_aircontrol box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES
 
 add_executable(test_coasting
     tools/test_coasting.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
     src/physics/PlayerCar.cpp
     src/graphics/Texture.cpp
     src/graphics/Renderer2D.cpp
@@ -67,6 +71,8 @@ target_link_libraries(test_coasting box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} 
 
 add_executable(test_air_sensors
     tools/test_air_sensors.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
     src/physics/PlayerCar.cpp
     src/graphics/Texture.cpp
     src/graphics/Renderer2D.cpp
@@ -78,6 +84,8 @@ target_link_libraries(test_air_sensors box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIE
 
 add_executable(test_suspension
     tools/test_suspension.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
     src/physics/PlayerCar.cpp
     src/graphics/Texture.cpp
     src/graphics/Renderer2D.cpp
@@ -296,6 +304,22 @@ add_executable(test_roster28
     src/audio/AudioEngine.cpp
 )
 target_link_libraries(test_roster28 box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
+add_executable(test_full_parity_1300
+    tools/test_full_parity_1300.cpp
+    src/core/Config.cpp
+    src/core/PlayerInfo.cpp
+    src/core/System.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
+    src/physics/PlayerCar.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Renderer2D.cpp
+    src/graphics/ParticleSystem.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_full_parity_1300 box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
 
 
 
