@@ -105,8 +105,6 @@ bool Game::Init() {
 
 #if defined(__PSP__)
     u32 t0 = sceKernelGetSystemTimeLow();
-#else
-    double t0 = System::GetTime();
 #endif
 
     mFont.Load("assets/fonts/gamefont.fnt", "assets/fonts/gamefont_0.png");
@@ -132,9 +130,6 @@ bool Game::Init() {
     sAssetLoadTimeUI = (float)(t1 - t0) / 1000.0f;
     printf("[PERF_ASSETS] Game::Init UI textures loaded in %u us (%.2f ms)\n", (unsigned int)(t1 - t0), sAssetLoadTimeUI);
     HCR_Log("[PERF_ASSETS] Game::Init UI textures loaded in %u us (%.2f ms)", (unsigned int)(t1 - t0), sAssetLoadTimeUI);
-#else
-    double t1 = System::GetTime();
-    printf("[PERF_ASSETS] Game::Init UI textures loaded in %.2f ms\n", (t1 - t0) * 1000.0);
 #endif
 
     mState = STATE_GARAGE;

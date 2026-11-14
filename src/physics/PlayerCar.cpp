@@ -20,8 +20,6 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     // Load textures
 #if defined(__PSP__)
     u32 t0 = sceKernelGetSystemTimeLow();
-#else
-    double t0 = System::GetTime();
 #endif
     mTexChassis.LoadPNG("assets/Car.png");
     mTexTire.LoadPNG("assets/Tire.png");
@@ -30,9 +28,6 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
 #if defined(__PSP__)
     u32 t1 = sceKernelGetSystemTimeLow();
     printf("[PERF_ASSETS] PlayerCar textures loaded in %u us (%.2f ms)\n", (unsigned int)(t1 - t0), (float)(t1 - t0) / 1000.0f);
-#else
-    double t1 = System::GetTime();
-    printf("[PERF_ASSETS] PlayerCar textures loaded in %.2f ms\n", (t1 - t0) * 1000.0);
 #endif
 
     // 1. Create Chassis Body (polygon from Config::VehicleJeep)
