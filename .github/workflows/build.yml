@@ -80,6 +80,7 @@ jobs:
           ./build-pc/test_texture
           ./build-pc/test_save
           ./build-pc/test_garage
+          ./build-pc/test_vehicles
 
       - name: Upload PC Artifacts
         uses: actions/upload-artifact@v4

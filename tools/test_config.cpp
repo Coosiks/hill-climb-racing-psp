@@ -72,6 +72,17 @@ int main() {
     TEST_CHECK(feq(Config::VehicleJeep.upg_mult_suspension, 1.05f), "upg_mult_suspension default");
     TEST_CHECK(feq(Config::VehicleJeep.upg_mult_tires, 1.10f), "upg_mult_tires default");
     TEST_CHECK(feq(Config::VehicleJeep.upg_mult_awd, 1.08f), "upg_mult_awd default");
+    TEST_CHECK(strcmp(Config::VehicleJeep.body_texture, "assets/Car.png") == 0, "body_texture default");
+    TEST_CHECK(strcmp(Config::VehicleJeep.wheel_texture, "assets/Tire.png") == 0, "wheel_texture default");
+    TEST_CHECK(strcmp(Config::VehicleJeep.preview_texture, "assets/car-icon-jeep.png") == 0, "preview_texture default");
+    TEST_CHECK(feq(Config::VehicleJeep.front_wheel_radius, 0.40f), "front_wheel_radius default");
+    TEST_CHECK(feq(Config::VehicleJeep.rear_wheel_radius, 0.40f), "rear_wheel_radius default");
+    TEST_CHECK(feq(Config::VehicleJeep.sprite_width, 3.40f), "sprite_width default");
+    TEST_CHECK(feq(Config::VehicleJeep.sprite_height, 1.45f), "sprite_height default");
+    TEST_CHECK(Config::VehicleJeep.drive_type == 2, "drive_type default");
+    TEST_CHECK(Config::VehicleJeep.fourth_upgrade_type == 0, "fourth_upgrade_type default");
+    TEST_CHECK(feq(Config::VehicleJeep.downforce_coeff, 0.0f), "downforce_coeff default");
+    TEST_CHECK(feq(Config::VehicleJeep.downforce_max, 150.0f), "downforce_max default");
 
     TEST_CHECK(feq(Config::Stages[0].gravity, -10.0f) && feq(Config::Stages[0].friction, 0.60f) && feq(Config::Stages[0].coin_multiplier, 1.25f), "stage 0 default");
     TEST_CHECK(feq(Config::Stages[1].gravity, -10.0f) && feq(Config::Stages[1].friction, 0.50f) && feq(Config::Stages[1].coin_multiplier, 1.75f), "stage 1 default");
@@ -80,7 +91,7 @@ int main() {
     printf("  [PASS] All baseline defaults match exact ground truth!\n\n");
 
     // ----------------------------------------------------
-    // Sub-test 2: Complete Config Key Coverage (52 keys)
+    // Sub-test 2: Complete Config Key Coverage (70 keys)
     // ----------------------------------------------------
     printf("[Sub-test 2] Testing individual key coverage via temporary CFG reload...\n");
 
@@ -146,7 +157,7 @@ int main() {
     remove("tmp_test_physics.cfg");
     printf("  [PASS] physics.cfg: %d / %d keys fully covered!\n", numPhysicsKeys - uncoveredKeys, numPhysicsKeys);
 
-    // (B) vehicles.cfg (32 keys)
+    // (B) vehicles.cfg (45 keys)
     int prevUncovered = uncoveredKeys;
     const char* vehicleKeys[] = {
         "name", "unlock_cost", "base_upgrade_cost", "max_upgrade_level", "upgrade_mult_fuel",
@@ -156,7 +167,10 @@ int main() {
         "rear_wheel_offset", "front_wheel_offset",
         "driver_head_radius", "driver_head_offset",
         "base_motor_speed", "base_motor_torque", "base_spring_freq", "base_spring_damp", "air_pitch_torque",
-        "upgrade_mult_engine", "upgrade_mult_suspension", "upgrade_mult_tires", "upgrade_mult_awd"
+        "upgrade_mult_engine", "upgrade_mult_suspension", "upgrade_mult_tires", "upgrade_mult_awd",
+        "body_texture", "wheel_texture", "front_wheel_texture", "rear_wheel_texture", "preview_texture",
+        "front_wheel_radius", "rear_wheel_radius", "sprite_width", "sprite_height",
+        "drive_type", "fourth_upgrade_type", "downforce_coeff", "downforce_max"
     };
     int numVehicleKeys = sizeof(vehicleKeys) / sizeof(vehicleKeys[0]);
 
@@ -195,6 +209,19 @@ int main() {
         else if (strcmp(vehicleKeys[i], "upgrade_mult_suspension") == 0) fprintf(tf, "upgrade_mult_suspension = 1.09\n");
         else if (strcmp(vehicleKeys[i], "upgrade_mult_tires") == 0) fprintf(tf, "upgrade_mult_tires = 1.16\n");
         else if (strcmp(vehicleKeys[i], "upgrade_mult_awd") == 0) fprintf(tf, "upgrade_mult_awd = 1.14\n");
+        else if (strcmp(vehicleKeys[i], "body_texture") == 0) fprintf(tf, "body_texture = assets/test_body.png\n");
+        else if (strcmp(vehicleKeys[i], "wheel_texture") == 0) fprintf(tf, "wheel_texture = assets/test_wheel.png\n");
+        else if (strcmp(vehicleKeys[i], "front_wheel_texture") == 0) fprintf(tf, "front_wheel_texture = assets/test_fwheel.png\n");
+        else if (strcmp(vehicleKeys[i], "rear_wheel_texture") == 0) fprintf(tf, "rear_wheel_texture = assets/test_rwheel.png\n");
+        else if (strcmp(vehicleKeys[i], "preview_texture") == 0) fprintf(tf, "preview_texture = assets/test_preview.png\n");
+        else if (strcmp(vehicleKeys[i], "front_wheel_radius") == 0) fprintf(tf, "front_wheel_radius = 0.42\n");
+        else if (strcmp(vehicleKeys[i], "rear_wheel_radius") == 0) fprintf(tf, "rear_wheel_radius = 0.48\n");
+        else if (strcmp(vehicleKeys[i], "sprite_width") == 0) fprintf(tf, "sprite_width = 3.65\n");
+        else if (strcmp(vehicleKeys[i], "sprite_height") == 0) fprintf(tf, "sprite_height = 1.85\n");
+        else if (strcmp(vehicleKeys[i], "drive_type") == 0) fprintf(tf, "drive_type = 1\n");
+        else if (strcmp(vehicleKeys[i], "fourth_upgrade_type") == 0) fprintf(tf, "fourth_upgrade_type = 3\n");
+        else if (strcmp(vehicleKeys[i], "downforce_coeff") == 0) fprintf(tf, "downforce_coeff = 0.25\n");
+        else if (strcmp(vehicleKeys[i], "downforce_max") == 0) fprintf(tf, "downforce_max = 180.0\n");
         fclose(tf);
 
         bool loaded = Config::LoadVehicles("tmp_test_vehicles.cfg");
@@ -233,6 +260,19 @@ int main() {
         else if (strcmp(vehicleKeys[i], "upgrade_mult_suspension") == 0) ok = feq(Config::VehicleJeep.upg_mult_suspension, 1.09f);
         else if (strcmp(vehicleKeys[i], "upgrade_mult_tires") == 0) ok = feq(Config::VehicleJeep.upg_mult_tires, 1.16f);
         else if (strcmp(vehicleKeys[i], "upgrade_mult_awd") == 0) ok = feq(Config::VehicleJeep.upg_mult_awd, 1.14f);
+        else if (strcmp(vehicleKeys[i], "body_texture") == 0) ok = (strcmp(Config::VehicleJeep.body_texture, "assets/test_body.png") == 0);
+        else if (strcmp(vehicleKeys[i], "wheel_texture") == 0) ok = (strcmp(Config::VehicleJeep.wheel_texture, "assets/test_wheel.png") == 0);
+        else if (strcmp(vehicleKeys[i], "front_wheel_texture") == 0) ok = (strcmp(Config::VehicleJeep.front_wheel_texture, "assets/test_fwheel.png") == 0);
+        else if (strcmp(vehicleKeys[i], "rear_wheel_texture") == 0) ok = (strcmp(Config::VehicleJeep.rear_wheel_texture, "assets/test_rwheel.png") == 0);
+        else if (strcmp(vehicleKeys[i], "preview_texture") == 0) ok = (strcmp(Config::VehicleJeep.preview_texture, "assets/test_preview.png") == 0);
+        else if (strcmp(vehicleKeys[i], "front_wheel_radius") == 0) ok = feq(Config::VehicleJeep.front_wheel_radius, 0.42f);
+        else if (strcmp(vehicleKeys[i], "rear_wheel_radius") == 0) ok = feq(Config::VehicleJeep.rear_wheel_radius, 0.48f);
+        else if (strcmp(vehicleKeys[i], "sprite_width") == 0) ok = feq(Config::VehicleJeep.sprite_width, 3.65f);
+        else if (strcmp(vehicleKeys[i], "sprite_height") == 0) ok = feq(Config::VehicleJeep.sprite_height, 1.85f);
+        else if (strcmp(vehicleKeys[i], "drive_type") == 0) ok = (Config::VehicleJeep.drive_type == 1);
+        else if (strcmp(vehicleKeys[i], "fourth_upgrade_type") == 0) ok = (Config::VehicleJeep.fourth_upgrade_type == 3);
+        else if (strcmp(vehicleKeys[i], "downforce_coeff") == 0) ok = feq(Config::VehicleJeep.downforce_coeff, 0.25f);
+        else if (strcmp(vehicleKeys[i], "downforce_max") == 0) ok = feq(Config::VehicleJeep.downforce_max, 180.0f);
 
         if (!ok) {
             fprintf(stderr, "FAIL: Key '%s' in vehicles.cfg did not update struct field!\n", vehicleKeys[i]);

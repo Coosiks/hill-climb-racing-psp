@@ -58,6 +58,19 @@ struct VehicleConfig {
     float upg_mult_suspension;
     float upg_mult_tires;
     float upg_mult_awd;
+    char body_texture[64];
+    char wheel_texture[64];
+    char front_wheel_texture[64];
+    char rear_wheel_texture[64];
+    char preview_texture[64];
+    float front_wheel_radius;
+    float rear_wheel_radius;
+    float sprite_width;
+    float sprite_height;
+    int drive_type;          // 0 = RWD, 1 = FWD, 2 = AWD
+    int fourth_upgrade_type; // 0 = AWD, 1 = FUEL, 2 = AIR_CONTROL, 3 = DOWNFORCE
+    float downforce_coeff;
+    float downforce_max;
 };
 
 struct StageConfig {

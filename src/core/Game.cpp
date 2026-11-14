@@ -111,7 +111,10 @@ void Game::LoadStagePreview() {
 
 void Game::LoadVehiclePreview() {
     mTexVehiclePreview.Destroy();
-    mTexVehiclePreview.LoadPNG("assets/Car.png");
+    const VehicleConfig* vConfig = Config::GetVehicle(mCurrentVehicle);
+    const char* prevPath = (vConfig && vConfig->preview_texture[0]) ? vConfig->preview_texture :
+                           ((vConfig && vConfig->body_texture[0]) ? vConfig->body_texture : "assets/Car.png");
+    mTexVehiclePreview.LoadPNG(prevPath);
 }
 
 bool Game::CanStartRace() const {
@@ -598,6 +601,18 @@ void Game::RenderGarage() {
         uint32_t vHash = PlayerInfo::HashId(Config::Vehicles[mCurrentVehicle].id);
         int maxLvl = Config::Vehicles[mCurrentVehicle].max_upgrade_level;
 
+        const VehicleConfig* vConfig = Config::GetVehicle(mCurrentVehicle);
+        const char* fourthName = "4WD";
+        const char* fourthKey = "[SEL] 4WD";
+        if (vConfig) {
+            switch (vConfig->fourth_upgrade_type) {
+                case 1: fourthName = "FUEL"; fourthKey = "[SEL] FUEL"; break;
+                case 2: fourthName = "AIR CTRL"; fourthKey = "[SEL] AIR"; break;
+                case 3: fourthName = "DOWNFORCE"; fourthKey = "[SEL] DOWN"; break;
+                default: fourthName = "4WD"; fourthKey = "[SEL] 4WD"; break;
+            }
+        }
+
         struct UpgCard {
             const char* key;
             const char* name;
@@ -607,7 +622,7 @@ void Game::RenderGarage() {
             { "[^] TRIANGLE", "ENGINE", PlayerInfo::GetVehicleUpgrade(vHash, 0), &mTexUpgEngine },
             { "[] SQUARE", "SUSPENSION", PlayerInfo::GetVehicleUpgrade(vHash, 1), &mTexUpgSusp },
             { "(O) CIRCLE", "TIRES", PlayerInfo::GetVehicleUpgrade(vHash, 2), &mTexUpgTires },
-            { "[SEL] 4WD", "4WD", PlayerInfo::GetVehicleUpgrade(vHash, 3), &mTexUpgAWD }
+            { fourthKey, fourthName, PlayerInfo::GetVehicleUpgrade(vHash, 3), &mTexUpgAWD }
         };
 
         for (int i = 0; i < 4; ++i) {

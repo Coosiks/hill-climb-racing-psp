@@ -58,7 +58,20 @@ VehicleConfig Config::VehicleJeep = {
     1.10f,          // upg_mult_engine
     1.05f,          // upg_mult_suspension
     1.10f,          // upg_mult_tires
-    1.08f           // upg_mult_awd
+    1.08f,          // upg_mult_awd
+    "assets/Car.png",           // body_texture
+    "assets/Tire.png",          // wheel_texture
+    "assets/Tire.png",          // front_wheel_texture
+    "assets/Tire.png",          // rear_wheel_texture
+    "assets/car-icon-jeep.png", // preview_texture
+    0.40f,                      // front_wheel_radius
+    0.40f,                      // rear_wheel_radius
+    3.40f,                      // sprite_width
+    1.45f,                      // sprite_height
+    2,                          // drive_type: 2 = AWD
+    0,                          // fourth_upgrade_type: 0 = AWD
+    0.0f,                       // downforce_coeff
+    150.0f                      // downforce_max
 };
 
 VehicleConfig Config::Vehicles[MAX_CONFIG_VEHICLES] = { Config::VehicleJeep };
@@ -198,7 +211,28 @@ bool Config::LoadVehicles(const char* filepath) {
                         v.chassis_vertices[vIdx][1] = (float)atof(comma + 1);
                     }
                 }
-                else if (strcmp(key, "wheel_radius") == 0) v.wheel_radius = (float)atof(val);
+                else if (strcmp(key, "wheel_radius") == 0) {
+                    v.wheel_radius = (float)atof(val);
+                    v.front_wheel_radius = v.wheel_radius;
+                    v.rear_wheel_radius = v.wheel_radius;
+                }
+                else if (strcmp(key, "front_wheel_radius") == 0) v.front_wheel_radius = (float)atof(val);
+                else if (strcmp(key, "rear_wheel_radius") == 0) v.rear_wheel_radius = (float)atof(val);
+                else if (strcmp(key, "sprite_width") == 0) v.sprite_width = (float)atof(val);
+                else if (strcmp(key, "sprite_height") == 0) v.sprite_height = (float)atof(val);
+                else if (strcmp(key, "body_texture") == 0) strncpy(v.body_texture, val, sizeof(v.body_texture) - 1);
+                else if (strcmp(key, "wheel_texture") == 0) {
+                    strncpy(v.wheel_texture, val, sizeof(v.wheel_texture) - 1);
+                    strncpy(v.front_wheel_texture, val, sizeof(v.front_wheel_texture) - 1);
+                    strncpy(v.rear_wheel_texture, val, sizeof(v.rear_wheel_texture) - 1);
+                }
+                else if (strcmp(key, "front_wheel_texture") == 0) strncpy(v.front_wheel_texture, val, sizeof(v.front_wheel_texture) - 1);
+                else if (strcmp(key, "rear_wheel_texture") == 0) strncpy(v.rear_wheel_texture, val, sizeof(v.rear_wheel_texture) - 1);
+                else if (strcmp(key, "preview_texture") == 0) strncpy(v.preview_texture, val, sizeof(v.preview_texture) - 1);
+                else if (strcmp(key, "drive_type") == 0) v.drive_type = atoi(val);
+                else if (strcmp(key, "fourth_upgrade_type") == 0) v.fourth_upgrade_type = atoi(val);
+                else if (strcmp(key, "downforce_coeff") == 0) v.downforce_coeff = (float)atof(val);
+                else if (strcmp(key, "downforce_max") == 0) v.downforce_max = (float)atof(val);
                 else if (strcmp(key, "wheel_density") == 0) v.wheel_density = (float)atof(val);
                 else if (strcmp(key, "wheel_base_friction") == 0) v.wheel_base_friction = (float)atof(val);
                 else if (strcmp(key, "wheel_restitution") == 0) v.wheel_restitution = (float)atof(val);

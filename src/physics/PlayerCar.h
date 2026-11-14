@@ -49,6 +49,12 @@ public:
     float GetRearSuspensionTranslation() const { return mRearJoint ? mRearJoint->GetJointTranslation() : 0.0f; }
     float GetFrontSuspensionTranslation() const { return mFrontJoint ? mFrontJoint->GetJointTranslation() : 0.0f; }
 
+    b2Body* GetChassisBody() const { return mChassis; }
+    b2Body* GetRearWheelBody() const { return mRearWheel; }
+    b2Body* GetFrontWheelBody() const { return mFrontWheel; }
+    float GetAirPitchTorque() const;
+    float GetDownforce() const;
+
 private:
     b2World* mWorld;
 
@@ -93,6 +99,7 @@ private:
     // Sprites
     Texture mTexChassis;
     Texture mTexTire;
+    Texture mTexFrontTire;
     Texture mTexDriverBody;
     Texture mTexDriverHead;
 };
