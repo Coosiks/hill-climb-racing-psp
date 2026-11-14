@@ -59,8 +59,8 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 ---
 
 ## [ ] Milestone M3: Vehicles, Garage, Upgrades & Persistent Save System
-- [ ] **T-030 (save):** Implement atomic key-value save storage with magic header, versioning, CRC32 checksum, and `.bak` fallback.
-- [ ] **T-031 (garage):** Garage menu system with upgrade purchasing (Engine, Suspension, Tires, 4WD) and stage selector.
+- [x] **T-030 (save):** Implement atomic key-value save storage with magic header, versioning, CRC32 checksum, and `.bak` fallback.
+- [x] **T-031 (garage):** Garage menu system with upgrade purchasing (Engine, Suspension, Tires, 4WD) and stage selector.
 - [ ] **T-032 (vehicle):** Calibrate secondary vehicles (Motocross Bike, Monster Truck, Tractor) via `vehicles.cfg`.
 
 ---
@@ -79,4 +79,9 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [ ] **T-051 (game):** Complete game-over flow (distance score, coins gathered, best stage record, retry/garage navigation).
 - [ ] **T-052 (perf):** Final performance profiling on real PSP-1000 hardware at 333 MHz (verification of locked 60 FPS in stress scenes).
 - [ ] **T-053 (release):** Production release v1.0.0 (signed EBOOT.PBP, release notes, packaging guide).
+
+---
+
+## [ ] Milestone M6: Content Parity 1.30.0
+- [ ] **T-120 (content):** Vehicles & Stages 1.30.0 Expansion: add configuration, visual assets (.tex), and physical calibration for 29 vehicles and 27 stages to reach parity with Hill Climb Racing v1.30.0.
 

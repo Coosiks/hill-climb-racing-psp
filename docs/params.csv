@@ -56,4 +56,14 @@ CAMERA_MIN_ZOOM,0.8,design/TODO-TUNE,2026-11-14,Minimum camera zoom bound
 CAMERA_MAX_ZOOM,1.2,design/TODO-TUNE,2026-11-14,Maximum camera zoom bound
 CHUNK_GEN_VERTICES_PER_STEP,8,design/TODO-TUNE,2026-11-14,Amortized vertex generation batch size per step
 MAX_TEXTURE_DIMENSION_PSP,512,design/TODO-TUNE,2026-11-14,Maximum POT texture dimension supported by PSP GE
+STAGE_UNLOCK_COST_COUNTRYSIDE,0,design/TODO-TUNE,2026-11-14,Starter stage unlock price
+STAGE_UNLOCK_COST_DESERT,10000,design/TODO-TUNE,2026-11-14,Desert unlock price
+STAGE_UNLOCK_COST_ARCTIC,20000,design/TODO-TUNE,2026-11-14,Arctic unlock price
+STAGE_UNLOCK_COST_MOON,50000,design/TODO-TUNE,2026-11-14,Moon unlock price
+VEHICLE_UNLOCK_COST_JEEP,0,design/TODO-TUNE,2026-11-14,Starter vehicle unlock price
+UPGRADE_BASE_COST_JEEP,1000,design/TODO-TUNE,2026-11-14,Base tier upgrade cost multiplier
+UPGRADE_MAX_LEVEL_JEEP,20,design/TODO-TUNE,2026-11-14,Maximum upgrade level per slot
+JEEP_UPGRADE_MULT_FUEL,1.05,design/TODO-TUNE,2026-11-14,Fuel tank capacity multiplier per level
+MAX_CONFIG_VEHICLES,32,design/TODO-TUNE,2026-11-14,Max vehicles supported by config and save systems
+MAX_CONFIG_STAGES,32,design/TODO-TUNE,2026-11-14,Max stages supported by config and save systems
 
