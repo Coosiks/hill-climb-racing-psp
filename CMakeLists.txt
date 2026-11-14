@@ -282,6 +282,21 @@ add_executable(test_roster24
 )
 target_link_libraries(test_roster24 box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
 
+add_executable(test_roster28
+    tools/test_roster28.cpp
+    src/core/Config.cpp
+    src/core/PlayerInfo.cpp
+    src/core/System.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
+    src/physics/PlayerCar.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Renderer2D.cpp
+    src/graphics/ParticleSystem.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_roster28 box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
 
 
 
