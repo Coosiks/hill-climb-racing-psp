@@ -25,6 +25,21 @@ struct Collectible {
 #define MAX_RENDER_POINTS  256
 #define CHUNK_GEN_BUDGET   8  // N vertices computed per step (design/TODO-TUNE)
 
+#define MAX_ACTIVE_BRIDGES 4
+#define MAX_BRIDGE_PLANKS  12
+#define BRIDGE_PLANK_WIDTH 1.20f
+#define BRIDGE_PLANK_HEIGHT 0.20f
+
+struct SuspensionBridge {
+    bool active;
+    int chunkIndex;
+    float startX;
+    float endX;
+    int plankCount;
+    b2Body* planks[MAX_BRIDGE_PLANKS];
+    b2RevoluteJoint* joints[MAX_BRIDGE_PLANKS + 1];
+};
+
 struct TerrainChunk {
     int chunkIndex;
     b2Body* body;
@@ -71,6 +86,8 @@ public:
     int GetActiveChunkCount() const;
     int GetTotalChunkSlots() const { return NUM_CHUNK_SLOTS; }
     b2Body* GetRearWallBody() const { return mRearWallBody; }
+    int GetActiveBridgeCount() const;
+    const SuspensionBridge* GetBridge(int index) const { return (index >= 0 && index < MAX_ACTIVE_BRIDGES) ? &mBridges[index] : NULL; }
 
     void GenerateChunkVertices(int chunkIndex, b2Vec2* outVerts, b2Vec2* outPrev, b2Vec2* outNext) const;
 
@@ -108,6 +125,17 @@ private:
     Texture mTexCoin100;
     Texture mTexCoin500;
     Texture mTexFuel;
+    Texture mTexBridge;
+
+    // Suspension bridge pool
+    SuspensionBridge mBridges[MAX_ACTIVE_BRIDGES];
+
+    void InitBridgePool();
+    void DestroyBridge(int bridgeIdx);
+    void DestroyBridgeForChunk(int chunkIndex);
+    void DestroyAllBridges();
+    bool CreateBridge(int chunkIndex, float startX, float endX, float startY, float endY, b2Body* anchorBody);
+    void MaybeSpawnBridge(int slotIdx);
 
     void InitChunkPool();
     void UpdateChunkWindow(int currentChunk);

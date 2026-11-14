@@ -56,12 +56,14 @@ Terrain::Terrain(b2World* world, StageType stageType)
     mTexCoin100.LoadPNG("assets/Coin100.png");
     mTexCoin500.LoadPNG("assets/Coin500.png");
     mTexFuel.LoadPNG("assets/fuel-canister.png");
+    mTexBridge.LoadPNG("assets/BridgeWoodBlock.png");
 #if defined(__PSP__)
     u32 t1 = sceKernelGetSystemTimeLow();
     printf("[PERF_ASSETS] Terrain textures loaded in %u us (%.2f ms)\n", (unsigned int)(t1 - t0), (float)(t1 - t0) / 1000.0f);
 #endif
 
     InitChunkPool();
+    InitBridgePool();
     UpdateChunkWindow(0);
     // Synchronously generate initial loading window: chunks -1, 0, 1, 2
     for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
@@ -78,6 +80,9 @@ Terrain::Terrain(b2World* world, StageType stageType)
 }
 
 Terrain::~Terrain() {
+    // 0. Destroy all active bridges in the pool
+    DestroyAllBridges();
+
     // 1. Destroy chunk pool bodies
     for (int i = 0; i < NUM_CHUNK_SLOTS; ++i) {
         if (mChunks[i].fixture && mChunks[i].body) {
@@ -350,7 +355,17 @@ float Terrain::GetHeightAtX(float x) const {
             double w3 = cos((double)t + w2);
             double w4 = cos((double)(t * 0.515f));
             double s = w1 * 1.2 + w3 * 0.8 + w4 * 0.4;
-            return (float)s;
+            float h = (float)s;
+
+            // Bridge chasms every 4 chunks (120m) starting at chunk 1: span [39.0, 51.0] (10 planks x 1.2m)
+            float modX = fmodf(x, 120.0f);
+            if (modX < 0.0f) modX += 120.0f;
+            if (x >= 30.0f && modX >= 39.0f && modX <= 51.0f) {
+                float u = (modX - 39.0f) / 12.0f;
+                float dip = sinf(u * 3.14159265f) * 3.5f;
+                h -= dip;
+            }
+            return h;
         }
 
         case STAGE_COUNTRYSIDE:
@@ -388,6 +403,147 @@ float Terrain::GetCeilingHeightAtX(float x) const {
         ceilY = floorY + 4.5f;
     }
     return ceilY;
+}
+
+void Terrain::InitBridgePool() {
+    for (int i = 0; i < MAX_ACTIVE_BRIDGES; ++i) {
+        mBridges[i].active = false;
+        mBridges[i].chunkIndex = -1;
+        mBridges[i].startX = 0.0f;
+        mBridges[i].endX = 0.0f;
+        mBridges[i].plankCount = 0;
+        for (int p = 0; p < MAX_BRIDGE_PLANKS; ++p) {
+            mBridges[i].planks[p] = NULL;
+        }
+        for (int j = 0; j <= MAX_BRIDGE_PLANKS; ++j) {
+            mBridges[i].joints[j] = NULL;
+        }
+    }
+}
+
+int Terrain::GetActiveBridgeCount() const {
+    int count = 0;
+    for (int i = 0; i < MAX_ACTIVE_BRIDGES; ++i) {
+        if (mBridges[i].active) count++;
+    }
+    return count;
+}
+
+void Terrain::DestroyBridge(int bridgeIdx) {
+    if (bridgeIdx < 0 || bridgeIdx >= MAX_ACTIVE_BRIDGES) return;
+    SuspensionBridge& b = mBridges[bridgeIdx];
+    if (!b.active) return;
+
+    for (int j = 0; j <= b.plankCount; ++j) {
+        if (b.joints[j]) {
+            mWorld->DestroyJoint(b.joints[j]);
+            b.joints[j] = NULL;
+        }
+    }
+    for (int p = 0; p < b.plankCount; ++p) {
+        if (b.planks[p]) {
+            mWorld->DestroyBody(b.planks[p]);
+            b.planks[p] = NULL;
+        }
+    }
+
+    b.active = false;
+    b.chunkIndex = -1;
+    b.plankCount = 0;
+}
+
+void Terrain::DestroyBridgeForChunk(int chunkIndex) {
+    for (int i = 0; i < MAX_ACTIVE_BRIDGES; ++i) {
+        if (mBridges[i].active && mBridges[i].chunkIndex == chunkIndex) {
+            DestroyBridge(i);
+        }
+    }
+}
+
+void Terrain::DestroyAllBridges() {
+    for (int i = 0; i < MAX_ACTIVE_BRIDGES; ++i) {
+        DestroyBridge(i);
+    }
+}
+
+bool Terrain::CreateBridge(int chunkIndex, float startX, float endX, float startY, float endY, b2Body* anchorBody) {
+    if (!anchorBody) return false;
+
+    int slot = -1;
+    for (int i = 0; i < MAX_ACTIVE_BRIDGES; ++i) {
+        if (!mBridges[i].active) {
+            slot = i;
+            break;
+        }
+    }
+    if (slot < 0) return false;
+
+    SuspensionBridge& b = mBridges[slot];
+    b.active = true;
+    b.chunkIndex = chunkIndex;
+    b.startX = startX;
+    b.endX = endX;
+    b.plankCount = 10;
+
+    b2PolygonShape plankBox;
+    plankBox.SetAsBox(BRIDGE_PLANK_WIDTH * 0.5f, BRIDGE_PLANK_HEIGHT * 0.5f);
+
+    b2FixtureDef pfd;
+    pfd.shape = &plankBox;
+    pfd.density = 1.5f;
+    pfd.friction = 0.70f;
+    pfd.restitution = 0.0f;
+    pfd.filter.categoryBits = CAT_TERRAIN;
+    pfd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL;
+
+    for (int i = 0; i < b.plankCount; ++i) {
+        float px = startX + ((float)i + 0.5f) * BRIDGE_PLANK_WIDTH;
+        float py = startY + (((float)i + 0.5f) / (float)b.plankCount) * (endY - startY);
+
+        b2BodyDef pbd;
+        pbd.type = b2_dynamicBody;
+        pbd.position.Set(px, py);
+        pbd.linearDamping = 0.5f;
+        pbd.angularDamping = 0.5f;
+        b.planks[i] = mWorld->CreateBody(&pbd);
+        b.planks[i]->CreateFixture(&pfd);
+    }
+
+    b2RevoluteJointDef jd;
+    jd.collideConnected = false;
+    jd.enableLimit = true;
+    jd.lowerAngle = -0.25f;
+    jd.upperAngle =  0.25f;
+
+    // Left anchor
+    jd.Initialize(anchorBody, b.planks[0], b2Vec2(startX, startY));
+    b.joints[0] = (b2RevoluteJoint*)mWorld->CreateJoint(&jd);
+
+    // Intermediate joints
+    for (int i = 1; i < b.plankCount; ++i) {
+        b2Vec2 anchor(startX + (float)i * BRIDGE_PLANK_WIDTH,
+                      startY + ((float)i / (float)b.plankCount) * (endY - startY));
+        jd.Initialize(b.planks[i - 1], b.planks[i], anchor);
+        b.joints[i] = (b2RevoluteJoint*)mWorld->CreateJoint(&jd);
+    }
+
+    // Right anchor
+    jd.Initialize(b.planks[b.plankCount - 1], anchorBody, b2Vec2(endX, endY));
+    b.joints[b.plankCount] = (b2RevoluteJoint*)mWorld->CreateJoint(&jd);
+
+    return true;
+}
+
+void Terrain::MaybeSpawnBridge(int slotIdx) {
+    TerrainChunk& chunk = mChunks[slotIdx];
+    if (chunk.chunkIndex > 0 && (chunk.chunkIndex % 4 == 1)) {
+        float chunkStart = (float)chunk.chunkIndex * CHUNK_WIDTH_METERS;
+        float x0 = chunkStart + 9.0f;
+        float x1 = chunkStart + 21.0f;
+        float y0 = GetHeightAtX(x0);
+        float y1 = GetHeightAtX(x1);
+        CreateBridge(chunk.chunkIndex, x0, x1, y0, y1, chunk.body);
+    }
 }
 
 void Terrain::InitChunkPool() {
@@ -491,6 +647,9 @@ int Terrain::GetChunkGenCount() {
 
 void Terrain::StartChunkGeneration(int slotIdx, int chunkIndex) {
     TerrainChunk& slot = mChunks[slotIdx];
+    if (slot.active) {
+        DestroyBridgeForChunk(slot.chunkIndex);
+    }
     if (slot.active && slot.body) {
         if (slot.fixture) {
             slot.body->DestroyFixture(slot.fixture);
@@ -601,6 +760,11 @@ bool Terrain::AdvanceGeneration(int slotIdx, int budget) {
             SpawnItemsAhead(chunkStart, chunkEnd);
         }
 
+        // Spawn bridge if stage has bridges enabled
+        if (mStageConfig && mStageConfig->has_bridges == 1) {
+            MaybeSpawnBridge(slotIdx);
+        }
+
         return true;
     }
 
@@ -621,6 +785,9 @@ void Terrain::CompleteChunkImmediately(int slotIdx) {
 
 void Terrain::UnloadChunk(int slotIdx) {
     TerrainChunk& slot = mChunks[slotIdx];
+    if (slot.active) {
+        DestroyBridgeForChunk(slot.chunkIndex);
+    }
     if (slot.active && slot.body) {
         if (slot.fixture) {
             slot.body->DestroyFixture(slot.fixture);
@@ -802,6 +969,20 @@ void Terrain::Render(float cameraX, float cameraY) {
 
             float size = (mItems[i].type == 1000) ? 1.0f : 0.75f;
             Renderer2D::DrawSprite(tex, mItems[i].x, mItems[i].y, size, size);
+        }
+    }
+
+    // Draw Suspension Bridges (batched)
+    for (int b = 0; b < MAX_ACTIVE_BRIDGES; ++b) {
+        if (mBridges[b].active) {
+            for (int p = 0; p < mBridges[b].plankCount; ++p) {
+                b2Body* plank = mBridges[b].planks[p];
+                if (plank) {
+                    b2Vec2 pos = plank->GetPosition();
+                    float angle = plank->GetAngle();
+                    Renderer2D::DrawSprite(&mTexBridge, pos.x, pos.y, BRIDGE_PLANK_WIDTH, BRIDGE_PLANK_HEIGHT, angle);
+                }
+            }
         }
     }
 }
