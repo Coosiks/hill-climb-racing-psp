@@ -95,4 +95,13 @@ ENGINE_PITCH_MIN,0.50,design/TODO-TUNE,2026-11-14,Minimum playback rate clamp fo
 ENGINE_PITCH_MAX,2.00,design/TODO-TUNE,2026-11-14,Maximum playback rate clamp for engine audio loop
 ENGINE_PITCH_IDLE,0.60,design/TODO-TUNE,2026-11-14,Target engine pitch at zero throttle / idle rpm
 MAX_BATCH_SPRITES,256,design/TODO-TUNE,2026-11-14,Renderer2D static sprite quad batch buffer capacity (1536 vertices)
+STAGE_UNLOCK_COST_HIGHWAY,125000,extracted (1.30.0 @ 0x14c57b),2026-11-14,Highway unlock price in 1.30.0
+STAGE_UNLOCK_COST_CAVE,150000,extracted (1.30.0 @ 0x14c5f7),2026-11-14,Cave unlock price in 1.30.0
+STAGE_UNLOCK_COST_MARS,250000,extracted (1.30.0 @ 0x14c76b),2026-11-14,Mars unlock price in 1.30.0
+STAGE_UNLOCK_COST_FOREST,850000,extracted (1.30.0 @ 0x14c9be),2026-11-14,Forest unlock price in 1.30.0
+CAVE_CEILING_OFFSET,6.5,design/TODO-TUNE,2026-11-14,Cave stage nominal ceiling vertical offset
+CAVE_MIN_CLEARANCE,4.5,design/TODO-TUNE,2026-11-14,Cave stage guaranteed minimum vertical clearance between floor and ceiling
+HIGHWAY_FUEL_INTERVAL,120.0,design/TODO-TUNE,2026-11-14,Distance interval in meters between fuel canisters on Highway
+FOREST_HAS_BRIDGES,1,design/TODO-TUNE,2026-11-14,Flag enabling suspension bridges on Forest stage
+
 

@@ -1,0 +1,375 @@
+# HCR 1.30.0 Stage Terrain Generators Disassembly & Constants Dump
+# Extracted from lib/x86/libgame.so
+
+==================================================
+Stage: Highway (Function at 0x148f0a, GOT = 0x40dff4)
+==================================================
+  0x148f0a: push     esi                      
+  0x148f0b: mov      esi, 0x3f800000          
+  0x148f10: push     ebx                      
+  0x148f11: call     0x4c414                  
+  0x148f16: add      ebx, 0x2c50de            
+  0x148f1c: lea      esp, [esp - 0x74]        
+  0x148f20: movss    xmm3, dword ptr [ebx - 0xc8d64] ; [0x345290] = float 3 (0x40400000)
+  0x148f28: movss    xmm0, dword ptr [esp + 0x84]
+  0x148f31: addss    xmm0, xmm3               
+  0x148f35: movss    xmm1, dword ptr [ebx - 0xc8cbc] ; [0x345338] = float 2.5 (0x40200000)
+  0x148f3d: movss    dword ptr [esp + 0x50], xmm3
+  0x148f43: mulss    xmm1, xmm0               
+  0x148f47: mulss    xmm0, dword ptr [ebx - 0xc85a4] ; [0x345a50] = float 6.7 (0x40d66666)
+  0x148f4f: movss    dword ptr [esp + 0x64], xmm1
+  0x148f55: movss    dword ptr [esp + 0x68], xmm0
+  0x148f5b: divss    xmm0, dword ptr [ebx - 0xc8b0c] ; [0x3454e8] = float 80 (0x42a00000)
+  0x148f63: addss    xmm0, dword ptr [ebx - 0xc8a2c] ; [0x3455c8] = float 3.14159 (0x40490fd0)
+  0x148f6b: mulss    xmm0, dword ptr [ebx - 0xc8d10] ; [0x3452e4] = float 4 (0x40800000)
+  0x148f73: movss    dword ptr [esp], xmm0    
+  0x148f78: call     0x4b7fc                  
+  0x148f7d: fstp     dword ptr [esp + 0x1c]   
+  0x148f81: movss    xmm0, dword ptr [esp + 0x1c]
+  0x148f87: mulss    xmm0, dword ptr [ebx - 0xc8d88] ; [0x34526c] = float 0.5 (0x3f000000)
+  0x148f8f: xorps    xmm1, xmm1               
+  0x148f92: addss    xmm0, xmm1               
+  0x148f96: movss    xmm1, dword ptr [esp + 0x68]
+  0x148f9c: divss    xmm1, dword ptr [ebx - 0xc8584] ; [0x345a70] = float 73 (0x42920000)
+  0x148fa4: movss    dword ptr [esp + 0x20], xmm0
+  0x148faa: addss    xmm1, dword ptr [ebx - 0xc8a2c] ; [0x3455c8] = float 3.14159 (0x40490fd0)
+  0x148fb2: movss    dword ptr [esp], xmm1    
+  0x148fb7: call     0x4b7fc                  
+  0x148fbc: fstp     dword ptr [esp + 0x1c]   
+  0x148fc0: movss    xmm1, dword ptr [esp + 0x1c]
+  0x148fc6: mulss    xmm1, dword ptr [ebx - 0xc8d48] ; [0x3452ac] = float 1.6 (0x3fcccccd)
+  0x148fce: movss    xmm0, dword ptr [esp + 0x20]
+  0x148fd4: movss    xmm2, dword ptr [ebx - 0xc8d88] ; [0x34526c] = float 0.5 (0x3f000000)
+  0x148fdc: addss    xmm0, xmm1               
+  0x148fe0: movss    xmm1, dword ptr [esp + 0x68]
+  0x148fe6: divss    xmm1, dword ptr [ebx - 0xc8498] ; [0x345b5c] = float 57 (0x42640000)
+  0x148fee: movss    dword ptr [esp + 0x20], xmm0
+  0x148ff4: addss    xmm1, dword ptr [ebx - 0xc8a2c] ; [0x3455c8] = float 3.14159 (0x40490fd0)
+  0x148ffc: mulss    xmm2, xmm1               
+  0x149000: movss    dword ptr [esp + 0x30], xmm1
+  0x149006: movss    dword ptr [esp], xmm2    
+  0x14900b: call     0x4b7fc                  
+  0x149010: movss    xmm4, dword ptr [esp + 0x64]
+  0x149016: fstp     dword ptr [esp + 0x1c]   
+  0x14901a: divss    xmm4, dword ptr [ebx - 0xc8a10] ; [0x3455e4] = float 300 (0x43960000)
+  0x149022: movss    xmm2, dword ptr [esp + 0x1c]
+  0x149028: mov      dword ptr [esp + 8], esi 
+  0x14902c: mov      dword ptr [esp + 4], 0   
+  0x149034: movss    dword ptr [esp + 0x40], xmm2
+  0x14903a: movss    dword ptr [esp], xmm4    
+  0x14903f: call     0xc3f59                  
+  0x149044: movss    xmm2, dword ptr [esp + 0x40]
+  0x14904a: fstp     dword ptr [esp + 0x1c]   
+  0x14904e: mulss    xmm2, dword ptr [ebx - 0xc8d48] ; [0x3452ac] = float 1.6 (0x3fcccccd)
+  0x149056: movss    xmm4, dword ptr [esp + 0x1c]
+  0x14905c: movss    xmm0, dword ptr [esp + 0x20]
+  0x149062: movss    xmm3, dword ptr [esp + 0x50]
+  0x149068: mulss    xmm2, xmm4               
+  0x14906c: addss    xmm0, xmm2               
+  0x149070: movss    xmm2, dword ptr [esp + 0x68]
+  0x149076: divss    xmm2, dword ptr [ebx - 0xc8490] ; [0x345b64] = float 78 (0x429c0000)
+  0x14907e: addss    xmm2, dword ptr [ebx - 0xc8a2c] ; [0x3455c8] = float 3.14159 (0x40490fd0)
+  0x149086: divss    xmm2, xmm3               
+  0x14908a: movss    dword ptr [esp], xmm2    
+  0x14908f: movss    dword ptr [esp + 0x20], xmm0
+  0x149095: call     0x4b7fc                  
+  0x14909a: movss    xmm2, dword ptr [esp + 0x64]
+  0x1490a0: mov      dword ptr [esp + 8], esi 
+  0x1490a4: divss    xmm2, dword ptr [ebx - 0xc89d0] ; [0x345624] = float 600 (0x44160000)
+  0x1490ac: fstp     dword ptr [esp + 0x6c]   
+  0x1490b0: mov      dword ptr [esp + 4], 0   
+  0x1490b8: movss    dword ptr [esp], xmm2    
+  0x1490bd: call     0xc3f59                  
+  0x1490c2: movss    xmm1, dword ptr [esp + 0x30]
+  0x1490c8: fstp     dword ptr [esp + 0x1c]   
+  0x1490cc: divss    xmm1, dword ptr [ebx - 0xc8c90] ; [0x345364] = float 7 (0x40e00000)
+  0x1490d4: movss    xmm3, dword ptr [ebx - 0xc8d48] ; [0x3452ac] = float 1.6 (0x3fcccccd)
+  0x1490dc: mulss    xmm3, dword ptr [esp + 0x6c]
+  0x1490e2: movss    xmm2, dword ptr [esp + 0x1c]
+  0x1490e8: movss    xmm0, dword ptr [esp + 0x20]
+  0x1490ee: mulss    xmm3, xmm2               
+  0x1490f2: addss    xmm0, xmm3               
+  0x1490f6: movss    dword ptr [esp + 0x20], xmm0
+
+==================================================
+Stage: Cave (Function at 0x148776, GOT = 0x40dff4)
+==================================================
+  0x148776: push     esi                      
+  0x148777: xor      esi, esi                 
+  0x148779: push     ebx                      
+  0x14877a: call     0x4c414                  
+  0x14877f: add      ebx, 0x2c5875            
+  0x148785: lea      esp, [esp - 0x44]        
+  0x148789: movss    xmm1, dword ptr [ebx - 0xc8c94] ; [0x345360] = float 1.5 (0x3fc00000)
+  0x148791: movss    xmm0, dword ptr [esp + 0x54]
+  0x148797: mulss    xmm0, xmm1               
+  0x14879b: movss    dword ptr [esp + 0x20], xmm1
+  0x1487a1: addss    xmm0, dword ptr [ebx - 0xc8d5c] ; [0x345298] = float 10 (0x41200000)
+  0x1487a9: movss    dword ptr [esp + 0x38], xmm0
+  0x1487af: divss    xmm0, dword ptr [ebx - 0xc8c0c] ; [0x3453e8] = float 17 (0x41880000)
+  0x1487b7: movss    dword ptr [esp], xmm0    
+  0x1487bc: call     0x4b80c                  
+  0x1487c1: movss    xmm0, dword ptr [esp + 0x38]
+  0x1487c7: fstp     dword ptr [esp + 0x1c]   
+  0x1487cb: divss    xmm0, dword ptr [ebx - 0xc84f0] ; [0x345b04] = float 7.21 (0x40e6b852)
+  0x1487d3: movss    xmm2, dword ptr [esp + 0x1c]
+  0x1487d9: addss    xmm0, xmm2               
+  0x1487dd: movss    dword ptr [esp], xmm0    
+  0x1487e2: call     0x4b7fc                  
+  0x1487e7: movss    xmm0, dword ptr [esp + 0x38]
+  0x1487ed: fstp     dword ptr [esp + 0x3c]   
+  0x1487f1: divss    xmm0, dword ptr [ebx - 0xc84ec] ; [0x345b08] = float 185 (0x43390000)
+  0x1487f9: movss    dword ptr [esp], xmm0    
+  0x1487fe: call     0x4b80c                  
+  0x148803: fstp     dword ptr [esp + 0x1c]   
+  0x148807: movss    xmm1, dword ptr [esp + 0x20]
+  0x14880d: movss    xmm0, dword ptr [esp + 0x1c]
+  0x148813: addss    xmm0, xmm1               
+  0x148817: mulss    xmm0, dword ptr [esp + 0x3c]
+  0x14881d: movss    dword ptr [esp + 0x3c], xmm0
+  0x148823: movss    xmm0, dword ptr [esp + 0x38]
+  0x148829: mulss    xmm0, dword ptr [ebx - 0xc84bc] ; [0x345b38] = float 0.1265 (0x3e018937)
+  0x148831: movss    dword ptr [esp], xmm0    
+  0x148836: call     0x4b80c                  
+  0x14883b: fstp     dword ptr [esp + 0x1c]   
+  0x14883f: movss    xmm0, dword ptr [esp + 0x1c]
+  0x148845: addss    xmm0, dword ptr [esp + 0x38]
+  0x14884b: movss    dword ptr [esp], xmm0    
+  0x148850: call     0x4b7fc                  
+  0x148855: movss    xmm1, dword ptr [esp + 0x38]
+  0x14885b: fstp     dword ptr [esp + 0x1c]   
+  0x14885f: divss    xmm1, dword ptr [ebx - 0xc8c34] ; [0x3453c0] = float 200 (0x43480000)
+  0x148867: movss    xmm0, dword ptr [esp + 0x1c]
+  0x14886d: movss    dword ptr [esp + 0x20], xmm0
+  0x148873: movss    dword ptr [esp], xmm1    
+  0x148878: call     0x4b80c                  
+  0x14887d: movss    xmm0, dword ptr [esp + 0x20]
+  0x148883: fstp     dword ptr [esp + 0x1c]   
+  0x148887: mulss    xmm0, dword ptr [ebx - 0xc8c64] ; [0x345390] = float 0.2 (0x3e4ccccd)
+  0x14888f: movss    xmm1, dword ptr [esp + 0x1c]
+  0x148895: mov      dword ptr [esp + 8], 0x3f800000
+  0x14889d: mov      dword ptr [esp + 4], esi 
+  0x1488a1: mulss    xmm0, xmm1               
+  0x1488a5: movss    xmm1, dword ptr [esp + 0x54]
+  0x1488ab: divss    xmm1, dword ptr [ebx - 0xc8d60] ; [0x345294] = float 100 (0x42c80000)
+  0x1488b3: movss    dword ptr [esp + 0x20], xmm0
+  0x1488b9: movss    dword ptr [esp], xmm1    
+  0x1488be: call     0xc3f59                  
+  0x1488c3: fstp     dword ptr [esp + 0x1c]   
+  0x1488c7: movss    xmm1, dword ptr [esp + 0x1c]
+  0x1488cd: movss    xmm0, dword ptr [esp + 0x20]
+  0x1488d3: mulss    xmm1, xmm0               
+  0x1488d7: movss    xmm0, dword ptr [esp + 0x38]
+  0x1488dd: divss    xmm0, dword ptr [ebx - 0xc8450] ; [0x345ba4] = float 25.521 (0x41cc2b02)
+  0x1488e5: addss    xmm1, dword ptr [esp + 0x3c]
+  0x1488eb: movss    dword ptr [esp + 0x3c], xmm1
+  0x1488f1: movss    dword ptr [esp], xmm0    
+  0x1488f6: call     0x4b80c                  
+  0x1488fb: movss    xmm0, dword ptr [esp + 0x38]
+  0x148901: fstp     dword ptr [esp + 0x1c]   
+  0x148905: divss    xmm0, dword ptr [ebx - 0xc844c] ; [0x345ba8] = float 7.651 (0x40f4d4fe)
+  0x14890d: movss    xmm1, dword ptr [esp + 0x1c]
+  0x148913: addss    xmm0, xmm1               
+  0x148917: movss    dword ptr [esp], xmm0    
+  0x14891c: call     0x4b7fc                  
+  0x148921: movss    xmm1, dword ptr [esp + 0x54]
+  0x148927: fstp     dword ptr [esp + 0x1c]   
+  0x14892b: divss    xmm1, dword ptr [ebx - 0xc84dc] ; [0x345b18] = float 900 (0x44610000)
+  0x148933: movss    xmm0, dword ptr [esp + 0x1c]
+  0x148939: mov      dword ptr [esp + 4], esi 
+  0x14893d: mov      dword ptr [esp + 8], 0x3f800000
+  0x148945: movss    dword ptr [esp + 0x20], xmm0
+  0x14894b: movss    dword ptr [esp], xmm1    
+  0x148950: call     0xc3f59                  
+  0x148955: movss    xmm0, dword ptr [esp + 0x20]
+  0x14895b: fstp     dword ptr [esp + 0x1c]   
+  0x14895f: addss    xmm0, xmm0               
+  0x148963: movss    xmm1, dword ptr [esp + 0x1c]
+
+==================================================
+Stage: Mars (Function at 0x147626, GOT = 0x40dff4)
+==================================================
+  0x147626: push     esi                      
+  0x147627: xor      esi, esi                 
+  0x147629: push     ebx                      
+  0x14762a: call     0x4c414                  
+  0x14762f: add      ebx, 0x2c69c5            
+  0x147635: lea      esp, [esp - 0x44]        
+  0x147639: movss    xmm0, dword ptr [esp + 0x54]
+  0x14763f: mulss    xmm0, dword ptr [ebx - 0xc8b3c] ; [0x3454b8] = float 1.75 (0x3fe00000)
+  0x147647: addss    xmm0, dword ptr [ebx - 0xc8d5c] ; [0x345298] = float 10 (0x41200000)
+  0x14764f: movss    dword ptr [esp + 0x38], xmm0
+  0x147655: divss    xmm0, dword ptr [ebx - 0xc84c4] ; [0x345b30] = float 67 (0x42860000)
+  0x14765d: movss    dword ptr [esp], xmm0    
+  0x147662: call     0x4b80c                  
+  0x147667: movss    xmm0, dword ptr [esp + 0x38]
+  0x14766d: fstp     dword ptr [esp + 0x1c]   
+  0x147671: divss    xmm0, dword ptr [ebx - 0xc84c0] ; [0x345b34] = float 9.21 (0x41135c29)
+  0x147679: movss    xmm1, dword ptr [esp + 0x1c]
+  0x14767f: addss    xmm0, xmm1               
+  0x147683: movss    dword ptr [esp], xmm0    
+  0x147688: call     0x4b7fc                  
+  0x14768d: movss    xmm0, dword ptr [esp + 0x38]
+  0x147693: fstp     dword ptr [esp + 0x3c]   
+  0x147697: divss    xmm0, dword ptr [ebx - 0xc84ec] ; [0x345b08] = float 185 (0x43390000)
+  0x14769f: movss    dword ptr [esp], xmm0    
+  0x1476a4: call     0x4b80c                  
+  0x1476a9: fstp     dword ptr [esp + 0x1c]   
+  0x1476ad: movss    xmm0, dword ptr [esp + 0x1c]
+  0x1476b3: addss    xmm0, dword ptr [ebx - 0xc8ce8] ; [0x34530c] = float 1.95 (0x3ff9999a)
+  0x1476bb: mulss    xmm0, dword ptr [esp + 0x3c]
+  0x1476c1: movss    dword ptr [esp + 0x3c], xmm0
+  0x1476c7: movss    xmm0, dword ptr [esp + 0x38]
+  0x1476cd: mulss    xmm0, dword ptr [ebx - 0xc84bc] ; [0x345b38] = float 0.1265 (0x3e018937)
+  0x1476d5: movss    dword ptr [esp], xmm0    
+  0x1476da: call     0x4b80c                  
+  0x1476df: fstp     dword ptr [esp + 0x1c]   
+  0x1476e3: movss    xmm0, dword ptr [esp + 0x1c]
+  0x1476e9: addss    xmm0, dword ptr [esp + 0x38]
+  0x1476ef: movss    dword ptr [esp], xmm0    
+  0x1476f4: call     0x4b7fc                  
+  0x1476f9: movss    xmm1, dword ptr [esp + 0x38]
+  0x1476ff: fstp     dword ptr [esp + 0x1c]   
+  0x147703: divss    xmm1, dword ptr [ebx - 0xc8c34] ; [0x3453c0] = float 200 (0x43480000)
+  0x14770b: movss    xmm0, dword ptr [esp + 0x1c]
+  0x147711: movss    dword ptr [esp + 0x20], xmm0
+  0x147717: movss    dword ptr [esp], xmm1    
+  0x14771c: call     0x4b80c                  
+  0x147721: movss    xmm0, dword ptr [esp + 0x20]
+  0x147727: fstp     dword ptr [esp + 0x1c]   
+  0x14772b: mulss    xmm0, dword ptr [ebx - 0xc8c64] ; [0x345390] = float 0.2 (0x3e4ccccd)
+  0x147733: movss    xmm1, dword ptr [esp + 0x1c]
+  0x147739: mov      dword ptr [esp + 8], 0x3f800000
+  0x147741: mov      dword ptr [esp + 4], esi 
+  0x147745: mulss    xmm0, xmm1               
+  0x147749: movss    xmm1, dword ptr [esp + 0x54]
+  0x14774f: divss    xmm1, dword ptr [ebx - 0xc8d60] ; [0x345294] = float 100 (0x42c80000)
+  0x147757: movss    dword ptr [esp + 0x20], xmm0
+  0x14775d: movss    dword ptr [esp], xmm1    
+  0x147762: call     0xc3f59                  
+  0x147767: fstp     dword ptr [esp + 0x1c]   
+  0x14776b: movss    xmm1, dword ptr [esp + 0x1c]
+  0x147771: movss    xmm0, dword ptr [esp + 0x20]
+  0x147777: mulss    xmm1, xmm0               
+  0x14777b: movss    xmm0, dword ptr [esp + 0x38]
+  0x147781: divss    xmm0, dword ptr [ebx - 0xc84b8] ; [0x345b3c] = float 33.521 (0x42061581)
+  0x147789: addss    xmm1, dword ptr [esp + 0x3c]
+  0x14778f: movss    dword ptr [esp + 0x3c], xmm1
+  0x147795: movss    dword ptr [esp], xmm0    
+  0x14779a: call     0x4b80c                  
+  0x14779f: movss    xmm0, dword ptr [esp + 0x38]
+  0x1477a5: fstp     dword ptr [esp + 0x1c]   
+  0x1477a9: divss    xmm0, dword ptr [ebx - 0xc84e0] ; [0x345b14] = float 8.651 (0x410a6a7f)
+  0x1477b1: movss    xmm1, dword ptr [esp + 0x1c]
+  0x1477b7: addss    xmm0, xmm1               
+  0x1477bb: movss    dword ptr [esp], xmm0    
+  0x1477c0: call     0x4b7fc                  
+  0x1477c5: movss    xmm1, dword ptr [esp + 0x54]
+  0x1477cb: fstp     dword ptr [esp + 0x1c]   
+  0x1477cf: divss    xmm1, dword ptr [ebx - 0xc84dc] ; [0x345b18] = float 900 (0x44610000)
+  0x1477d7: movss    xmm0, dword ptr [esp + 0x1c]
+  0x1477dd: mov      dword ptr [esp + 4], esi 
+  0x1477e1: mov      dword ptr [esp + 8], 0x3f800000
+  0x1477e9: movss    dword ptr [esp + 0x20], xmm0
+  0x1477ef: movss    dword ptr [esp], xmm1    
+  0x1477f4: call     0xc3f59                  
+  0x1477f9: movss    xmm0, dword ptr [esp + 0x20]
+  0x1477ff: fstp     dword ptr [esp + 0x1c]   
+  0x147803: mulss    xmm0, dword ptr [ebx - 0xc8890] ; [0x345764] = float 1.8 (0x3fe66666)
+  0x14780b: movss    xmm1, dword ptr [esp + 0x1c]
+  0x147811: mulss    xmm0, xmm1               
+
+==================================================
+Stage: Forest (Function at 0x148b88, GOT = 0x40dff4)
+==================================================
+  0x148b88: push     esi                      
+  0x148b89: xor      esi, esi                 
+  0x148b8b: push     ebx                      
+  0x148b8c: call     0x4c414                  
+  0x148b91: add      ebx, 0x2c5463            
+  0x148b97: lea      esp, [esp - 0x84]        
+  0x148b9e: movss    xmm2, dword ptr [ebx - 0xc8c94] ; [0x345360] = float 1.5 (0x3fc00000)
+  0x148ba6: movss    xmm0, dword ptr [esp + 0x94]
+  0x148baf: mulss    xmm0, xmm2               
+  0x148bb3: movss    dword ptr [esp + 0x30], xmm2
+  0x148bb9: movss    dword ptr [esp + 0x7c], xmm0
+  0x148bbf: movss    xmm1, dword ptr [esp + 0x7c]
+  0x148bc5: movss    xmm0, dword ptr [ebx - 0xc8d5c] ; [0x345298] = float 10 (0x41200000)
+  0x148bcd: addss    xmm1, xmm0               
+  0x148bd1: movss    dword ptr [esp + 0x7c], xmm1
+  0x148bd7: divss    xmm1, xmm0               
+  0x148bdb: movss    dword ptr [esp], xmm1    
+  0x148be0: call     0x4b7fc                  
+  0x148be5: fstp     dword ptr [esp + 0x1c]   
+  0x148be9: movss    xmm0, dword ptr [esp + 0x1c]
+  0x148bef: movss    xmm1, dword ptr [esp + 0x7c]
+  0x148bf5: addss    xmm0, xmm0               
+  0x148bf9: mulss    xmm1, dword ptr [ebx - 0xc8544] ; [0x345ab0] = float 0.215 (0x3e5c28f6)
+  0x148c01: movss    dword ptr [esp], xmm1    
+  0x148c06: movss    dword ptr [esp + 0x20], xmm0
+  0x148c0c: call     0x4b80c                  
+  0x148c11: fstp     dword ptr [esp + 0x1c]   
+  0x148c15: movss    xmm3, dword ptr [esp + 0x1c]
+  0x148c1b: movss    xmm1, dword ptr [esp + 0x7c]
+  0x148c21: addss    xmm1, xmm3               
+  0x148c25: movss    dword ptr [esp + 0x40], xmm3
+  0x148c2b: movss    dword ptr [esp], xmm1    
+  0x148c30: call     0x4b80c                  
+  0x148c35: movss    xmm4, dword ptr [esp + 0x7c]
+  0x148c3b: fstp     dword ptr [esp + 0x1c]   
+  0x148c3f: mulss    xmm4, dword ptr [ebx - 0xc897c] ; [0x345678] = float 0.0015 (0x3ac49ba6)
+  0x148c47: mov      dword ptr [esp + 4], esi 
+  0x148c4b: movss    xmm1, dword ptr [esp + 0x1c]
+  0x148c51: mov      dword ptr [esp + 8], 0x3f800000
+  0x148c59: movss    dword ptr [esp + 0x60], xmm1
+  0x148c5f: movss    dword ptr [esp], xmm4    
+  0x148c64: call     0xc3f59                  
+  0x148c69: movss    xmm1, dword ptr [esp + 0x60]
+  0x148c6f: fstp     dword ptr [esp + 0x1c]   
+  0x148c73: mulss    xmm1, dword ptr [ebx - 0xc8c64] ; [0x345390] = float 0.2 (0x3e4ccccd)
+  0x148c7b: movss    xmm4, dword ptr [esp + 0x1c]
+  0x148c81: movss    xmm0, dword ptr [esp + 0x20]
+  0x148c87: movss    dword ptr [esp + 0x50], xmm4
+  0x148c8d: mulss    xmm1, xmm4               
+  0x148c91: addss    xmm0, xmm1               
+  0x148c95: movss    xmm1, dword ptr [esp + 0x7c]
+  0x148c9b: mulss    xmm1, dword ptr [ebx - 0xc843c] ; [0x345bb8] = float 0.515 (0x3f03d70a)
+  0x148ca3: movss    dword ptr [esp], xmm1    
+  0x148ca8: movss    dword ptr [esp + 0x20], xmm0
+  0x148cae: call     0x4b80c                  
+  0x148cb3: movss    xmm5, dword ptr [ebx - 0xc8d28] ; [0x3452cc] = float 0.25 (0x3e800000)
+  0x148cbb: fstp     dword ptr [esp + 0x1c]   
+  0x148cbf: movss    xmm1, dword ptr [esp + 0x7c]
+  0x148cc5: mulss    xmm1, xmm5               
+  0x148cc9: movss    xmm6, dword ptr [esp + 0x1c]
+  0x148ccf: addss    xmm1, xmm6               
+  0x148cd3: movss    dword ptr [esp], xmm1    
+  0x148cd8: movss    dword ptr [esp + 0x60], xmm5
+  0x148cde: call     0x4b7fc                  
+  0x148ce3: fstp     dword ptr [esp + 0x1c]   
+  0x148ce7: movss    xmm5, dword ptr [esp + 0x60]
+  0x148ced: movss    xmm1, dword ptr [esp + 0x1c]
+  0x148cf3: mulss    xmm1, xmm5               
+  0x148cf7: movss    xmm4, dword ptr [esp + 0x50]
+  0x148cfd: movss    xmm0, dword ptr [esp + 0x20]
+  0x148d03: mulss    xmm1, xmm4               
+  0x148d07: addss    xmm0, xmm1               
+  0x148d0b: movss    xmm1, dword ptr [esp + 0x7c]
+  0x148d11: mulss    xmm1, dword ptr [ebx - 0xc8438] ; [0x345bbc] = float 0.1515 (0x3e1b22d1)
+  0x148d19: movss    dword ptr [esp], xmm1    
+  0x148d1e: movss    dword ptr [esp + 0x20], xmm0
+  0x148d24: call     0x4b80c                  
+  0x148d29: movss    xmm1, dword ptr [esp + 0x7c]
+  0x148d2f: fstp     dword ptr [esp + 0x1c]   
+  0x148d33: mulss    xmm1, dword ptr [ebx - 0xc86d0] ; [0x345924] = float 0.16 (0x3e23d70a)
+  0x148d3b: movss    xmm4, dword ptr [esp + 0x1c]
+  0x148d41: addss    xmm1, xmm4               
+  0x148d45: addss    xmm1, dword ptr [ebx - 0xc8538] ; [0x345abc] = float 2.411 (0x401a4dd3)
+  0x148d4d: movss    dword ptr [esp], xmm1    
+  0x148d52: call     0x4b7fc                  
+  0x148d57: movss    xmm4, dword ptr [esp + 0x7c]
+  0x148d5d: fstp     dword ptr [esp + 0x1c]   
+  0x148d61: mulss    xmm4, dword ptr [ebx - 0xc8600] ; [0x3459f4] = float 0.00075 (0x3a449ba6)
+  0x148d69: mov      dword ptr [esp + 4], esi 
+  0x148d6d: movss    xmm1, dword ptr [esp + 0x1c]
+  0x148d73: mov      dword ptr [esp + 8], 0x3f800000

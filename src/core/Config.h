@@ -87,6 +87,10 @@ struct StageConfig {
     char ground_texture[64];
     char surface_texture[64];
     char music[64];
+    int has_ceiling;
+    float ceiling_offset;
+    float fuel_interval;
+    int has_bridges;
 };
 
 class Config {

@@ -10,7 +10,7 @@ int PlayerInfo::EngineLevel = 0;
 int PlayerInfo::SuspensionLevel = 0;
 int PlayerInfo::TiresLevel = 0;
 int PlayerInfo::AWDLevel = 0;
-int PlayerInfo::HighScores[STAGE_COUNT] = { 0, 0, 0, 0 };
+int PlayerInfo::HighScores[STAGE_COUNT] = { 0 };
 
 uint32_t PlayerInfo::CalculateCRC32(const void* data, size_t length) {
     static uint32_t table[256];
@@ -276,7 +276,10 @@ void PlayerInfo::SyncToLegacy() {
         EngineLevel = SuspensionLevel = TiresLevel = AWDLevel = 0;
     }
 
-    const char* stageTags[4] = { "countryside", "desert", "arctic", "moon" };
+    const char* stageTags[STAGE_COUNT] = {
+        "countryside", "desert", "arctic", "moon",
+        "highway", "cave", "mars", "forest"
+    };
     for (int i = 0; i < STAGE_COUNT; ++i) {
         SavedStageEntry* s = GetStageEntry(HashId(stageTags[i]));
         HighScores[i] = s ? s->bestDistance : 0;
@@ -301,7 +304,10 @@ void PlayerInfo::SyncFromLegacy() {
         }
     }
 
-    const char* stageTags[4] = { "countryside", "desert", "arctic", "moon" };
+    const char* stageTags[STAGE_COUNT] = {
+        "countryside", "desert", "arctic", "moon",
+        "highway", "cave", "mars", "forest"
+    };
     for (int i = 0; i < STAGE_COUNT; ++i) {
         SavedStageEntry* s = GetOrCreateStageEntry(HashId(stageTags[i]));
         if (s && s->bestDistance != HighScores[i]) {
@@ -370,7 +376,8 @@ bool PlayerInfo::Load(const char* basePath) {
         int magic = 0;
         int legacyCoins = 0;
         int eng = 0, susp = 0, tires = 0, awd = 0;
-        int scores[STAGE_COUNT] = { 0 };
+        const int LEGACY_STAGE_COUNT = 4;
+        int scores[LEGACY_STAGE_COUNT] = { 0 };
 
         bool readOk = true;
         if (fread(&magic, sizeof(int), 1, df) != 1 || magic != 0x48435231) readOk = false;
@@ -379,7 +386,7 @@ bool PlayerInfo::Load(const char* basePath) {
         if (readOk && fread(&susp, sizeof(int), 1, df) != 1) readOk = false;
         if (readOk && fread(&tires, sizeof(int), 1, df) != 1) readOk = false;
         if (readOk && fread(&awd, sizeof(int), 1, df) != 1) readOk = false;
-        if (readOk && fread(scores, sizeof(int), STAGE_COUNT, df) != STAGE_COUNT) readOk = false;
+        if (readOk && fread(scores, sizeof(int), LEGACY_STAGE_COUNT, df) != LEGACY_STAGE_COUNT) readOk = false;
         fclose(df);
 
         if (readOk) {
@@ -397,7 +404,7 @@ bool PlayerInfo::Load(const char* basePath) {
             }
 
             const char* stageTags[4] = { "countryside", "desert", "arctic", "moon" };
-            for (int i = 0; i < STAGE_COUNT; ++i) {
+            for (int i = 0; i < LEGACY_STAGE_COUNT; ++i) {
                 SavedStageEntry* s = GetOrCreateStageEntry(HashId(stageTags[i]));
                 if (s) { s->unlocked = 1; s->bestDistance = scores[i]; }
             }

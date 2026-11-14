@@ -4,6 +4,7 @@
 #include <Box2D/Box2D.h>
 #include <stdint.h>
 #include "core/GameConstants.h"
+#include "core/Config.h"
 #include "graphics/Texture.h"
 #include "graphics/Renderer2D.h"
 
@@ -28,9 +29,13 @@ struct TerrainChunk {
     int chunkIndex;
     b2Body* body;
     b2Fixture* fixture;
+    b2Fixture* ceilingFixture;
     b2Vec2 vertices[VERTS_PER_CHUNK];
+    b2Vec2 ceilingVertices[VERTS_PER_CHUNK];
     b2Vec2 prevVertex;
     b2Vec2 nextVertex;
+    b2Vec2 prevCeilingVertex;
+    b2Vec2 nextCeilingVertex;
     int verticesComputed;
     uint64_t accumulatedTicks;
     bool ready;
@@ -49,8 +54,11 @@ public:
     void Render(float cameraX, float cameraY);
 
     float GetHeightAtX(float x) const;
+    float GetCeilingHeightAtX(float x) const;
+    bool HasCeiling() const;
     float GetStageFriction() const;
     float GetCoinMultiplier() const;
+    const StageConfig* GetStageConfig() const { return mStageConfig; }
 
     int GetItemCount() const { return mItemCount; }
     const Collectible* GetItems() const { return mItems; }
@@ -69,6 +77,7 @@ public:
 private:
     b2World* mWorld;
     StageType mStageType;
+    const StageConfig* mStageConfig;
 
     // Static chunk pool
     TerrainChunk mChunks[NUM_CHUNK_SLOTS];
@@ -77,6 +86,8 @@ private:
     // Render coordinates cache
     float mRenderX[MAX_RENDER_POINTS];
     float mRenderY[MAX_RENDER_POINTS];
+    float mCeilRenderX[MAX_RENDER_POINTS];
+    float mCeilRenderY[MAX_RENDER_POINTS];
 
     // Collectibles
     Collectible mItems[MAX_COLLECTIBLES];

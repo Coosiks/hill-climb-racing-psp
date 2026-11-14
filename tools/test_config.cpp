@@ -297,10 +297,11 @@ int main() {
     remove("tmp_test_vehicles.cfg");
     printf("  [PASS] vehicles.cfg: %d / %d keys fully covered!\n", numVehicleKeys - (uncoveredKeys - prevUncovered), numVehicleKeys);
 
-    // (C) stages.cfg (8 keys)
+    // (C) stages.cfg (12 keys)
     prevUncovered = uncoveredKeys;
     const char* stageKeys[] = {
-        "name", "unlock_cost", "gravity", "friction", "coin_multiplier", "ground_texture", "surface_texture", "music"
+        "name", "unlock_cost", "gravity", "friction", "coin_multiplier", "ground_texture", "surface_texture", "music",
+        "has_ceiling", "ceiling_offset", "fuel_interval", "has_bridges"
     };
     int numStageKeys = sizeof(stageKeys) / sizeof(stageKeys[0]);
 
@@ -316,6 +317,10 @@ int main() {
         else if (strcmp(stageKeys[i], "ground_texture") == 0) fprintf(tf, "ground_texture = assets/tmp_ground.png\n");
         else if (strcmp(stageKeys[i], "surface_texture") == 0) fprintf(tf, "surface_texture = assets/tmp_surface.png\n");
         else if (strcmp(stageKeys[i], "music") == 0) fprintf(tf, "music = assets/audio/tmp_music.ogg\n");
+        else if (strcmp(stageKeys[i], "has_ceiling") == 0) fprintf(tf, "has_ceiling = 1\n");
+        else if (strcmp(stageKeys[i], "ceiling_offset") == 0) fprintf(tf, "ceiling_offset = 7.2\n");
+        else if (strcmp(stageKeys[i], "fuel_interval") == 0) fprintf(tf, "fuel_interval = 110.0\n");
+        else if (strcmp(stageKeys[i], "has_bridges") == 0) fprintf(tf, "has_bridges = 1\n");
         fclose(tf);
 
         bool loaded = Config::LoadStages("tmp_test_stages.cfg");
@@ -330,6 +335,10 @@ int main() {
         else if (strcmp(stageKeys[i], "ground_texture") == 0) ok = (strcmp(Config::Stages[0].ground_texture, "assets/tmp_ground.png") == 0);
         else if (strcmp(stageKeys[i], "surface_texture") == 0) ok = (strcmp(Config::Stages[0].surface_texture, "assets/tmp_surface.png") == 0);
         else if (strcmp(stageKeys[i], "music") == 0) ok = (strcmp(Config::Stages[0].music, "assets/audio/tmp_music.ogg") == 0);
+        else if (strcmp(stageKeys[i], "has_ceiling") == 0) ok = (Config::Stages[0].has_ceiling == 1);
+        else if (strcmp(stageKeys[i], "ceiling_offset") == 0) ok = feq(Config::Stages[0].ceiling_offset, 7.2f);
+        else if (strcmp(stageKeys[i], "fuel_interval") == 0) ok = feq(Config::Stages[0].fuel_interval, 110.0f);
+        else if (strcmp(stageKeys[i], "has_bridges") == 0) ok = (Config::Stages[0].has_bridges == 1);
 
         if (!ok) {
             fprintf(stderr, "FAIL: Key '%s' in stages.cfg did not update struct field!\n", stageKeys[i]);
@@ -343,6 +352,7 @@ int main() {
 
     printf("\nTotal config keys tested: %d | Uncovered keys: %d\n", totalKeysCovered, uncoveredKeys);
     TEST_CHECK(uncoveredKeys == 0, "All keys must be covered");
+    TEST_CHECK(totalKeysCovered == 78, "All 78 config keys must be covered (21 physics + 45 vehicles + 12 stages)");
 
     // ----------------------------------------------------
     // Sub-test 3: Dynamic Behavior Change Without Recompile

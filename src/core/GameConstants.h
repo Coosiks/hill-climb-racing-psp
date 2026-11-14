@@ -28,7 +28,11 @@ enum StageType {
     STAGE_DESERT      = 1,
     STAGE_ARCTIC      = 2,
     STAGE_MOON        = 3,
-    STAGE_COUNT       = 4
+    STAGE_HIGHWAY     = 4,
+    STAGE_CAVE        = 5,
+    STAGE_MARS        = 6,
+    STAGE_FOREST      = 7,
+    STAGE_COUNT       = 8
 };
 
 // Upgrade pricing: Cost = 1000 * (level + 1)^2

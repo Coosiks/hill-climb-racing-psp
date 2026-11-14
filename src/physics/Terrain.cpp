@@ -32,8 +32,23 @@ Terrain::Terrain(b2World* world, StageType stageType)
     u32 t0 = sceKernelGetSystemTimeLow();
 #endif
     int stageIdx = (mStageType >= 0 && mStageType < STAGE_COUNT) ? mStageType : STAGE_COUNTRYSIDE;
-    mTexGround.LoadPNG(Config::Stages[stageIdx].ground_texture);
-    mTexSurface.LoadPNG(Config::Stages[stageIdx].surface_texture);
+    if (stageIdx < Config::StageCount) {
+        mStageConfig = &Config::Stages[stageIdx];
+    } else {
+        mStageConfig = &Config::Stages[STAGE_COUNTRYSIDE];
+    }
+
+    if (mStageConfig->ground_texture[0]) {
+        mTexGround.LoadPNG(mStageConfig->ground_texture);
+    } else {
+        mTexGround.LoadPNG("assets/terrain-ground.png");
+    }
+
+    if (mStageConfig->surface_texture[0]) {
+        mTexSurface.LoadPNG(mStageConfig->surface_texture);
+    } else {
+        mTexSurface.LoadPNG("assets/terrain-surface.png");
+    }
 
     // Collectibles
     mTexCoin5.LoadPNG("assets/Coin5.png");
@@ -194,16 +209,28 @@ void Terrain::ProcessDeferredDestroy(float carX) {
     }
 }
 
+bool Terrain::HasCeiling() const {
+    return (mStageConfig && mStageConfig->has_ceiling != 0);
+}
+
 float Terrain::GetStageFriction() const {
-    if (mStageType >= 0 && mStageType < STAGE_COUNT) {
-        return Config::Stages[mStageType].friction;
+    if (mStageConfig) {
+        return mStageConfig->friction;
+    }
+    int stageIdx = (mStageType >= 0 && mStageType < STAGE_COUNT) ? mStageType : STAGE_COUNTRYSIDE;
+    if (stageIdx < Config::StageCount) {
+        return Config::Stages[stageIdx].friction;
     }
     return Config::Stages[STAGE_COUNTRYSIDE].friction;
 }
 
 float Terrain::GetCoinMultiplier() const {
-    if (mStageType >= 0 && mStageType < STAGE_COUNT) {
-        return Config::Stages[mStageType].coin_multiplier;
+    if (mStageConfig) {
+        return mStageConfig->coin_multiplier;
+    }
+    int stageIdx = (mStageType >= 0 && mStageType < STAGE_COUNT) ? mStageType : STAGE_COUNTRYSIDE;
+    if (stageIdx < Config::StageCount) {
+        return Config::Stages[stageIdx].coin_multiplier;
     }
     return Config::Stages[STAGE_COUNTRYSIDE].coin_multiplier;
 }
@@ -278,6 +305,54 @@ float Terrain::GetHeightAtX(float x) const {
             return (float)s * amp;
         }
 
+        case STAGE_HIGHWAY: {
+            // Extracted from libgame.so @ 0x148f0a (StageHighway)
+            // Fast, smooth undulating asphalt waves
+            double w1 = 0.5 * sin((double)(t * 0.335f + 3.14159f) * 4.0);
+            double w2 = 1.6 * sin((double)(t * 0.09178f + 3.14159f));
+            double w3 = 1.6 * sin(0.5 * (double)(t * 0.11754f + 3.14159f));
+            float k = clampf(t * 0.001f, 0.0f, 1.0f);
+            double s = w1 * 0.4 + w2 * 0.6 + w3 * (0.5 + 0.5 * (double)k);
+            return (float)s * 1.5f;
+        }
+
+        case STAGE_CAVE: {
+            // Extracted from libgame.so @ 0x148776 (StageCave)
+            // Underground rocky floor with bumpy profile
+            double w1 = cos((double)(t / 17.0f));
+            double w2 = sin((double)(t / 7.21f) + w1);
+            double w3 = cos((double)(t / 185.0f));
+            double w4 = (w3 + 1.5) * w2;
+            double w5 = sin((double)t + cos((double)(t * 0.1265f)));
+            double w6 = cos((double)(t / 200.0f)) * 0.2;
+            double s = w4 * 0.5 + w5 * 0.35 + w6 * 0.8;
+            return (float)s;
+        }
+
+        case STAGE_MARS: {
+            // Extracted from libgame.so @ 0x147626 (StageMars)
+            // Martian terrain with craters and steep slopes
+            float tm = x * 1.75f + 10.0f;
+            double w1 = cos((double)(tm / 67.0f));
+            double w2 = sin((double)(tm / 9.21f) + w1);
+            double w3 = cos((double)(tm / 185.0f));
+            double w4 = (w3 + 1.95) * w2;
+            double w5 = sin((double)tm + cos((double)(tm * 0.1265f)));
+            double s = w4 * 0.65 + w5 * 0.45;
+            return (float)s * 1.4f;
+        }
+
+        case STAGE_FOREST: {
+            // Extracted from libgame.so @ 0x148b88 (StageForest)
+            // Forest terrain with rolling hills and bridge chasms
+            double w1 = sin((double)(t / 10.0f));
+            double w2 = cos((double)(t * 0.215f));
+            double w3 = cos((double)t + w2);
+            double w4 = cos((double)(t * 0.515f));
+            double s = w1 * 1.2 + w3 * 0.8 + w4 * 0.4;
+            return (float)s;
+        }
+
         case STAGE_COUNTRYSIDE:
         default: {
             double w1 = 2.0 * cos((double)(t * 0.10f));
@@ -300,6 +375,19 @@ float Terrain::GetHeightAtX(float x) const {
             return (float)s * amp;
         }
     }
+}
+
+float Terrain::GetCeilingHeightAtX(float x) const {
+    float floorY = GetHeightAtX(x);
+    float offset = (mStageConfig && mStageConfig->ceiling_offset > 0.0f) ? mStageConfig->ceiling_offset : 6.5f;
+    // Cave ceiling undulations (extracted from libgame.so @ 0x14269e)
+    float undulation = cosf(x / 12.76214f) * 0.75f + sinf(x * 0.05f) * 0.35f;
+    float ceilY = floorY + offset + undulation;
+    // Guaranteed minimum clearance >= 4.5m
+    if (ceilY < floorY + 4.5f) {
+        ceilY = floorY + 4.5f;
+    }
+    return ceilY;
 }
 
 void Terrain::InitChunkPool() {
@@ -327,15 +415,19 @@ void Terrain::InitChunkPool() {
         mChunks[i].chunkIndex = -1;
         mChunks[i].body = mWorld->CreateBody(&chunkBd);
         mChunks[i].fixture = NULL;
+        mChunks[i].ceilingFixture = NULL;
         mChunks[i].active = false;
         mChunks[i].ready = false;
         mChunks[i].verticesComputed = 0;
         mChunks[i].accumulatedTicks = 0;
         for (int v = 0; v < VERTS_PER_CHUNK; ++v) {
             mChunks[i].vertices[v].SetZero();
+            mChunks[i].ceilingVertices[v].SetZero();
         }
         mChunks[i].prevVertex.SetZero();
         mChunks[i].nextVertex.SetZero();
+        mChunks[i].prevCeilingVertex.SetZero();
+        mChunks[i].nextCeilingVertex.SetZero();
     }
 }
 
@@ -399,9 +491,15 @@ int Terrain::GetChunkGenCount() {
 
 void Terrain::StartChunkGeneration(int slotIdx, int chunkIndex) {
     TerrainChunk& slot = mChunks[slotIdx];
-    if (slot.active && slot.fixture && slot.body) {
-        slot.body->DestroyFixture(slot.fixture);
-        slot.fixture = NULL;
+    if (slot.active && slot.body) {
+        if (slot.fixture) {
+            slot.body->DestroyFixture(slot.fixture);
+            slot.fixture = NULL;
+        }
+        if (slot.ceilingFixture) {
+            slot.body->DestroyFixture(slot.ceilingFixture);
+            slot.ceilingFixture = NULL;
+        }
     }
     slot.chunkIndex = chunkIndex;
     slot.active = true;
@@ -421,10 +519,13 @@ bool Terrain::AdvanceGeneration(int slotIdx, int budget) {
 
     float startX = (float)slot.chunkIndex * CHUNK_WIDTH_METERS;
 
-    // If starting vertex computation, also compute prevVertex
+    // If starting vertex computation, also compute prevVertex (and ceiling)
     if (slot.verticesComputed == 0) {
         float prevX = startX - CHUNK_STEP_METERS;
         slot.prevVertex.Set(prevX, GetHeightAtX(prevX));
+        if (HasCeiling()) {
+            slot.prevCeilingVertex.Set(prevX, GetCeilingHeightAtX(prevX));
+        }
     }
 
     int endIdx = slot.verticesComputed + budget;
@@ -435,6 +536,9 @@ bool Terrain::AdvanceGeneration(int slotIdx, int budget) {
     for (int i = slot.verticesComputed; i < endIdx; ++i) {
         float x = startX + (float)i * CHUNK_STEP_METERS;
         slot.vertices[i].Set(x, GetHeightAtX(x));
+        if (HasCeiling()) {
+            slot.ceilingVertices[i].Set(x, GetCeilingHeightAtX(x));
+        }
     }
     slot.verticesComputed = endIdx;
 
@@ -456,6 +560,22 @@ bool Terrain::AdvanceGeneration(int slotIdx, int budget) {
         fd.filter.categoryBits = CAT_TERRAIN;
         fd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL | CAT_DRIVER;
         slot.fixture = slot.body->CreateFixture(&fd);
+
+        if (HasCeiling()) {
+            slot.nextCeilingVertex.Set(nextX, GetCeilingHeightAtX(nextX));
+            b2ChainShape ceilChain;
+            ceilChain.CreateChain(slot.ceilingVertices, VERTS_PER_CHUNK);
+            ceilChain.SetPrevVertex(slot.prevCeilingVertex);
+            ceilChain.SetNextVertex(slot.nextCeilingVertex);
+
+            b2FixtureDef cfd;
+            cfd.shape = &ceilChain;
+            cfd.friction = GetStageFriction();
+            cfd.restitution = 0.0f;
+            cfd.filter.categoryBits = CAT_TERRAIN;
+            cfd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL | CAT_DRIVER;
+            slot.ceilingFixture = slot.body->CreateFixture(&cfd);
+        }
 
         slot.ready = true;
 
@@ -501,9 +621,15 @@ void Terrain::CompleteChunkImmediately(int slotIdx) {
 
 void Terrain::UnloadChunk(int slotIdx) {
     TerrainChunk& slot = mChunks[slotIdx];
-    if (slot.active && slot.fixture && slot.body) {
-        slot.body->DestroyFixture(slot.fixture);
-        slot.fixture = NULL;
+    if (slot.active && slot.body) {
+        if (slot.fixture) {
+            slot.body->DestroyFixture(slot.fixture);
+            slot.fixture = NULL;
+        }
+        if (slot.ceilingFixture) {
+            slot.body->DestroyFixture(slot.ceilingFixture);
+            slot.ceilingFixture = NULL;
+        }
     }
     slot.chunkIndex = -1;
     slot.active = false;
@@ -573,7 +699,10 @@ void Terrain::SpawnItemsAhead(float startX, float endX) {
     float spawnX = mLastItemSpawnX + 35.0f;
     mLastItemSpawnX = spawnX;
 
-    bool spawnFuel = ((int)(spawnX) % 90 < 35);
+    float fuelInterval = (mStageConfig && mStageConfig->fuel_interval > 0.0f) ? mStageConfig->fuel_interval : 90.0f;
+    int intervalInt = (int)fuelInterval;
+    if (intervalInt <= 0) intervalInt = 90;
+    bool spawnFuel = ((int)(spawnX) % intervalInt < 35);
 
     if (spawnFuel && mItemCount < MAX_COLLECTIBLES) {
         float y = GetHeightAtX(spawnX) + 1.2f;
@@ -640,6 +769,10 @@ void Terrain::Render(float cameraX, float cameraY) {
                     if (renderCount < MAX_RENDER_POINTS) {
                         mRenderX[renderCount] = mChunks[s].vertices[i].x;
                         mRenderY[renderCount] = mChunks[s].vertices[i].y;
+                        if (HasCeiling()) {
+                            mCeilRenderX[renderCount] = mChunks[s].ceilingVertices[i].x;
+                            mCeilRenderY[renderCount] = mChunks[s].ceilingVertices[i].y;
+                        }
                         renderCount++;
                     }
                 }
@@ -652,6 +785,10 @@ void Terrain::Render(float cameraX, float cameraY) {
         float bottomY = cameraY - 14.0f;
         Renderer2D::DrawTerrainFill(&mTexGround, mRenderX, mRenderY, renderCount, bottomY);
         Renderer2D::DrawTerrainSurface(&mTexSurface, mRenderX, mRenderY, renderCount, 0.6f);
+
+        if (HasCeiling()) {
+            Renderer2D::DrawTerrainSurface(&mTexSurface, mCeilRenderX, mCeilRenderY, renderCount, 0.6f);
+        }
     }
 
     // Draw Collectibles (only if within visible range)

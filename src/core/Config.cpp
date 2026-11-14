@@ -315,6 +315,10 @@ bool Config::LoadStages(const char* filepath) {
                     Stages[currentStage].gravity = -10.0f;
                     Stages[currentStage].friction = 0.50f;
                     Stages[currentStage].coin_multiplier = 1.0f;
+                    Stages[currentStage].has_ceiling = 0;
+                    Stages[currentStage].ceiling_offset = 6.5f;
+                    Stages[currentStage].fuel_interval = 90.0f;
+                    Stages[currentStage].has_bridges = 0;
                 }
             }
             continue;
@@ -327,6 +331,10 @@ bool Config::LoadStages(const char* filepath) {
                 memset(&Stages[currentStage], 0, sizeof(StageConfig));
                 strncpy(Stages[currentStage].id, "countryside", sizeof(Stages[currentStage].id) - 1);
                 strncpy(Stages[currentStage].name, "Countryside", sizeof(Stages[currentStage].name) - 1);
+                Stages[currentStage].has_ceiling = 0;
+                Stages[currentStage].ceiling_offset = 6.5f;
+                Stages[currentStage].fuel_interval = 90.0f;
+                Stages[currentStage].has_bridges = 0;
             } else {
                 currentStage = 0;
             }
@@ -347,6 +355,10 @@ bool Config::LoadStages(const char* filepath) {
                 else if (strcmp(key, "ground_texture") == 0) strncpy(s.ground_texture, val, sizeof(s.ground_texture) - 1);
                 else if (strcmp(key, "surface_texture") == 0) strncpy(s.surface_texture, val, sizeof(s.surface_texture) - 1);
                 else if (strcmp(key, "music") == 0) strncpy(s.music, val, sizeof(s.music) - 1);
+                else if (strcmp(key, "has_ceiling") == 0) s.has_ceiling = atoi(val);
+                else if (strcmp(key, "ceiling_offset") == 0) s.ceiling_offset = (float)atof(val);
+                else if (strcmp(key, "fuel_interval") == 0) s.fuel_interval = (float)atof(val);
+                else if (strcmp(key, "has_bridges") == 0) s.has_bridges = atoi(val);
             }
         }
     }
