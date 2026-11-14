@@ -1,5 +1,74 @@
 #include "Renderer2D.h"
 #include <math.h>
+#include <string.h>
+
+Vertex2D Renderer2D::sBatchVertices[MAX_BATCH_VERTS];
+Texture* Renderer2D::sBatchTexture = NULL;
+int Renderer2D::sBatchQuadCount = 0;
+int Renderer2D::sDrawCallCount = 0;
+int Renderer2D::sBatchedQuadCount = 0;
+
+void Renderer2D::ResetMetrics() {
+    sDrawCallCount = 0;
+    sBatchedQuadCount = 0;
+}
+
+int Renderer2D::GetDrawCallCount() {
+    return sDrawCallCount;
+}
+
+int Renderer2D::GetBatchedQuadCount() {
+    return sBatchedQuadCount;
+}
+
+void Renderer2D::EndFrame() {
+    FlushBatch();
+}
+
+void Renderer2D::AddQuadToBatch(Texture* tex,
+                                float x0, float y0, float u0, float v0,
+                                float x1, float y1, float u1, float v1,
+                                float x2, float y2, float u2, float v2,
+                                float x3, float y3, float u3, float v3,
+                                unsigned int color) {
+    if (!tex) return;
+
+    if (sBatchTexture != tex || sBatchQuadCount >= MAX_BATCH_SPRITES) {
+        FlushBatch();
+    }
+
+    sBatchTexture = tex;
+    int base = sBatchQuadCount * 6;
+
+    // Triangle 1: (0, 1, 2)
+    sBatchVertices[base + 0].u = u0; sBatchVertices[base + 0].v = v0;
+    sBatchVertices[base + 0].color = color;
+    sBatchVertices[base + 0].x = x0; sBatchVertices[base + 0].y = y0; sBatchVertices[base + 0].z = 0.0f;
+
+    sBatchVertices[base + 1].u = u1; sBatchVertices[base + 1].v = v1;
+    sBatchVertices[base + 1].color = color;
+    sBatchVertices[base + 1].x = x1; sBatchVertices[base + 1].y = y1; sBatchVertices[base + 1].z = 0.0f;
+
+    sBatchVertices[base + 2].u = u2; sBatchVertices[base + 2].v = v2;
+    sBatchVertices[base + 2].color = color;
+    sBatchVertices[base + 2].x = x2; sBatchVertices[base + 2].y = y2; sBatchVertices[base + 2].z = 0.0f;
+
+    // Triangle 2: (2, 1, 3)
+    sBatchVertices[base + 3].u = u2; sBatchVertices[base + 3].v = v2;
+    sBatchVertices[base + 3].color = color;
+    sBatchVertices[base + 3].x = x2; sBatchVertices[base + 3].y = y2; sBatchVertices[base + 3].z = 0.0f;
+
+    sBatchVertices[base + 4].u = u1; sBatchVertices[base + 4].v = v1;
+    sBatchVertices[base + 4].color = color;
+    sBatchVertices[base + 4].x = x1; sBatchVertices[base + 4].y = y1; sBatchVertices[base + 4].z = 0.0f;
+
+    sBatchVertices[base + 5].u = u3; sBatchVertices[base + 5].v = v3;
+    sBatchVertices[base + 5].color = color;
+    sBatchVertices[base + 5].x = x3; sBatchVertices[base + 5].y = y3; sBatchVertices[base + 5].z = 0.0f;
+
+    sBatchQuadCount++;
+    sBatchedQuadCount++;
+}
 
 #if defined(__PSP__)
 
@@ -13,9 +82,16 @@ void Renderer2D::Init() {
 
     sceGumMatrixMode(GU_MODEL);
     sceGumLoadIdentity();
+
+    sBatchQuadCount = 0;
+    sBatchTexture = NULL;
+    sDrawCallCount = 0;
+    sBatchedQuadCount = 0;
 }
 
 void Renderer2D::SetupCamera(float camX, float camY, float zoom) {
+    FlushBatch();
+
     sceGumMatrixMode(GU_PROJECTION);
     sceGumLoadIdentity();
 
@@ -34,6 +110,8 @@ void Renderer2D::SetupCamera(float camX, float camY, float zoom) {
 }
 
 void Renderer2D::SetupScreenSpace() {
+    FlushBatch();
+
     sceGumMatrixMode(GU_PROJECTION);
     sceGumLoadIdentity();
     sceGumOrtho(0.0f, PSP_SCREEN_WIDTH, PSP_SCREEN_HEIGHT, 0.0f, -1.0f, 1.0f);
@@ -45,80 +123,90 @@ void Renderer2D::SetupScreenSpace() {
     sceGumLoadIdentity();
 }
 
-void Renderer2D::DrawSprite(Texture* tex, float worldX, float worldY, float width, float height, float angle, unsigned int color) {
-    if (!tex) return;
+void Renderer2D::FlushBatch() {
+    if (sBatchQuadCount == 0 || !sBatchTexture) return;
 
-    tex->Bind(GU_LINEAR);
+    sDrawCallCount++;
+    sBatchTexture->Bind(GU_LINEAR);
     sceGuTexWrap(GU_CLAMP, GU_CLAMP);
 
     sceGumMatrixMode(GU_MODEL);
-    sceGumPushMatrix();
+    sceGumLoadIdentity();
 
-    ScePspFVector3 pos = { worldX, worldY, 0.0f };
-    sceGumTranslate(&pos);
-
-    if (angle != 0.0f) {
-        sceGumRotateZ(angle);
+    int vertCount = sBatchQuadCount * 6;
+    Vertex2D* v = (Vertex2D*)sceGuGetMemory(vertCount * sizeof(Vertex2D));
+    if (v) {
+        memcpy(v, sBatchVertices, vertCount * sizeof(Vertex2D));
+        sceGumDrawArray(GU_TRIANGLES, GU_TEXTURE_32BITF | GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D, vertCount, 0, v);
     }
+
+    sBatchQuadCount = 0;
+    sBatchTexture = NULL;
+}
+
+void Renderer2D::DrawSprite(Texture* tex, float worldX, float worldY, float width, float height, float angle, unsigned int color) {
+    if (!tex) return;
 
     float hw = width * 0.5f;
     float hh = height * 0.5f;
     float maxU = tex->GetMaxU();
     float maxV = tex->GetMaxV();
 
-    Vertex2D* v = (Vertex2D*)sceGuGetMemory(4 * sizeof(Vertex2D));
-    if (!v) {
-        sceGumPopMatrix();
-        return;
+    float cosA = 1.0f, sinA = 0.0f;
+    if (angle != 0.0f) {
+        cosA = cosf(angle);
+        sinA = sinf(angle);
     }
 
-    v[0].u = 0.0f; v[0].v = 0.0f; v[0].color = color; v[0].x = -hw; v[0].y =  hh; v[0].z = 0.0f;
-    v[1].u = maxU; v[1].v = 0.0f; v[1].color = color; v[1].x =  hw; v[1].y =  hh; v[1].z = 0.0f;
-    v[2].u = 0.0f; v[2].v = maxV; v[2].color = color; v[2].x = -hw; v[2].y = -hh; v[2].z = 0.0f;
-    v[3].u = maxU; v[3].v = maxV; v[3].color = color; v[3].x =  hw; v[3].y = -hh; v[3].z = 0.0f;
+    // Top-left, top-right, bottom-left, bottom-right
+    float x0 = worldX + (-hw * cosA -  hh * sinA);
+    float y0 = worldY + (-hw * sinA +  hh * cosA);
 
-    sceGumDrawArray(GU_TRIANGLE_STRIP, GU_TEXTURE_32BITF | GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D, 4, 0, v);
-    sceGumPopMatrix();
+    float x1 = worldX + ( hw * cosA -  hh * sinA);
+    float y1 = worldY + ( hw * sinA +  hh * cosA);
+
+    float x2 = worldX + (-hw * cosA - -hh * sinA);
+    float y2 = worldY + (-hw * sinA + -hh * cosA);
+
+    float x3 = worldX + ( hw * cosA - -hh * sinA);
+    float y3 = worldY + ( hw * sinA + -hh * cosA);
+
+    AddQuadToBatch(tex,
+                   x0, y0, 0.0f, 0.0f,
+                   x1, y1, maxU, 0.0f,
+                   x2, y2, 0.0f, maxV,
+                   x3, y3, maxU, maxV,
+                   color);
 }
 
 void Renderer2D::DrawSpriteScreen(Texture* tex, float screenX, float screenY, float width, float height, unsigned int color) {
     if (!tex) return;
 
-    tex->Bind(GU_LINEAR);
-    sceGuTexWrap(GU_CLAMP, GU_CLAMP);
-
     float maxU = tex->GetMaxU();
     float maxV = tex->GetMaxV();
 
-    Vertex2D* v = (Vertex2D*)sceGuGetMemory(4 * sizeof(Vertex2D));
-    if (!v) return;
-
-    v[0].u = 0.0f; v[0].v = 0.0f; v[0].color = color; v[0].x = screenX;         v[0].y = screenY;          v[0].z = 0.0f;
-    v[1].u = maxU; v[1].v = 0.0f; v[1].color = color; v[1].x = screenX + width; v[1].y = screenY;          v[1].z = 0.0f;
-    v[2].u = 0.0f; v[2].v = maxV; v[2].color = color; v[2].x = screenX;         v[2].y = screenY + height; v[2].z = 0.0f;
-    v[3].u = maxU; v[3].v = maxV; v[3].color = color; v[3].x = screenX + width; v[3].y = screenY + height; v[3].z = 0.0f;
-
-    sceGumDrawArray(GU_TRIANGLE_STRIP, GU_TEXTURE_32BITF | GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D, 4, 0, v);
+    AddQuadToBatch(tex,
+                   screenX,         screenY,          0.0f, 0.0f,
+                   screenX + width, screenY,          maxU, 0.0f,
+                   screenX,         screenY + height, 0.0f, maxV,
+                   screenX + width, screenY + height, maxU, maxV,
+                   color);
 }
 
 void Renderer2D::DrawQuad(Texture* tex, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, unsigned int color) {
     if (!tex) return;
 
-    tex->Bind(GU_LINEAR);
-    sceGuTexWrap(GU_CLAMP, GU_CLAMP);
-
-    Vertex2D* v = (Vertex2D*)sceGuGetMemory(4 * sizeof(Vertex2D));
-    if (!v) return;
-
-    v[0].u = u0; v[0].v = v0; v[0].color = color; v[0].x = x0; v[0].y = y0; v[0].z = 0.0f;
-    v[1].u = u1; v[1].v = v0; v[1].color = color; v[1].x = x1; v[1].y = y0; v[1].z = 0.0f;
-    v[2].u = u0; v[2].v = v1; v[2].color = color; v[2].x = x0; v[2].y = y1; v[2].z = 0.0f;
-    v[3].u = u1; v[3].v = v1; v[3].color = color; v[3].x = x1; v[3].y = y1; v[3].z = 0.0f;
-
-    sceGumDrawArray(GU_TRIANGLE_STRIP, GU_TEXTURE_32BITF | GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D, 4, 0, v);
+    AddQuadToBatch(tex,
+                   x0, y0, u0, v0,
+                   x1, y0, u1, v0,
+                   x0, y1, u0, v1,
+                   x1, y1, u1, v1,
+                   color);
 }
 
 void Renderer2D::DrawFilledRect(float x, float y, float w, float h, unsigned int color) {
+    FlushBatch();
+
     sceGuDisable(GU_TEXTURE_2D);
 
     ColorVertex2D* v = (ColorVertex2D*)sceGuGetMemory(4 * sizeof(ColorVertex2D));
@@ -129,6 +217,7 @@ void Renderer2D::DrawFilledRect(float x, float y, float w, float h, unsigned int
         v[3].color = color; v[3].x = x + w; v[3].y = y + h; v[3].z = 0.0f;
 
         sceGumDrawArray(GU_TRIANGLE_STRIP, GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D, 4, 0, v);
+        sDrawCallCount++;
     }
 
     sceGuEnable(GU_TEXTURE_2D);
@@ -136,6 +225,8 @@ void Renderer2D::DrawFilledRect(float x, float y, float w, float h, unsigned int
 
 void Renderer2D::DrawTerrainFill(Texture* groundTex, const float* pointsX, const float* pointsY, int count, float bottomY, unsigned int color) {
     if (!groundTex || count < 2) return;
+
+    FlushBatch();
 
     groundTex->Bind(GU_REPEAT);
     sceGuTexWrap(GU_REPEAT, GU_REPEAT);
@@ -171,10 +262,13 @@ void Renderer2D::DrawTerrainFill(Texture* groundTex, const float* pointsX, const
     }
 
     sceGumDrawArray(GU_TRIANGLE_STRIP, GU_TEXTURE_32BITF | GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D, vertCount, 0, v);
+    sDrawCallCount++;
 }
 
 void Renderer2D::DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, const float* pointsY, int count, float thickness, unsigned int color) {
     if (!surfaceTex || count < 2) return;
+
+    FlushBatch();
 
     surfaceTex->Bind(GU_REPEAT);
     sceGuTexWrap(GU_REPEAT, GU_CLAMP);
@@ -208,6 +302,7 @@ void Renderer2D::DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, c
     }
 
     sceGumDrawArray(GU_TRIANGLE_STRIP, GU_TEXTURE_32BITF | GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D, vertCount, 0, v);
+    sDrawCallCount++;
 }
 
 #else // PC OpenGL Implementation
@@ -216,9 +311,16 @@ void Renderer2D::Init() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_TEXTURE_2D);
+
+    sBatchQuadCount = 0;
+    sBatchTexture = NULL;
+    sDrawCallCount = 0;
+    sBatchedQuadCount = 0;
 }
 
 void Renderer2D::SetupCamera(float camX, float camY, float zoom) {
+    FlushBatch();
+
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
@@ -233,6 +335,8 @@ void Renderer2D::SetupCamera(float camX, float camY, float zoom) {
 }
 
 void Renderer2D::SetupScreenSpace() {
+    FlushBatch();
+
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(0.0f, PSP_SCREEN_WIDTH, PSP_SCREEN_HEIGHT, 0.0f, -1.0f, 1.0f);
@@ -245,71 +349,90 @@ static inline void SetGLColor(unsigned int c) {
     glColor4ub(c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF, (c >> 24) & 0xFF);
 }
 
-void Renderer2D::DrawSprite(Texture* tex, float worldX, float worldY, float width, float height, float angle, unsigned int color) {
-    if (!tex) return;
+void Renderer2D::FlushBatch() {
+    if (sBatchQuadCount == 0 || !sBatchTexture) return;
 
-    tex->Bind(GL_LINEAR);
+    sDrawCallCount++;
+    sBatchTexture->Bind(GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glPushMatrix();
-    glTranslatef(worldX, worldY, 0.0f);
-    if (angle != 0.0f) {
-        glRotatef(angle * (180.0f / 3.14159265f), 0.0f, 0.0f, 1.0f);
+    glBegin(GL_TRIANGLES);
+    int totalVerts = sBatchQuadCount * 6;
+    for (int i = 0; i < totalVerts; ++i) {
+        const Vertex2D& v = sBatchVertices[i];
+        SetGLColor(v.color);
+        glTexCoord2f(v.u, v.v);
+        glVertex2f(v.x, v.y);
     }
+    glEnd();
+
+    sBatchQuadCount = 0;
+    sBatchTexture = NULL;
+}
+
+void Renderer2D::DrawSprite(Texture* tex, float worldX, float worldY, float width, float height, float angle, unsigned int color) {
+    if (!tex) return;
 
     float hw = width * 0.5f;
     float hh = height * 0.5f;
     float maxU = tex->GetMaxU();
     float maxV = tex->GetMaxV();
 
-    SetGLColor(color);
-    glBegin(GL_TRIANGLE_STRIP);
-    glTexCoord2f(0.0f, 0.0f); glVertex2f(-hw,  hh);
-    glTexCoord2f(maxU, 0.0f); glVertex2f( hw,  hh);
-    glTexCoord2f(0.0f, maxV); glVertex2f(-hw, -hh);
-    glTexCoord2f(maxU, maxV); glVertex2f( hw, -hh);
-    glEnd();
+    float cosA = 1.0f, sinA = 0.0f;
+    if (angle != 0.0f) {
+        cosA = cosf(angle);
+        sinA = sinf(angle);
+    }
 
-    glPopMatrix();
+    float x0 = worldX + (-hw * cosA -  hh * sinA);
+    float y0 = worldY + (-hw * sinA +  hh * cosA);
+
+    float x1 = worldX + ( hw * cosA -  hh * sinA);
+    float y1 = worldY + ( hw * sinA +  hh * cosA);
+
+    float x2 = worldX + (-hw * cosA - -hh * sinA);
+    float y2 = worldY + (-hw * sinA + -hh * cosA);
+
+    float x3 = worldX + ( hw * cosA - -hh * sinA);
+    float y3 = worldY + ( hw * sinA + -hh * cosA);
+
+    AddQuadToBatch(tex,
+                   x0, y0, 0.0f, 0.0f,
+                   x1, y1, maxU, 0.0f,
+                   x2, y2, 0.0f, maxV,
+                   x3, y3, maxU, maxV,
+                   color);
 }
 
 void Renderer2D::DrawSpriteScreen(Texture* tex, float screenX, float screenY, float width, float height, unsigned int color) {
     if (!tex) return;
 
-    tex->Bind(GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
     float maxU = tex->GetMaxU();
     float maxV = tex->GetMaxV();
 
-    SetGLColor(color);
-    glBegin(GL_TRIANGLE_STRIP);
-    glTexCoord2f(0.0f, 0.0f); glVertex2f(screenX,         screenY);
-    glTexCoord2f(maxU, 0.0f); glVertex2f(screenX + width, screenY);
-    glTexCoord2f(0.0f, maxV); glVertex2f(screenX,         screenY + height);
-    glTexCoord2f(maxU, maxV); glVertex2f(screenX + width, screenY + height);
-    glEnd();
+    AddQuadToBatch(tex,
+                   screenX,         screenY,          0.0f, 0.0f,
+                   screenX + width, screenY,          maxU, 0.0f,
+                   screenX,         screenY + height, 0.0f, maxV,
+                   screenX + width, screenY + height, maxU, maxV,
+                   color);
 }
 
 void Renderer2D::DrawQuad(Texture* tex, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, unsigned int color) {
     if (!tex) return;
 
-    tex->Bind(GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    SetGLColor(color);
-    glBegin(GL_TRIANGLE_STRIP);
-    glTexCoord2f(u0, v0); glVertex2f(x0, y0);
-    glTexCoord2f(u1, v0); glVertex2f(x1, y0);
-    glTexCoord2f(u0, v1); glVertex2f(x0, y1);
-    glTexCoord2f(u1, v1); glVertex2f(x1, y1);
-    glEnd();
+    AddQuadToBatch(tex,
+                   x0, y0, u0, v0,
+                   x1, y0, u1, v0,
+                   x0, y1, u0, v1,
+                   x1, y1, u1, v1,
+                   color);
 }
 
 void Renderer2D::DrawFilledRect(float x, float y, float w, float h, unsigned int color) {
+    FlushBatch();
+
     glDisable(GL_TEXTURE_2D);
     SetGLColor(color);
 
@@ -321,10 +444,13 @@ void Renderer2D::DrawFilledRect(float x, float y, float w, float h, unsigned int
     glEnd();
 
     glEnable(GL_TEXTURE_2D);
+    sDrawCallCount++;
 }
 
 void Renderer2D::DrawTerrainFill(Texture* groundTex, const float* pointsX, const float* pointsY, int count, float bottomY, unsigned int color) {
     if (!groundTex || count < 2) return;
+
+    FlushBatch();
 
     groundTex->Bind(GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -347,10 +473,13 @@ void Renderer2D::DrawTerrainFill(Texture* groundTex, const float* pointsX, const
         glTexCoord2f(u, vBot); glVertex2f(x, bottomY);
     }
     glEnd();
+    sDrawCallCount++;
 }
 
 void Renderer2D::DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, const float* pointsY, int count, float thickness, unsigned int color) {
     if (!surfaceTex || count < 2) return;
+
+    FlushBatch();
 
     surfaceTex->Bind(GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -371,6 +500,7 @@ void Renderer2D::DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, c
         glTexCoord2f(u, 1.0f); glVertex2f(x, y - halfThick);
     }
     glEnd();
+    sDrawCallCount++;
 }
 
 #endif
