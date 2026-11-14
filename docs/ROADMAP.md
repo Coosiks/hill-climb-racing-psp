@@ -101,19 +101,28 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [x] **H11 (core, render, save):** Save migration deduplication merging old `0xDC088A10` into canonical `0xB61B2D9E` (`vehicleCount--`, `fmaxf` levels), Night Mode render layer ordering (ambient darkening FIRST, additive headlight cone SECOND), world-to-screen camera projection in `Renderer2D::DrawLightCone`, honest batch/draw call metrics (`sBatchedQuadCount = 0`, `sDrawCallCount = 2`).
 - [x] **T-128 (content, terrain):** Expand stages to 24 (`seasons`, `bootcamp`, `xmas`, `alienplanet`, `arcticcave`, `ragnarok`), pure `double` height generators, Arctic Cave ceiling collision, Ragnarok mud pools, dirt particle colors, 100% bit-exact frozen heightfield determinism for stages 0..17.
 - [x] **T-129 (content, vehicle):** Expand vehicle roster to 24 (`dunebuggy`, `superoffroad`, `truck`, `minibike`, `bigfinger`, `hotrod`), 4th upgrade slot mapping (AWD, DOWNFORCE, AIR_CONTROL, BOOST), authoritative 24-vehicle Box2D physical mass table, APK 1.30.0 unlock costs.
-- [x] **T-130 (test):** 20th automated regression test (`test_roster24`) verifying 24 stages, 24 vehicles, save migration deduplication, Night Mode screen coordinates, and layer ordering.
+- [x] **Test 20:** 20th automated regression test (`test_roster24`) verifying 24 stages, 24 vehicles, save migration deduplication, Night Mode screen coordinates, and layer ordering.
+- [x] **H13 (core):** Unify stage string identifiers into file-scope `kStageTags[]` in `PlayerInfo.cpp`, compile-time `static_assert(sizeof(kStageTags)/sizeof(kStageTags[0]) == STAGE_COUNT)`, bounds-checked `PlayerInfo::StageTagAt(i)` accessor, null guards, and Sub-test 9 in `test_save.cpp`.
+- [x] **H12 (render):** Audit blending and texture state restoration in `Renderer2D::DrawLightCone` across PSP (`GU_ADD, GU_SRC_ALPHA, GU_FIX`) and PC (`GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA`), confirming persistent `GU_BLEND`/`GL_BLEND` activation.
+- [x] **T-130 (content, terrain):** Expand stages to 28 (`factory`, `haunted`, `northpole`, `nuclear`), achieving 100% stage content parity with 1.30.0; pure `double` height generators, bridge gating on factory, dual night+mud mechanics on haunted.
+- [x] **T-131a (content, vehicle):** Add `train` (Kiddie Express) as 25th vehicle; elongated wheelbase ($3.80$ m $> 3.40$ m), heavy chassis mass ($9.7367$ kg $> 3.4206$ kg median), BOOST 4th upgrade slot, elevated locomotive angular damping ($0.60$).
+- [ ] **Test 21:** 21st automated regression test (`test_roster28`) verifying 28 stages, 25 vehicles, FNV-1a hashes, train mass & wheelbase, and H13 regressions.
 
 ---
 
-## [ ] Milestone: Special Vehicle Physics (Deferred)
-Specialized physics architectures required for 5 non-standard vehicles that do not fit the standard two-wheel `PlayerCar` chassis-and-wheels model:
-- **Snowmobile:** Front ski steering joint with variable friction, rear continuous rubber tread/caterpillar contact model (`b2WheelJoint` chain or multi-contact track patch).
-- **Hovercraft:** Cushion thruster aerodynamics with downward air cushion repulsion force, zero wheel friction, lateral drift dynamics, and steering air rudders.
-- **Sleigh:** Dual sliding runners (skis) with low-friction edge contacts, terrain contour conformity, and absence of wheel rotation.
-- **Train (Locomotive & Carriages):** Multi-body articulated carriage train linked by `b2DistanceJoint` / `b2RevoluteJoint` couplers, multi-axle rail-wheel contacts, and distributed mass physics.
-- **Moonlander:** Multi-directional vector rocket thrusters, main engine vertical impulse, reaction control system (RCS) attitude thrusters, and landing gear shock struts.
+## [ ] Milestone M7: Special Vehicle Physics & Content Parity Completion
+### Batch 16 Step 0: Special Vehicle Physics Architectural Grounding
+Specialized physics architectures required for 4 non-standard vehicles that do not fit the standard two-wheel `PlayerCar` chassis-and-wheels model:
+- **Snowmobile:** Front ski steering runner with terrain edge contact vs rear continuous rubber caterpillar tread.
+  - *Unresolved Design Question 1:* Model front ski as rigid slider polygon fixture with directional friction or revolute suspension joint; model rear tread as multi-wheel chain or single long friction strip.
+- **Sleigh:** Dual sliding runners (skis) with zero rotating wheel bodies.
+  - *Unresolved Design Question 2:* Contact modeling with two low-friction edge contact pads; snow/ice friction ($\mu = 0.05$) vs terrain drag on asphalt/dirt ($\mu = 0.80$).
+- **Hovercraft:** Dynamic air cushion repulsion aerodynamics.
+  - *Unresolved Design Question 3:* Air cushion lift force implementation (raycast-based spring repulsion vs Box2D soft contact sensor); zero-friction lateral drift and air rudder turning moments.
+- **Moonlander:** Rocket thrust propulsion & reaction control system (RCS).
+  - *Unresolved Design Question 4:* Main vertical rocket engine variable impulse vector; attitude control torque jets; multi-strut landing gear shock damping on harsh terrain.
 
-*Note: The remaining 4 stages (`factory`, `haunted`, `northpole`, `nuclear`) are scheduled for the next content parity batch.*
+*All future parameters for Batch 16 vehicles are classified as `design/TODO-TUNE` until calibrated against reference video.*
 
 
 
