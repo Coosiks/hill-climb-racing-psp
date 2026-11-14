@@ -18,7 +18,9 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
       mMaxFuel(Config::Physics.max_fuel * powf((vConfig && (vConfig->fourth_upgrade_type == 2 || vConfig->fourth_upgrade_type == 3)) ? 1.0f : (vConfig ? vConfig : &Config::VehicleJeep)->upg_mult_fuel, (float)awdLvl)),
       mEngineRev(0.0f), mIsDead(false), mOutOfFuel(false),
       mThrottleActive(false), mBrakeActive(false),
-      mThrottleRamp(0.0f), mAirTime(0.0f), mAirRotation(0.0f), mLastAngle(0.0f), mFlipsCount(0) {
+      mThrottleRamp(0.0f), mAirTime(0.0f), mAirRotation(0.0f), mLastAngle(0.0f), mFlipsCount(0),
+      mPrevInAir(false), mPendingAirTimeBonus(0), mPendingAirTimeSeconds(0.0f),
+      mWheelieTime(0.0f), mPendingWheelieBonus(0), mPendingWheelieTime(0.0f) {
 
     // Load textures
 #if defined(__PSP__)
@@ -254,6 +256,22 @@ int PlayerCar::PopFlips() {
     return f;
 }
 
+int PlayerCar::PopAirTimeBonus(float* outSec) {
+    int b = mPendingAirTimeBonus;
+    if (outSec) *outSec = mPendingAirTimeSeconds;
+    mPendingAirTimeBonus = 0;
+    mPendingAirTimeSeconds = 0.0f;
+    return b;
+}
+
+int PlayerCar::PopWheelieBonus(float* outSec) {
+    int b = mPendingWheelieBonus;
+    if (outSec) *outSec = mPendingWheelieTime;
+    mPendingWheelieBonus = 0;
+    mPendingWheelieTime = 0.0f;
+    return b;
+}
+
 static bool IsGroundContact(b2ContactEdge* ce, b2Body* wheel) {
     if (!ce || !ce->contact || !ce->contact->IsTouching()) return false;
     b2Fixture* fA = ce->contact->GetFixtureA();
@@ -264,17 +282,24 @@ static bool IsGroundContact(b2ContactEdge* ce, b2Body* wheel) {
     return (other->GetFilterData().categoryBits & CAT_TERRAIN) != 0;
 }
 
-bool PlayerCar::IsInAir() const {
-    if (!mRearWheel || !mFrontWheel) return true;
-
+bool PlayerCar::IsRearWheelOnGround() const {
+    if (!mRearWheel) return false;
     for (b2ContactEdge* ce = mRearWheel->GetContactList(); ce; ce = ce->next) {
-        if (IsGroundContact(ce, mRearWheel)) return false;
+        if (IsGroundContact(ce, mRearWheel)) return true;
     }
-    for (b2ContactEdge* ce = mFrontWheel->GetContactList(); ce; ce = ce->next) {
-        if (IsGroundContact(ce, mFrontWheel)) return false;
-    }
+    return false;
+}
 
-    return true;
+bool PlayerCar::IsFrontWheelOnGround() const {
+    if (!mFrontWheel) return false;
+    for (b2ContactEdge* ce = mFrontWheel->GetContactList(); ce; ce = ce->next) {
+        if (IsGroundContact(ce, mFrontWheel)) return true;
+    }
+    return false;
+}
+
+bool PlayerCar::IsInAir() const {
+    return !IsRearWheelOnGround() && !IsFrontWheelOnGround();
 }
 
 void PlayerCar::Accelerate() {
@@ -336,9 +361,16 @@ void PlayerCar::Update(float dt) {
     if (inAir) {
         mAirTime += dt;
     } else {
+        if (mPrevInAir && !mIsDead && mAirTime >= Config::Physics.air_time_threshold) {
+            int seconds = (int)floorf(mAirTime);
+            if (seconds < 1) seconds = 1;
+            mPendingAirTimeBonus = seconds * (int)Config::Physics.air_time_bonus_rate;
+            mPendingAirTimeSeconds = mAirTime;
+        }
         mAirTime = 0.0f;
         mAirRotation = 0.0f;
     }
+    mPrevInAir = inAir;
 
     // Track flips in air
     float angle = mChassis->GetAngle();
@@ -361,6 +393,23 @@ void PlayerCar::Update(float dt) {
         }
     }
     mLastAngle = angle;
+
+    // 2b. Wheelie tracking (rear wheel on ground, front in air, pitch angle in [0.08, 1.40] rad)
+    bool rearOnGround = IsRearWheelOnGround();
+    bool frontOnGround = IsFrontWheelOnGround();
+    bool isWheelie = (!mIsDead && rearOnGround && !frontOnGround && angle > 0.08f && angle < 1.40f);
+
+    if (isWheelie) {
+        mWheelieTime += dt;
+    } else {
+        if (mWheelieTime >= Config::Physics.wheelie_threshold && !mIsDead) {
+            int seconds = (int)floorf(mWheelieTime);
+            if (seconds < 1) seconds = 1;
+            mPendingWheelieBonus = seconds * Config::Physics.wheelie_bonus_coins;
+            mPendingWheelieTime = mWheelieTime;
+        }
+        mWheelieTime = 0.0f;
+    }
 
     // 3. 1:1 Motor & Wheel Physics Actuation (from libgame.so PlayerCar::accelerate)
     float maxSpeed = mConfig->base_motor_speed * powf(1.05f, mEngineLevel);

@@ -20,6 +20,9 @@ struct PhysicsConfig {
     float fuel_drain_drive;
     int flip_bonus_coins;
     float air_time_threshold;
+    float air_time_bonus_rate;
+    float wheelie_threshold;
+    int wheelie_bonus_coins;
     float camera_lead_x;
     float camera_lead_y;
     float camera_smoothing;

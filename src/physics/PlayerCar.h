@@ -42,8 +42,13 @@ public:
     void Kill();
 
     bool IsInAir() const;
+    bool IsRearWheelOnGround() const;
+    bool IsFrontWheelOnGround() const;
     float GetAirTime() const { return mAirTime; }
+    float GetWheelieTime() const { return mWheelieTime; }
     int PopFlips(); // Returns +1 for backflip, -1 for frontflip, 0 for none
+    int PopAirTimeBonus(float* outSec = NULL);
+    int PopWheelieBonus(float* outSec = NULL);
 
     b2WheelJoint* GetRearJoint() const { return mRearJoint; }
     b2WheelJoint* GetFrontJoint() const { return mFrontJoint; }
@@ -98,6 +103,14 @@ private:
     float mAirRotation;
     float mLastAngle;
     int mFlipsCount;
+
+    bool mPrevInAir;
+    int mPendingAirTimeBonus;
+    float mPendingAirTimeSeconds;
+
+    float mWheelieTime;
+    int mPendingWheelieBonus;
+    float mPendingWheelieTime;
 
     // Sprites
     Texture mTexChassis;

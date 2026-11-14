@@ -45,6 +45,10 @@ DRIVER_NECK_UPPER_ANGLE,0.60,design/TODO-TUNE,2026-11-14,b2RevoluteJoint neck up
 DRIVER_NECK_SPRING_K,10.0,design/TODO-TUNE,2026-11-14,Neck PD controller spring return stiffness
 DRIVER_NECK_MAX_TORQUE_ALIVE,15.0,design/TODO-TUNE,2026-11-14,Neck motor max torque when driver alive
 DRIVER_NECK_MAX_TORQUE_DEAD,0.5,design/TODO-TUNE,2026-11-14,Weak neck motor torque for limp ragdoll on death
+AIR_TIME_THRESHOLD,1.0,design/TODO-TUNE,2026-11-14,Minimum airborne seconds to trigger air time bonus
+AIR_TIME_BONUS_RATE,250.0,design/TODO-TUNE,2026-11-14,Coins awarded per second of air time
+WHEELIE_THRESHOLD,1.5,design/TODO-TUNE,2026-11-14,Minimum seconds on rear wheel to trigger wheelie bonus
+WHEELIE_BONUS_COINS,500,design/TODO-TUNE,2026-11-14,Base coins awarded for successful wheelie
 MAX_FUEL,100.0,extracted,2026-11-12,Game logic constants
 FUEL_DRAIN_IDLE,0.60,measured,2026-11-12,Idle consumption per second
 FUEL_DRAIN_DRIVE,2.20,measured,2026-11-12,Throttle active consumption per second

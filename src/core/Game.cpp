@@ -719,7 +719,8 @@ void Game::UpdatePhysicsStep(float dt) {
         mMaxDistance = pos.x;
     }
 
-    // Stunt Tracking (Flips in air)
+    // Stunt Tracking
+    // 1. Flips in air
     int flip = mCar->PopFlips();
     if (flip > 0) {
         mSessionCoins += Config::Physics.flip_bonus_coins;
@@ -731,6 +732,28 @@ void Game::UpdatePhysicsStep(float dt) {
         mSessionCoins += Config::Physics.flip_bonus_coins;
         mStuntName = "FRONTFLIP!";
         mStuntCoins = Config::Physics.flip_bonus_coins;
+        mStuntTimer = 2.0f;
+        AudioEngine::PlaySFX(SFX_COIN);
+    }
+
+    // 2. Air Time bonus
+    float airSec = 0.0f;
+    int airBonus = mCar->PopAirTimeBonus(&airSec);
+    if (airBonus > 0) {
+        mSessionCoins += airBonus;
+        mStuntName = "AIR TIME!";
+        mStuntCoins = airBonus;
+        mStuntTimer = 2.0f;
+        AudioEngine::PlaySFX(SFX_COIN);
+    }
+
+    // 3. Wheelie bonus
+    float wheelieSec = 0.0f;
+    int wheelieBonus = mCar->PopWheelieBonus(&wheelieSec);
+    if (wheelieBonus > 0) {
+        mSessionCoins += wheelieBonus;
+        mStuntName = "WHEELIE!";
+        mStuntCoins = wheelieBonus;
         mStuntTimer = 2.0f;
         AudioEngine::PlaySFX(SFX_COIN);
     }

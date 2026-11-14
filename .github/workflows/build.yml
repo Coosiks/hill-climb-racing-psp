@@ -81,6 +81,7 @@ jobs:
           ./build-pc/test_save
           ./build-pc/test_garage
           ./build-pc/test_vehicles
+          ./build-pc/test_tricks_and_driver
 
       - name: Upload PC Artifacts
         uses: actions/upload-artifact@v4
