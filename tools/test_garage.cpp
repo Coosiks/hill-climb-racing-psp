@@ -56,10 +56,10 @@ int main() {
     TEST_CHECK(!PlayerInfo::IsStageUnlocked(desertHash), "Desert must be locked initially");
     TEST_CHECK(PlayerInfo::IsVehicleUnlocked(jeepHash), "Jeep must be unlocked by default");
 
-    int desertCost = Config::Stages[1].unlock_cost; // 10,000
-    TEST_CHECK(desertCost == 10000, "Desert unlock cost must be 10000");
+    int desertCost = Config::Stages[1].unlock_cost; // 35,000
+    TEST_CHECK(desertCost == 35000, "Desert unlock cost must be 35000");
 
-    // Attempt purchase with insufficient coins (5000 < 10000)
+    // Attempt purchase with insufficient coins (5000 < 35000)
     if (PlayerInfo::GetCoins() >= desertCost) {
         PlayerInfo::AddCoins(-desertCost);
         PlayerInfo::UnlockStage(desertHash);
@@ -68,8 +68,8 @@ int main() {
     TEST_CHECK(PlayerInfo::GetCoins() == 5000, "Coins must remain unchanged on failed purchase");
 
     // Grant coins and perform successful purchase
-    PlayerInfo::AddCoins(15000); // balance = 20,000
-    TEST_CHECK(PlayerInfo::GetCoins() == 20000, "Balance should be 20000");
+    PlayerInfo::AddCoins(40000); // balance = 45,000
+    TEST_CHECK(PlayerInfo::GetCoins() == 45000, "Balance should be 45000");
 
     if (PlayerInfo::GetCoins() >= desertCost) {
         PlayerInfo::AddCoins(-desertCost);
