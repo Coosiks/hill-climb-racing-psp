@@ -40,6 +40,11 @@ JEEP_AIR_PITCH_TORQUE,10.0,measured,2026-11-12,Airborne flip torque calibration
 DRIVER_HEAD_RADIUS,0.24,extracted,2026-11-12,PlayerCar::createDriver (0x000d1db4)
 DRIVER_HEAD_OFFSET_X,-0.10,extracted,2026-11-12,PlayerCar::createDriver
 DRIVER_HEAD_OFFSET_Y,0.50,extracted,2026-11-12,PlayerCar::createDriver
+DRIVER_NECK_LOWER_ANGLE,-0.60,design/TODO-TUNE,2026-11-14,b2RevoluteJoint neck lower angular limit (radians)
+DRIVER_NECK_UPPER_ANGLE,0.60,design/TODO-TUNE,2026-11-14,b2RevoluteJoint neck upper angular limit (radians)
+DRIVER_NECK_SPRING_K,10.0,design/TODO-TUNE,2026-11-14,Neck PD controller spring return stiffness
+DRIVER_NECK_MAX_TORQUE_ALIVE,15.0,design/TODO-TUNE,2026-11-14,Neck motor max torque when driver alive
+DRIVER_NECK_MAX_TORQUE_DEAD,0.5,design/TODO-TUNE,2026-11-14,Weak neck motor torque for limp ragdoll on death
 MAX_FUEL,100.0,extracted,2026-11-12,Game logic constants
 FUEL_DRAIN_IDLE,0.60,measured,2026-11-12,Idle consumption per second
 FUEL_DRAIN_DRIVE,2.20,measured,2026-11-12,Throttle active consumption per second

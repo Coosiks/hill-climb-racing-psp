@@ -35,8 +35,10 @@ void PhysicsWorld::BeginContact(b2Contact* contact) {
     // Check Driver head hitting terrain
     if ((catA == CAT_DRIVER && catB == CAT_TERRAIN) ||
         (catB == CAT_DRIVER && catA == CAT_TERRAIN)) {
-        if (mListener) {
-            mListener->OnDriverDown();
+        if (!fixA->IsSensor() && !fixB->IsSensor()) {
+            if (mListener) {
+                mListener->OnDriverDown();
+            }
         }
     }
 

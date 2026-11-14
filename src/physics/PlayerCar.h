@@ -37,6 +37,7 @@ public:
     const VehicleConfig* GetConfig() const { return mConfig; }
     void AddFuel(float amount);
     bool IsDead() const { return mIsDead; }
+    bool IsDriverDead() const { return mIsDead; }
     bool IsOutOfFuel() const { return mOutOfFuel; }
     void Kill();
 
@@ -46,6 +47,8 @@ public:
 
     b2WheelJoint* GetRearJoint() const { return mRearJoint; }
     b2WheelJoint* GetFrontJoint() const { return mFrontJoint; }
+    b2RevoluteJoint* GetNeckJoint() const { return mNeckJoint; }
+    b2Body* GetDriverHeadBody() const { return mDriverHead; }
     float GetRearSuspensionTranslation() const { return mRearJoint ? mRearJoint->GetJointTranslation() : 0.0f; }
     float GetFrontSuspensionTranslation() const { return mFrontJoint ? mFrontJoint->GetJointTranslation() : 0.0f; }
 

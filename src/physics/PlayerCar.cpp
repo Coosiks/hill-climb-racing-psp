@@ -157,15 +157,19 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     hfd.density = 0.5f;
     hfd.friction = 0.5f;
     hfd.filter.categoryBits = CAT_DRIVER;
-    hfd.filter.maskBits = CAT_TERRAIN;
+    hfd.filter.maskBits = CAT_TERRAIN | CAT_ITEM;
     mDriverHead->CreateFixture(&hfd);
 
     // Revolute Joint for Head/Neck
     b2RevoluteJointDef rjd;
     rjd.Initialize(mChassis, mDriverHead, headPos + b2Vec2(0.0f, -0.15f));
+    rjd.collideConnected = false;
     rjd.enableLimit = true;
-    rjd.lowerAngle = -0.35f;
-    rjd.upperAngle =  0.35f;
+    rjd.lowerAngle = -0.60f;
+    rjd.upperAngle =  0.60f;
+    rjd.enableMotor = true;
+    rjd.maxMotorTorque = 15.0f;
+    rjd.motorSpeed = 0.0f;
     mNeckJoint = (b2RevoluteJoint*)mWorld->CreateJoint(&rjd);
 
     mLastAngle = mChassis->GetAngle();
@@ -235,10 +239,11 @@ float PlayerCar::GetSpeedKmH() const {
 void PlayerCar::Kill() {
     if (!mIsDead) {
         mIsDead = true;
-        // Break neck joint so driver head ragdolls freely on crash
+        // Weaken neck motor for limp ragdoll on death
         if (mNeckJoint) {
-            mWorld->DestroyJoint(mNeckJoint);
-            mNeckJoint = NULL;
+            mNeckJoint->EnableMotor(true);
+            mNeckJoint->SetMotorSpeed(0.0f);
+            mNeckJoint->SetMaxMotorTorque(0.5f);
         }
     }
 }
@@ -300,7 +305,21 @@ void PlayerCar::Update(float dt) {
         mEngineRev = 0.0f;
         mRearJoint->EnableMotor(false);
         if (mFrontJoint) mFrontJoint->EnableMotor(false);
+        if (mNeckJoint) {
+            mNeckJoint->EnableMotor(true);
+            mNeckJoint->SetMotorSpeed(0.0f);
+            mNeckJoint->SetMaxMotorTorque(0.5f);
+        }
         return;
+    }
+
+    // 0. Driver neck PD spring motor return
+    if (mNeckJoint) {
+        float neckAngle = mNeckJoint->GetJointAngle();
+        float kSpring = 10.0f;
+        mNeckJoint->EnableMotor(true);
+        mNeckJoint->SetMotorSpeed(-kSpring * neckAngle);
+        mNeckJoint->SetMaxMotorTorque(15.0f);
     }
 
     // 1. Throttle pedal response ramp
