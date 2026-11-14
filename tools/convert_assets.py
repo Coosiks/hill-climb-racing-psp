@@ -559,6 +559,109 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
         print(f"Converted {audio_count} audio files to canonical 22050Hz 16-bit PCM WAV.")
     return manifest
 
+def audit_assets(out_dir="assets", allow_missing=False, stages_cfg="config/stages.cfg", vehicles_cfg="config/vehicles.cfg"):
+    import configparser
+    print("\n==================================================")
+    print("   Hill Climb Racing: Canonical Asset Audit (H17a)")
+    print("==================================================")
+
+    if not (os.path.isfile(stages_cfg) and os.path.isfile(vehicles_cfg)):
+        print(f"Warning: Configuration files not found ({stages_cfg}, {vehicles_cfg}). Skipping audit.")
+        return True
+
+    cp_stages = configparser.ConfigParser()
+    cp_stages.read(stages_cfg, encoding="utf-8")
+    cp_vehicles = configparser.ConfigParser()
+    cp_vehicles.read(vehicles_cfg, encoding="utf-8")
+
+    stages = cp_stages.sections()
+    vehicles = cp_vehicles.sections()
+
+    missing_files = []
+    
+    stage_png_ok = 0
+    stage_tex_ok = 0
+    music_ok = 0
+
+    print(f"[AUDIT] Auditing {len(stages)} Stages...")
+    for s in stages:
+        for key in ["ground_texture", "surface_texture"]:
+            tex_val = cp_stages.get(s, key, fallback="")
+            if not tex_val:
+                missing_files.append(f"Stage [{s}] missing key '{key}' in config")
+                continue
+            rel = tex_val[len("assets/"):] if tex_val.startswith("assets/") else tex_val
+            png_path = os.path.join(out_dir, rel)
+            tex_path = os.path.splitext(png_path)[0] + ".tex"
+            
+            if os.path.isfile(png_path):
+                stage_png_ok += 1
+            else:
+                missing_files.append(f"Stage [{s}] PNG missing: {png_path}")
+
+            if os.path.isfile(tex_path):
+                stage_tex_ok += 1
+            else:
+                missing_files.append(f"Stage [{s}] TEX missing: {tex_path}")
+
+        music_val = cp_stages.get(s, "music", fallback="")
+        if music_val:
+            rel_m = music_val[len("assets/"):] if music_val.startswith("assets/") else music_val
+            m_path = os.path.join(out_dir, rel_m)
+            m_wav = os.path.splitext(m_path)[0] + ".wav"
+            m_ogg = os.path.splitext(m_path)[0] + ".ogg"
+            if os.path.isfile(m_path) or os.path.isfile(m_wav) or os.path.isfile(m_ogg):
+                music_ok += 1
+            else:
+                missing_files.append(f"Stage [{s}] Music missing: {m_path} (.wav/.ogg)")
+        else:
+            missing_files.append(f"Stage [{s}] missing 'music' in config")
+
+    veh_png_ok = 0
+    veh_tex_ok = 0
+    print(f"[AUDIT] Auditing {len(vehicles)} Vehicles...")
+    for v in vehicles:
+        for key in ["body_texture", "wheel_texture", "preview_texture"]:
+            tex_val = cp_vehicles.get(v, key, fallback="")
+            if not tex_val:
+                missing_files.append(f"Vehicle [{v}] missing key '{key}' in config")
+                continue
+            rel = tex_val[len("assets/"):] if tex_val.startswith("assets/") else tex_val
+            png_path = os.path.join(out_dir, rel)
+            tex_path = os.path.splitext(png_path)[0] + ".tex"
+
+            if os.path.isfile(png_path):
+                veh_png_ok += 1
+            else:
+                missing_files.append(f"Vehicle [{v}] PNG missing: {png_path}")
+
+            if os.path.isfile(tex_path):
+                veh_tex_ok += 1
+            else:
+                missing_files.append(f"Vehicle [{v}] TEX missing: {tex_path}")
+
+    print("\n--------------------------------------------------")
+    print(f"Stage Textures:   PNG {stage_png_ok}/{len(stages)*2} | TEX {stage_tex_ok}/{len(stages)*2}")
+    print(f"Vehicle Textures: PNG {veh_png_ok}/{len(vehicles)*3} | TEX {veh_tex_ok}/{len(vehicles)*3}")
+    print(f"Stage Music:      AUDIO {music_ok}/{len(stages)}")
+    print("--------------------------------------------------")
+
+    if missing_files:
+        print(f"[AUDIT FAILED] Found {len(missing_files)} missing asset entries:")
+        for m in missing_files[:20]:
+            print(f"  - {m}")
+        if len(missing_files) > 20:
+            print(f"  ... and {len(missing_files) - 20} more.")
+        if not allow_missing:
+            print("[AUDIT] Exiting with status 1 (use --allow-missing to ignore).")
+            sys.exit(1)
+        else:
+            print("[AUDIT] Continuing because --allow-missing was passed.")
+            return False
+    else:
+        print(f"[AUDIT PASSED] 100% Asset Parity Verified: {len(stages)} Stages, {len(vehicles)} Vehicles, {len(stages)} Music tracks.")
+        return True
+
 def main():
     parser = argparse.ArgumentParser(description="Hill Climb Racing - Asset Converter & Preprocessor (T-111 & T-043)")
     input_group = parser.add_mutually_exclusive_group(required=False)
@@ -569,6 +672,7 @@ def main():
     parser.add_argument("--no-swizzle", action="store_true", help="Disable PSP GE hardware texture swizzling")
     parser.add_argument("--no-audio", action="store_true", help="Disable audio conversion to 22050Hz WAV")
     parser.add_argument("--no-music", action="store_true", help="Disable background music tracks conversion")
+    parser.add_argument("--allow-missing", action="store_true", help="Do not exit with error code if asset audit finds missing files")
 
     args = parser.parse_args()
 
@@ -596,6 +700,11 @@ def main():
         swizzle=not args.no_swizzle,
         convert_audio=not args.no_audio,
         convert_music=not args.no_music
+    )
+
+    audit_assets(
+        out_dir=args.out,
+        allow_missing=args.allow_missing
     )
 
 if __name__ == '__main__':

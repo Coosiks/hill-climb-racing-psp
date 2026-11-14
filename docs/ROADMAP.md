@@ -124,5 +124,14 @@ Specialized physics architectures required for 4 non-standard vehicles that do n
 
 *All future parameters for Batch 16 vehicles are classified as `design/TODO-TUNE` until calibrated against reference video.*
 
+---
+
+## [ ] Milestone M8: Audio Routing, Music Streaming, Assets & Beta.3 Release Prep
+- [x] **H16 (audio):** Real-time audio routing and SFX mixing in `AudioEngine` (engine pitch, skid, coin/fuel SFX).
+- [x] **T-132 (audio):** Streaming background music architecture with 16.16 fixed-point phase accumulator resampler and loop seam handling.
+- [x] **T-133 (game, hud):** State machine pause mode (`STATE_PAUSE`), Start button toggling, and distance bonus coin awards every 100m.
+- [x] **H17a (assets):** Resolve stage texture paths to APK reality across 19 stages in `config/stages.cfg`; document canonical spring variant for Seasons (`terrain-seasons-spring.png`) and fallback ground textures (`cave`, `rooftops`, `construction`, `ragnarok` $\to$ `terrain-ground.png`); add comprehensive audit to `tools/convert_assets.py` enforcing 100% texture and music coverage.
+
+
 
 

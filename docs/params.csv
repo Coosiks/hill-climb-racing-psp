@@ -206,3 +206,8 @@ THRUSTER_BOOST_PER_LEVEL,0.05,design/TODO-TUNE,2026-11-15,Thruster force scaling
 THRUSTER_FUEL_DRAIN,0.04,design/TODO-TUNE,2026-11-15,Thruster fuel consumption rate per physics step
 DISTANCE_BONUS_STEP,100.0,design/TODO-TUNE,2026-11-15,Distance threshold interval in meters for awarding distance bonus coins
 DISTANCE_BONUS_COINS,500,design/TODO-TUNE,2026-11-15,Coins awarded upon crossing each distance interval
+STAGE_SEASONS_VARIANT_DEFAULT,spring,design/TODO-TUNE,2026-11-15,Canonical default season variant (terrain-seasons-spring.png)
+STAGE_CAVE_GROUND_FALLBACK,assets/terrain-ground.png,design/TODO-TUNE,2026-11-15,Fallback ground texture for cave (no cave-ground.png in APK)
+STAGE_ROOFTOPS_GROUND_FALLBACK,assets/terrain-ground.png,design/TODO-TUNE,2026-11-15,Fallback ground texture for rooftops (building-01-roof for surface)
+STAGE_CONSTRUCTION_GROUND_FALLBACK,assets/terrain-ground.png,design/TODO-TUNE,2026-11-15,Fallback ground texture for construction (construction-building1-roof for surface)
+STAGE_RAGNAROK_GROUND_FALLBACK,assets/terrain-ground.png,design/TODO-TUNE,2026-11-15,Fallback ground texture for ragnarok (terrain-troll-fur for surface)
