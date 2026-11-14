@@ -33,7 +33,10 @@ public:
 
 private:
     GameState mState;
-    StageType mCurrentStage;
+    int mCurrentStage;
+    int mCurrentVehicle;
+    int mGarageTab;
+    int mSelectedUpgradeSlot;
 
     PhysicsWorld* mPhysics;
     Terrain* mTerrain;
@@ -71,9 +74,16 @@ private:
     Texture mTexUpgSusp;
     Texture mTexUpgTires;
     Texture mTexUpgAWD;
-    Texture mTexStageIcons[STAGE_COUNT];
+    Texture mTexStagePreview;
+    Texture mTexStageLocked;
+    Texture mTexVehiclePreview;
 
     Font mFont;
+
+    void LoadStagePreview();
+    void LoadVehiclePreview();
+    bool CanStartRace() const;
+    void CommitRaceResults();
 
     void StartRace();
     void EndRace();

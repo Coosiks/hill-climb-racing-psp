@@ -36,13 +36,7 @@ uint32_t PlayerInfo::CalculateCRC32(const void* data, size_t length) {
 }
 
 uint32_t PlayerInfo::HashId(const char* str) {
-    uint32_t hash = 2166136261u;
-    if (!str) return hash;
-    while (*str) {
-        hash ^= (uint8_t)(*str++);
-        hash *= 16777619u;
-    }
-    return hash;
+    return HashFNV1a_32(str);
 }
 
 void PlayerInfo::BuildFilePaths(const char* basePath, char* binPath, char* bakPath, char* tmpPath, char* datPath, size_t maxLen) {

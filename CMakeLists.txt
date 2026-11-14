@@ -150,6 +150,20 @@ add_executable(test_save
 )
 target_link_libraries(test_save m pthread)
 
+add_executable(test_garage
+    tools/test_garage.cpp
+    src/core/Config.cpp
+    src/core/PlayerInfo.cpp
+    src/core/System.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
+    src/physics/PlayerCar.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Renderer2D.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_garage box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
 
 
 

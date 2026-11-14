@@ -146,10 +146,11 @@ int main() {
     remove("tmp_test_physics.cfg");
     printf("  [PASS] physics.cfg: %d / %d keys fully covered!\n", numPhysicsKeys - uncoveredKeys, numPhysicsKeys);
 
-    // (B) vehicles.cfg (28 keys)
+    // (B) vehicles.cfg (32 keys)
     int prevUncovered = uncoveredKeys;
     const char* vehicleKeys[] = {
-        "name", "chassis_density", "chassis_friction", "chassis_restitution", "chassis_vertex_count",
+        "name", "unlock_cost", "base_upgrade_cost", "max_upgrade_level", "upgrade_mult_fuel",
+        "chassis_density", "chassis_friction", "chassis_restitution", "chassis_vertex_count",
         "v0", "v1", "v2", "v3", "v4", "v5",
         "wheel_radius", "wheel_density", "wheel_base_friction", "wheel_restitution",
         "rear_wheel_offset", "front_wheel_offset",
@@ -163,6 +164,10 @@ int main() {
         FILE* tf = fopen("tmp_test_vehicles.cfg", "w");
         TEST_CHECK(tf != NULL, "Failed to create tmp_test_vehicles.cfg");
         if (strcmp(vehicleKeys[i], "name") == 0) fprintf(tf, "name = TestCarX\n");
+        else if (strcmp(vehicleKeys[i], "unlock_cost") == 0) fprintf(tf, "unlock_cost = 5000\n");
+        else if (strcmp(vehicleKeys[i], "base_upgrade_cost") == 0) fprintf(tf, "base_upgrade_cost = 2500\n");
+        else if (strcmp(vehicleKeys[i], "max_upgrade_level") == 0) fprintf(tf, "max_upgrade_level = 25\n");
+        else if (strcmp(vehicleKeys[i], "upgrade_mult_fuel") == 0) fprintf(tf, "upgrade_mult_fuel = 1.07\n");
         else if (strcmp(vehicleKeys[i], "chassis_density") == 0) fprintf(tf, "chassis_density = 2.45\n");
         else if (strcmp(vehicleKeys[i], "chassis_friction") == 0) fprintf(tf, "chassis_friction = 0.38\n");
         else if (strcmp(vehicleKeys[i], "chassis_restitution") == 0) fprintf(tf, "chassis_restitution = 0.15\n");
@@ -197,6 +202,10 @@ int main() {
 
         bool ok = false;
         if (strcmp(vehicleKeys[i], "name") == 0) ok = (strcmp(Config::VehicleJeep.name, "TestCarX") == 0);
+        else if (strcmp(vehicleKeys[i], "unlock_cost") == 0) ok = (Config::VehicleJeep.unlock_cost == 5000);
+        else if (strcmp(vehicleKeys[i], "base_upgrade_cost") == 0) ok = (Config::VehicleJeep.base_upgrade_cost == 2500);
+        else if (strcmp(vehicleKeys[i], "max_upgrade_level") == 0) ok = (Config::VehicleJeep.max_upgrade_level == 25);
+        else if (strcmp(vehicleKeys[i], "upgrade_mult_fuel") == 0) ok = feq(Config::VehicleJeep.upg_mult_fuel, 1.07f);
         else if (strcmp(vehicleKeys[i], "chassis_density") == 0) ok = feq(Config::VehicleJeep.chassis_density, 2.45f);
         else if (strcmp(vehicleKeys[i], "chassis_friction") == 0) ok = feq(Config::VehicleJeep.chassis_friction, 0.38f);
         else if (strcmp(vehicleKeys[i], "chassis_restitution") == 0) ok = feq(Config::VehicleJeep.chassis_restitution, 0.15f);
@@ -235,10 +244,10 @@ int main() {
     remove("tmp_test_vehicles.cfg");
     printf("  [PASS] vehicles.cfg: %d / %d keys fully covered!\n", numVehicleKeys - (uncoveredKeys - prevUncovered), numVehicleKeys);
 
-    // (C) stages.cfg (7 keys)
+    // (C) stages.cfg (8 keys)
     prevUncovered = uncoveredKeys;
     const char* stageKeys[] = {
-        "name", "gravity", "friction", "coin_multiplier", "ground_texture", "surface_texture", "music"
+        "name", "unlock_cost", "gravity", "friction", "coin_multiplier", "ground_texture", "surface_texture", "music"
     };
     int numStageKeys = sizeof(stageKeys) / sizeof(stageKeys[0]);
 
@@ -247,6 +256,7 @@ int main() {
         TEST_CHECK(tf != NULL, "Failed to create tmp_test_stages.cfg");
         fprintf(tf, "[countryside]\n");
         if (strcmp(stageKeys[i], "name") == 0) fprintf(tf, "name = TestMeadow\n");
+        else if (strcmp(stageKeys[i], "unlock_cost") == 0) fprintf(tf, "unlock_cost = 15000\n");
         else if (strcmp(stageKeys[i], "gravity") == 0) fprintf(tf, "gravity = -12.5\n");
         else if (strcmp(stageKeys[i], "friction") == 0) fprintf(tf, "friction = 0.74\n");
         else if (strcmp(stageKeys[i], "coin_multiplier") == 0) fprintf(tf, "coin_multiplier = 2.15\n");
@@ -260,6 +270,7 @@ int main() {
 
         bool ok = false;
         if (strcmp(stageKeys[i], "name") == 0) ok = (strcmp(Config::Stages[0].name, "TestMeadow") == 0);
+        else if (strcmp(stageKeys[i], "unlock_cost") == 0) ok = (Config::Stages[0].unlock_cost == 15000);
         else if (strcmp(stageKeys[i], "gravity") == 0) ok = feq(Config::Stages[0].gravity, -12.5f);
         else if (strcmp(stageKeys[i], "friction") == 0) ok = feq(Config::Stages[0].friction, 0.74f);
         else if (strcmp(stageKeys[i], "coin_multiplier") == 0) ok = feq(Config::Stages[0].coin_multiplier, 2.15f);

@@ -13,9 +13,11 @@ struct BodyTransform {
     BodyTransform(const b2Vec2& p, float a) : position(p), angle(a) {}
 };
 
+struct VehicleConfig;
+
 class PlayerCar {
 public:
-    PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int suspLvl, int tireLvl, int awdLvl);
+    PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int suspLvl, int tireLvl, int awdLvl, const VehicleConfig* vConfig = NULL);
     ~PlayerCar();
 
     void CapturePreviousTransforms();
@@ -31,6 +33,8 @@ public:
     float GetSpeedKmH() const;
     float GetEngineRev() const { return mEngineRev; }
     float GetFuel() const { return mFuel; }
+    float GetMaxFuel() const { return mMaxFuel; }
+    const VehicleConfig* GetConfig() const { return mConfig; }
     void AddFuel(float amount);
     bool IsDead() const { return mIsDead; }
     bool IsOutOfFuel() const { return mOutOfFuel; }
@@ -70,7 +74,9 @@ private:
     b2RevoluteJoint* mNeckJoint;
 
     // State
+    const VehicleConfig* mConfig;
     float mFuel;
+    float mMaxFuel;
     float mEngineRev;
     bool mIsDead;
     bool mOutOfFuel;

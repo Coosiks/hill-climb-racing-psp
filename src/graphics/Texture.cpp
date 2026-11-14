@@ -71,7 +71,7 @@ Texture::Texture()
 {
 }
 
-Texture::~Texture() {
+void Texture::Free() {
 #if defined(__PSP__)
     if (mData) {
         free(mData);
@@ -87,10 +87,18 @@ Texture::~Texture() {
         mTexID = 0;
     }
 #endif
+    mWidth = mHeight = mTextureWidth = mTextureHeight = 0;
+    mMaxU = mMaxV = 1.0f;
+    mDataSize = 0;
+}
+
+Texture::~Texture() {
+    Free();
 }
 
 bool Texture::LoadTex(const char* filepath) {
     if (!filepath) return false;
+    Free();
 
     FILE* f = fopen(filepath, "rb");
     if (!f) {

@@ -55,6 +55,9 @@ public:
     Texture();
     ~Texture();
 
+    void Free();
+    void Destroy() { Free(); }
+
     bool Load(const char* filepath);
     bool LoadPNG(const char* filepath); // Backwards-compatible wrapper calling Load()
     bool LoadTex(const char* filepath);

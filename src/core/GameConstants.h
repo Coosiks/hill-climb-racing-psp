@@ -1,6 +1,8 @@
 #ifndef HCR_GAME_CONSTANTS_H
 #define HCR_GAME_CONSTANTS_H
 
+#include <stdint.h>
+
 // Fixed Screen resolution
 #define PSP_SCREEN_WIDTH   480
 #define PSP_SCREEN_HEIGHT  272
@@ -33,6 +35,17 @@ enum StageType {
 inline int GetUpgradeCost(int currentLevel) {
     int next = currentLevel + 1;
     return 1000 * next * next;
+}
+
+// 32-bit FNV-1a Hash
+inline uint32_t HashFNV1a_32(const char* str) {
+    uint32_t hash = 2166136261u;
+    if (!str) return hash;
+    while (*str) {
+        hash ^= (uint8_t)(*str++);
+        hash *= 16777619u;
+    }
+    return hash;
 }
 
 // ==============================================================================

@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
+
+#define MAX_CONFIG_VEHICLES 64
+#define MAX_CONFIG_STAGES   64
 
 struct PhysicsConfig {
     float ptm_ratio;
@@ -26,7 +30,12 @@ struct PhysicsConfig {
 };
 
 struct VehicleConfig {
+    char id[32];
     char name[32];
+    int unlock_cost;
+    int base_upgrade_cost;
+    int max_upgrade_level;
+    float upg_mult_fuel;
     float chassis_density;
     float chassis_friction;
     float chassis_restitution;
@@ -52,7 +61,9 @@ struct VehicleConfig {
 };
 
 struct StageConfig {
+    char id[32];
     char name[32];
+    int unlock_cost;
     float gravity;
     float friction;
     float coin_multiplier;
@@ -65,13 +76,24 @@ class Config {
 public:
     static PhysicsConfig Physics;
     static VehicleConfig VehicleJeep;
-    static StageConfig Stages[4];
+    static VehicleConfig Vehicles[MAX_CONFIG_VEHICLES];
+    static int           VehicleCount;
+
+    static StageConfig   Stages[MAX_CONFIG_STAGES];
+    static int           StageCount;
 
     static bool LoadAll(const char* baseDir = "");
     static bool LoadPhysics(const char* filepath);
     static bool LoadVehicles(const char* filepath);
     static bool LoadStages(const char* filepath);
+
+    static const VehicleConfig* GetVehicle(int index);
+    static const VehicleConfig* FindVehicleById(const char* id);
+    static const VehicleConfig* FindVehicleByHash(uint32_t idHash);
+
+    static const StageConfig* GetStage(int index);
+    static const StageConfig* FindStageById(const char* id);
+    static const StageConfig* FindStageByHash(uint32_t idHash);
 };
 
 #endif // HCR_CONFIG_H
-
