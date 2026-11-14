@@ -278,7 +278,8 @@ void PlayerInfo::SyncToLegacy() {
 
     const char* stageTags[STAGE_COUNT] = {
         "countryside", "desert", "arctic", "moon",
-        "highway", "cave", "mars", "forest"
+        "highway", "cave", "mars", "forest",
+        "mountain", "mudpool", "volcano", "beach"
     };
     for (int i = 0; i < STAGE_COUNT; ++i) {
         SavedStageEntry* s = GetStageEntry(HashId(stageTags[i]));
@@ -306,7 +307,8 @@ void PlayerInfo::SyncFromLegacy() {
 
     const char* stageTags[STAGE_COUNT] = {
         "countryside", "desert", "arctic", "moon",
-        "highway", "cave", "mars", "forest"
+        "highway", "cave", "mars", "forest",
+        "mountain", "mudpool", "volcano", "beach"
     };
     for (int i = 0; i < STAGE_COUNT; ++i) {
         SavedStageEntry* s = GetOrCreateStageEntry(HashId(stageTags[i]));

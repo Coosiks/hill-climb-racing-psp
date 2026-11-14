@@ -4,6 +4,14 @@
 #include "Texture.h"
 #include "core/GameConstants.h"
 
+// Color format invariant across all platforms (PSP sceGu and PC OpenGL):
+// ABGR 32-bit (GU_COLOR_8888 format):
+//   bits  0..7:  Red   (c & 0xFF)
+//   bits  8..15: Green ((c >> 8) & 0xFF)
+//   bits 16..23: Blue  ((c >> 16) & 0xFF)
+//   bits 24..31: Alpha ((c >> 24) & 0xFF)
+// On PC OpenGL, SetGLColor unpacks via glColor4ub(c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF, (c >> 24) & 0xFF).
+
 #if defined(__PSP__)
 #include <pspgu.h>
 #include <pspgum.h>

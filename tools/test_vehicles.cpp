@@ -25,35 +25,37 @@ int main() {
     printf("========================================================\n\n");
 
     // ----------------------------------------------------
-    // Sub-test A: Config Parsing & 8 Vehicles Registry
+    // Sub-test A: Config Parsing & 12 Vehicles Registry
     // ----------------------------------------------------
-    printf("[Sub-test A] Checking 8 vehicles configuration and hashes...\n");
+    printf("[Sub-test A] Checking 12 vehicles configuration and hashes...\n");
     bool loaded = Config::LoadVehicles("config/vehicles.cfg");
     if (!loaded) loaded = Config::LoadVehicles("data/vehicles.cfg");
     TEST_CHECK(loaded, "Failed to load vehicles.cfg");
-    TEST_CHECK(Config::VehicleCount >= 8, "Config::VehicleCount must be at least 8");
+    TEST_CHECK(Config::VehicleCount >= 12, "Config::VehicleCount must be at least 12");
 
-    const char* expectedIds[8] = {
+    const char* expectedIds[12] = {
         "jeep", "motocross", "monster_truck", "race_car",
-        "tractor", "hippievan", "quadbike", "touristbus"
+        "tractor", "hippievan", "quadbike", "touristbus",
+        "onewheeler", "fingerscrew", "policecar", "ambulance"
     };
-    int expectedCosts[8] = {
+    int expectedCosts[12] = {
         0, 75000, 100000, 250000,
-        100000, 120000, 175000, 200000
+        100000, 120000, 175000, 200000,
+        150000, 300000, 350000, 400000
     };
-    uint32_t hashes[8];
+    uint32_t hashes[12];
 
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 12; ++i) {
         const VehicleConfig& v = Config::Vehicles[i];
         TEST_CHECK(strcmp(v.id, expectedIds[i]) == 0, "Vehicle ID matches expected");
         TEST_CHECK(v.unlock_cost == expectedCosts[i], "Vehicle unlock cost matches expected");
         hashes[i] = PlayerInfo::HashId(v.id);
-        printf("  Vehicle [%d]: %-14s (hash 0x%08X, cost %6d)\n", i, v.id, hashes[i], v.unlock_cost);
+        printf("  Vehicle [%2d]: %-14s (hash 0x%08X, cost %6d)\n", i, v.id, hashes[i], v.unlock_cost);
     }
 
-    // Verify all 8 hashes are strictly unique
-    for (int i = 0; i < 8; ++i) {
-        for (int j = i + 1; j < 8; ++j) {
+    // Verify all 12 hashes are strictly unique
+    for (int i = 0; i < 12; ++i) {
+        for (int j = i + 1; j < 12; ++j) {
             TEST_CHECK(hashes[i] != hashes[j], "Vehicle hashes must be unique");
         }
     }
@@ -167,7 +169,7 @@ int main() {
         b2CircleShape* fwShape = (b2CircleShape*)car.GetFrontWheelBody()->GetFixtureList()->GetShape();
         TEST_CHECK(feq(rwShape->m_radius, 0.60f), "Tractor rear wheel radius == 0.60 (oversized)");
         TEST_CHECK(feq(fwShape->m_radius, 0.35f), "Tractor front wheel radius == 0.35 (small front)");
-        TEST_CHECK(tractor.fourth_upgrade_type == 1, "Tractor 4th upgrade type == 1 (FUEL)");
+        TEST_CHECK(tractor.fourth_upgrade_type == 4, "Tractor 4th upgrade type == 4 (STABILITY)");
         TEST_CHECK(tractor.drive_type == 0, "Tractor drive type == 0 (RWD)");
     }
 
@@ -178,7 +180,7 @@ int main() {
         b2CircleShape* fwShape = (b2CircleShape*)car.GetFrontWheelBody()->GetFixtureList()->GetShape();
         TEST_CHECK(feq(rwShape->m_radius, 0.40f), "Hippie van wheel radius == 0.40");
         TEST_CHECK(feq(fwShape->m_radius, 0.40f), "Hippie van wheel radius == 0.40");
-        TEST_CHECK(hippievan.fourth_upgrade_type == 1, "Hippie van 4th upgrade type == 1 (FUEL)");
+        TEST_CHECK(hippievan.fourth_upgrade_type == 5, "Hippie van 4th upgrade type == 5 (BOOST)");
         TEST_CHECK(hippievan.drive_type == 0, "Hippie van drive type == 0 (RWD)");
     }
 

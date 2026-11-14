@@ -14,10 +14,11 @@ struct BodyTransform {
 };
 
 struct VehicleConfig;
+class Terrain;
 
 class PlayerCar {
 public:
-    PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int suspLvl, int tireLvl, int awdLvl, const VehicleConfig* vConfig = NULL);
+    PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int suspLvl, int tireLvl, int awdLvl, const VehicleConfig* vConfig = NULL, const Terrain* terrain = NULL);
     ~PlayerCar();
 
     void CapturePreviousTransforms();
@@ -42,6 +43,9 @@ public:
     bool IsThrottleActive() const { return mThrottleActive; }
     bool IsBrakeActive() const { return mBrakeActive; }
     void Kill();
+
+    void SetTerrain(const Terrain* terrain) { mTerrain = terrain; }
+    const Terrain* GetTerrain() const { return mTerrain; }
 
     bool IsInAir() const;
     bool IsRearWheelOnGround() const;
@@ -91,6 +95,7 @@ private:
 
     // State
     const VehicleConfig* mConfig;
+    const Terrain* mTerrain;
     float mFuel;
     float mMaxFuel;
     float mEngineRev;

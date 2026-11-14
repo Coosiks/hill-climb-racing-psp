@@ -109,12 +109,26 @@ VEHICLE_UNLOCK_COST_QUADBIKE,175000,extracted (1.30.0 @ 0x0f80b9),2026-11-14,Qua
 VEHICLE_UNLOCK_COST_TOURISTBUS,200000,extracted (1.30.0 @ 0x0f82ed),2026-11-14,Tourist Bus unlock price
 TRACTOR_FRONT_WHEEL_RADIUS,0.35,design/TODO-TUNE,2026-11-14,Tractor small front steering wheel radius
 TRACTOR_REAR_WHEEL_RADIUS,0.60,design/TODO-TUNE,2026-11-14,Tractor large rear drive wheel radius
-TRACTOR_4TH_UPGRADE_MAPPING,1,design/TODO-TUNE,2026-11-14,Mapping original STABILITY upgrade to FUEL (type 1)
+TRACTOR_4TH_UPGRADE_MAPPING,4,design/TODO-TUNE,2026-11-14,Mapping original STABILITY upgrade to STABILITY (type 4)
 HIPPIEVAN_WHEEL_RADIUS,0.40,design/TODO-TUNE,2026-11-14,Hippie van symmetric wheel radius
-HIPPIEVAN_4TH_UPGRADE_MAPPING,1,design/TODO-TUNE,2026-11-14,Mapping original BOOST upgrade to FUEL (type 1)
+HIPPIEVAN_4TH_UPGRADE_MAPPING,5,design/TODO-TUNE,2026-11-14,Mapping original BOOST upgrade to BOOST (type 5)
 QUADBIKE_WHEEL_RADIUS,0.42,design/TODO-TUNE,2026-11-14,Quad bike 4WD wheel radius
 QUADBIKE_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Quad bike 4WD torque distribution ratio
 TOURISTBUS_WHEEL_RADIUS,0.44,design/TODO-TUNE,2026-11-14,Tourist bus heavy wheel radius
 TOURISTBUS_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Tourist bus 4WD torque distribution ratio
+STAGE_UNLOCK_COST_MOUNTAIN,850000,extracted (1.30.0 @ 0x14ca3a),2026-11-14,Mountain unlock price
+STAGE_UNLOCK_COST_MUDPOOL,1000000,extracted (1.30.0 @ 0x14cb32),2026-11-14,Mudpool unlock price
+STAGE_UNLOCK_COST_VOLCANO,1000000,extracted (1.30.0 @ 0x14cbae),2026-11-14,Volcano unlock price
+STAGE_UNLOCK_COST_BEACH,1000000,extracted (1.30.0 @ 0x14cc2a),2026-11-14,Beach unlock price
+MUDPOOL_MUD_DAMPING,2.5,design/TODO-TUNE,2026-11-14,Viscous drag coefficient in mud pools on Mudpool stage
+VOLCANO_MUD_DAMPING,1.8,design/TODO-TUNE,2026-11-14,Viscous drag coefficient in lava mud pools on Volcano stage
+VEHICLE_UNLOCK_COST_ONEWHEELER,150000,extracted (1.30.0 @ 0x0f7e85),2026-11-14,Onewheeler unlock price
+VEHICLE_UNLOCK_COST_FINGERSCREW,300000,extracted (1.30.0 @ 0x0f8755),2026-11-14,Finger Screw unlock price
+VEHICLE_UNLOCK_COST_POLICECAR,350000,extracted (1.30.0 @ 0x0f8989),2026-11-14,Police Car unlock price
+VEHICLE_UNLOCK_COST_AMBULANCE,400000,extracted (1.30.0 @ 0x0f8bbd),2026-11-14,Ambulance unlock price
+ONEWHEELER_4TH_UPGRADE_TYPE,4,design/TODO-TUNE,2026-11-14,Onewheeler 4th upgrade slot (STABILITY)
+FINGERSCREW_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Finger Screw 4th upgrade slot (4WD)
+POLICECAR_4TH_UPGRADE_TYPE,5,design/TODO-TUNE,2026-11-14,Police Car 4th upgrade slot (BOOST)
+AMBULANCE_4TH_UPGRADE_TYPE,4,design/TODO-TUNE,2026-11-14,Ambulance 4th upgrade slot (STABILITY)
 
 

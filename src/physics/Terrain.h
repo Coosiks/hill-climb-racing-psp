@@ -3,6 +3,7 @@
 
 #include <Box2D/Box2D.h>
 #include <stdint.h>
+#include <math.h>
 #include "core/GameConstants.h"
 #include "core/Config.h"
 #include "graphics/Texture.h"
@@ -71,6 +72,16 @@ public:
     float GetHeightAtX(float x) const;
     float GetCeilingHeightAtX(float x) const;
     bool HasCeiling() const;
+    inline bool IsInMudZone(float x) const {
+        if (!mStageConfig || mStageConfig->has_mud_pools == 0) return false;
+        if (x < 15.0f) return false;
+        float modX = fmodf(x, 60.0f);
+        if (modX < 0.0f) modX += 60.0f;
+        if (mStageType == STAGE_VOLCANO) {
+            return (modX >= 20.0f && modX <= 34.0f);
+        }
+        return (modX >= 18.0f && modX <= 32.0f);
+    }
     float GetStageFriction() const;
     float GetCoinMultiplier() const;
     const StageConfig* GetStageConfig() const { return mStageConfig; }

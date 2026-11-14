@@ -135,6 +135,18 @@ void ParticleSystem::EmitWheelDirt(float wheelX, float wheelY, float wheelVx, fl
         case STAGE_FOREST:
             dirtColor = 0xD0204030; // Dark forest loam / moss
             break;
+        case STAGE_MOUNTAIN:
+            dirtColor = 0xD0506070; // Alpine rock / slate grey
+            break;
+        case STAGE_MUDPOOL:
+            dirtColor = 0xD0102030; // Dark viscous swamp mud
+            break;
+        case STAGE_VOLCANO:
+            dirtColor = 0xD01020D0; // Glowing volcanic cinder / magma ember
+            break;
+        case STAGE_BEACH:
+            dirtColor = 0xD060C0E0; // Warm sunlit dune sand
+            break;
         case STAGE_COUNTRYSIDE:
         default:
             dirtColor = 0xD0306080; // Earth brown dirt

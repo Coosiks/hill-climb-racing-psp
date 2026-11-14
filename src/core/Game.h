@@ -31,6 +31,31 @@ public:
     virtual void OnCoinCollected(int value);
     virtual void OnFuelCollected();
 
+    // Race management & testability helpers (T-033)
+    void StartRace();
+    void EndRace();
+    void CommitRaceResults();
+    void UpdatePhysicsStep(float dt);
+
+    int GetRaceCollectedCoins() const { return mRaceCollectedCoins; }
+    int GetRaceTrickBonusCoins() const { return mRaceTrickBonusCoins; }
+    int GetRaceDistanceBonusCoins() const { return mRaceDistanceBonusCoins; }
+    int GetSessionCoins() const { return mSessionCoins; }
+    bool IsNewRecord() const { return mIsNewRecord; }
+    float GetMaxDistance() const { return mMaxDistance; }
+    void SetMaxDistance(float dist) { mMaxDistance = dist; }
+
+    GameState GetState() const { return mState; }
+    void SetState(GameState state) { mState = state; }
+    int GetCurrentStage() const { return mCurrentStage; }
+    void SetCurrentStage(int stage) { mCurrentStage = stage; }
+    int GetCurrentVehicle() const { return mCurrentVehicle; }
+    void SetCurrentVehicle(int veh) { mCurrentVehicle = veh; }
+
+    PlayerCar* GetCar() const { return mCar; }
+    Terrain* GetTerrain() const { return mTerrain; }
+    PhysicsWorld* GetPhysics() const { return mPhysics; }
+
 private:
     GameState mState;
     int mCurrentStage;
@@ -42,8 +67,12 @@ private:
     Terrain* mTerrain;
     PlayerCar* mCar;
 
-    // Session stats
+    // Session stats (T-033 detailed breakdown)
     int mSessionCoins;
+    int mRaceCollectedCoins;
+    int mRaceTrickBonusCoins;
+    int mRaceDistanceBonusCoins;
+    bool mIsNewRecord;
     float mMaxDistance;
     bool mGameOverReasonDriverDown;
 
@@ -83,16 +112,11 @@ private:
     void LoadStagePreview();
     void LoadVehiclePreview();
     bool CanStartRace() const;
-    void CommitRaceResults();
-
-    void StartRace();
-    void EndRace();
 
     void UpdateGarage();
     void RenderGarage();
 
     void UpdatePlaying(float frameTime);
-    void UpdatePhysicsStep(float dt);
     void RenderPlaying();
 
     void UpdateGameOver();

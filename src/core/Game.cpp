@@ -83,7 +83,9 @@ Game::Game()
     : mState(STATE_GARAGE), mCurrentStage(0), mCurrentVehicle(0),
       mGarageTab(0), mSelectedUpgradeSlot(0),
       mPhysics(NULL), mTerrain(NULL), mCar(NULL),
-      mSessionCoins(0), mMaxDistance(0.0f), mGameOverReasonDriverDown(false),
+      mSessionCoins(0), mRaceCollectedCoins(0), mRaceTrickBonusCoins(0),
+      mRaceDistanceBonusCoins(0), mIsNewRecord(false),
+      mMaxDistance(0.0f), mGameOverReasonDriverDown(false),
       mStuntTimer(0.0f), mStuntName(NULL), mStuntCoins(0),
       mOutOfFuelStopTimer(0.0f), mOutOfFuelFallbackTimer(0.0f),
       mCameraX(0.0f), mCameraY(0.0f), mCameraZoom(1.0f),
@@ -130,10 +132,12 @@ bool Game::CanStartRace() const {
 
 void Game::CommitRaceResults() {
     PlayerInfo::AddCoins(mSessionCoins);
+    mIsNewRecord = false;
     if (mCurrentStage >= 0 && mCurrentStage < Config::StageCount) {
         uint32_t stageHash = PlayerInfo::HashId(Config::Stages[mCurrentStage].id);
         int curBest = PlayerInfo::GetStageRecord(stageHash);
         if ((int)mMaxDistance > curBest) {
+            mIsNewRecord = true;
             PlayerInfo::SetStageRecord(stageHash, (int)mMaxDistance);
         }
         if (mCurrentStage < STAGE_COUNT && (int)mMaxDistance > PlayerInfo::HighScores[mCurrentStage]) {
@@ -233,7 +237,7 @@ void Game::StartRace() {
     int tire = vEntry ? vEntry->levelTires : PlayerInfo::TiresLevel;
     int awd  = vEntry ? vEntry->level4th : PlayerInfo::AWDLevel;
 
-    mCar = new PlayerCar(mPhysics->GetWorld(), startPos, eng, susp, tire, awd, vConfig);
+    mCar = new PlayerCar(mPhysics->GetWorld(), startPos, eng, susp, tire, awd, vConfig, mTerrain);
 #if defined(__PSP__)
     u32 tp1 = sceKernelGetSystemTimeLow();
     sAssetLoadTimeCar = (float)(tp1 - tp0) / 1000.0f;
@@ -241,6 +245,10 @@ void Game::StartRace() {
 #endif
 
     mSessionCoins = 0;
+    mRaceCollectedCoins = 0;
+    mRaceTrickBonusCoins = 0;
+    mRaceDistanceBonusCoins = 0;
+    mIsNewRecord = false;
     mMaxDistance = 0.0f;
     mStuntTimer = 0.0f;
     mStuntName = NULL;
@@ -292,7 +300,9 @@ void Game::OnDriverDown() {
 
 void Game::OnCoinCollected(int value) {
     float mult = mTerrain ? mTerrain->GetCoinMultiplier() : 1.0f;
-    mSessionCoins += (int)(value * mult);
+    int earned = (int)(value * mult);
+    mRaceCollectedCoins += earned;
+    mSessionCoins += earned;
     AudioEngine::PlaySFX(SFX_COIN);
 }
 
@@ -610,10 +620,13 @@ void Game::RenderGarage() {
         const char* fourthKey = "[SEL] 4WD";
         if (vConfig) {
             switch (vConfig->fourth_upgrade_type) {
+                case 0: fourthName = "4WD"; fourthKey = "[SEL] 4WD"; break;
                 case 1: fourthName = "FUEL"; fourthKey = "[SEL] FUEL"; break;
                 case 2: fourthName = "AIR CTRL"; fourthKey = "[SEL] AIR"; break;
                 case 3: fourthName = "DOWNFORCE"; fourthKey = "[SEL] DOWN"; break;
-                default: fourthName = "4WD"; fourthKey = "[SEL] 4WD"; break;
+                case 4: fourthName = "STABILITY"; fourthKey = "[SEL] STAB"; break;
+                case 5: fourthName = "BOOST"; fourthKey = "[SEL] BOOST"; break;
+                default: fourthName = "SPECIAL"; fourthKey = "[SEL] SPEC"; break;
             }
         }
 
@@ -729,15 +742,19 @@ void Game::UpdatePhysicsStep(float dt) {
     // 1. Flips in air
     int flip = mCar->PopFlips();
     if (flip > 0) {
-        mSessionCoins += Config::Physics.flip_bonus_coins;
+        int bonus = Config::Physics.flip_bonus_coins;
+        mRaceTrickBonusCoins += bonus;
+        mSessionCoins += bonus;
         mStuntName = "BACKFLIP!";
-        mStuntCoins = Config::Physics.flip_bonus_coins;
+        mStuntCoins = bonus;
         mStuntTimer = 2.0f;
         AudioEngine::PlaySFX(SFX_COIN);
     } else if (flip < 0) {
-        mSessionCoins += Config::Physics.flip_bonus_coins;
+        int bonus = Config::Physics.flip_bonus_coins;
+        mRaceTrickBonusCoins += bonus;
+        mSessionCoins += bonus;
         mStuntName = "FRONTFLIP!";
-        mStuntCoins = Config::Physics.flip_bonus_coins;
+        mStuntCoins = bonus;
         mStuntTimer = 2.0f;
         AudioEngine::PlaySFX(SFX_COIN);
     }
@@ -746,6 +763,7 @@ void Game::UpdatePhysicsStep(float dt) {
     float airSec = 0.0f;
     int airBonus = mCar->PopAirTimeBonus(&airSec);
     if (airBonus > 0) {
+        mRaceTrickBonusCoins += airBonus;
         mSessionCoins += airBonus;
         mStuntName = "AIR TIME!";
         mStuntCoins = airBonus;
@@ -757,6 +775,7 @@ void Game::UpdatePhysicsStep(float dt) {
     float wheelieSec = 0.0f;
     int wheelieBonus = mCar->PopWheelieBonus(&wheelieSec);
     if (wheelieBonus > 0) {
+        mRaceTrickBonusCoins += wheelieBonus;
         mSessionCoins += wheelieBonus;
         mStuntName = "WHEELIE!";
         mStuntCoins = wheelieBonus;
@@ -1044,25 +1063,32 @@ void Game::RenderGameOver() {
     float tw = mFont.GetTextWidth(titleText, 0.55f);
     mFont.DrawText(titleText, 50 + (380 - tw) * 0.5f, 42, 0.55f, 0xFFFFFFFF);
 
-    // Stats
+    // Stats (T-033 detailed breakdown)
     char buf[64];
     snprintf(buf, sizeof(buf), "DISTANCE: %d METERS", (int)mMaxDistance);
-    mFont.DrawText(buf, 80, 95, 0.42f, 0xFFFFFFFF);
+    mFont.DrawText(buf, 80, 85, 0.40f, 0xFFFFFFFF);
 
-    snprintf(buf, sizeof(buf), "COINS EARNED: +%d", mSessionCoins);
-    mFont.DrawText(buf, 80, 125, 0.42f, 0xFF00E5FF);
+    if (mIsNewRecord) {
+        Renderer2D::DrawFilledRect(265, 83, 115, 18, 0xFF00AAFF);
+        mFont.DrawText("NEW RECORD!", 272, 86, 0.34f, 0xFFFFFFFF);
+    }
 
-    uint32_t curStageHash = PlayerInfo::HashId(Config::Stages[mCurrentStage].id);
-    snprintf(buf, sizeof(buf), "BEST RECORD: %d METERS", PlayerInfo::GetStageRecord(curStageHash));
-    mFont.DrawText(buf, 80, 155, 0.38f, 0xFF88DDFF);
+    snprintf(buf, sizeof(buf), "COINS: +%d", mRaceCollectedCoins);
+    mFont.DrawText(buf, 80, 110, 0.38f, 0xFF00E5FF);
+
+    snprintf(buf, sizeof(buf), "TRICKS: +%d", mRaceTrickBonusCoins);
+    mFont.DrawText(buf, 80, 132, 0.38f, 0xFF55FF55);
+
+    snprintf(buf, sizeof(buf), "TOTAL COINS: %lld", (long long)PlayerInfo::GetCoins());
+    mFont.DrawText(buf, 80, 154, 0.38f, 0xFFE0E0E0);
 
     // Buttons
     // [X] Retry
-    Renderer2D::DrawFilledRect(70, 190, 150, 32, 0xFF257518);
-    mFont.DrawText("[X] RETRY", 100, 196, 0.38f, 0xFFFFFFFF);
+    Renderer2D::DrawFilledRect(70, 188, 150, 32, 0xFF257518);
+    mFont.DrawText("[X] RETRY", 100, 194, 0.38f, 0xFFFFFFFF);
 
     // [O] Garage
-    Renderer2D::DrawFilledRect(260, 190, 150, 32, 0xFF453020);
-    mFont.DrawText("[O] GARAGE", 285, 196, 0.38f, 0xFFFFFFFF);
+    Renderer2D::DrawFilledRect(260, 188, 150, 32, 0xFF453020);
+    mFont.DrawText("[O] GARAGE", 285, 194, 0.38f, 0xFFFFFFFF);
 }
 

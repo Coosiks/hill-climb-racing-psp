@@ -1,4 +1,5 @@
 #include "PlayerCar.h"
+#include "Terrain.h"
 #include "core/Config.h"
 #include <math.h>
 
@@ -8,12 +9,13 @@ static inline float clampf(float v, float lo, float hi) {
     return v;
 }
 
-PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int suspLvl, int tireLvl, int awdLvl, const VehicleConfig* vConfig)
+PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int suspLvl, int tireLvl, int awdLvl, const VehicleConfig* vConfig, const Terrain* terrain)
     : mWorld(world), mEngineLevel(engineLvl), mSuspensionLevel(suspLvl),
       mTireLevel(tireLvl), mAWDLevel(awdLvl),
       mChassis(NULL), mRearWheel(NULL), mFrontWheel(NULL), mDriverHead(NULL),
       mRearJoint(NULL), mFrontJoint(NULL), mNeckJoint(NULL),
       mConfig(vConfig ? vConfig : &Config::VehicleJeep),
+      mTerrain(terrain),
       mFuel(Config::Physics.max_fuel * powf((vConfig && (vConfig->fourth_upgrade_type == 2 || vConfig->fourth_upgrade_type == 3)) ? 1.0f : (vConfig ? vConfig : &Config::VehicleJeep)->upg_mult_fuel, (float)awdLvl)),
       mMaxFuel(Config::Physics.max_fuel * powf((vConfig && (vConfig->fourth_upgrade_type == 2 || vConfig->fourth_upgrade_type == 3)) ? 1.0f : (vConfig ? vConfig : &Config::VehicleJeep)->upg_mult_fuel, (float)awdLvl)),
       mEngineRev(0.0f), mIsDead(false), mOutOfFuel(false),
@@ -74,6 +76,11 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     md.center.Set(0.0f, -0.20f);
     md.I = 2.4f;
     mChassis->SetMassData(&md);
+
+    // 4th Upgrade: STABILITY (type 4) - increases base chassis angular damping
+    if (mConfig && mConfig->fourth_upgrade_type == 4) {
+        mChassis->SetAngularDamping(0.8f + 0.25f * (float)mAWDLevel);
+    }
 
     // 2. Create Wheels (offsets and properties from mConfig)
     float wheelFriction = mConfig->wheel_base_friction * powf(mConfig->upg_mult_tires, mTireLevel);
@@ -414,6 +421,11 @@ void PlayerCar::Update(float dt) {
     // 3. 1:1 Motor & Wheel Physics Actuation (from libgame.so PlayerCar::accelerate)
     float maxSpeed = mConfig->base_motor_speed * powf(1.05f, mEngineLevel);
     float engineTorque = mConfig->base_motor_torque * powf(mConfig->upg_mult_engine, mEngineLevel);
+    if (mConfig->fourth_upgrade_type == 5 && mAWDLevel > 0 && mThrottleActive && !mOutOfFuel) {
+        float boostMult = 1.0f + 0.05f * (float)mAWDLevel;
+        maxSpeed *= boostMult;
+        engineTorque *= boostMult;
+    }
     float awdFactor = (mConfig->fourth_upgrade_type == 0) ? ((float)mAWDLevel / 18.0f) : 0.50f;
     if (awdFactor > 0.50f) awdFactor = 0.50f;
     float airTorque = GetAirPitchTorque();
@@ -563,6 +575,40 @@ void PlayerCar::Update(float dt) {
 
             b2Vec2 dragForce = (-dragMag / speed) * v;
             mChassis->ApplyForceToCenter(dragForce, true);
+        }
+    }
+
+    // Active pitch stabilization (fourth_upgrade_type == 4: STABILITY)
+    if (mConfig->fourth_upgrade_type == 4 && mAWDLevel > 0 && mChassis) {
+        mChassis->ApplyTorque(-mChassis->GetAngularVelocity() * 0.5f * (float)mAWDLevel, true);
+    }
+
+    // 8. Viscous Mud Damping (T-123)
+    if (mTerrain && mTerrain->GetStageConfig() && mTerrain->GetStageConfig()->has_mud_pools != 0) {
+        float mudDamping = mTerrain->GetStageConfig()->mud_damping;
+        if (mudDamping > 0.0f) {
+            bool rearInMud = mRearWheel && IsRearWheelOnGround() && mTerrain->IsInMudZone(mRearWheel->GetPosition().x);
+            bool frontInMud = mFrontWheel && IsFrontWheelOnGround() && mTerrain->IsInMudZone(mFrontWheel->GetPosition().x);
+
+            if (rearInMud) {
+                b2Vec2 v = mRearWheel->GetLinearVelocity();
+                b2Vec2 drag(-mudDamping * v.x * 20.0f, -mudDamping * v.y * 5.0f);
+                mRearWheel->ApplyForceToCenter(drag, true);
+                float w = mRearWheel->GetAngularVelocity();
+                mRearWheel->ApplyTorque(-w * mudDamping * 2.0f, true);
+            }
+            if (frontInMud) {
+                b2Vec2 v = mFrontWheel->GetLinearVelocity();
+                b2Vec2 drag(-mudDamping * v.x * 20.0f, -mudDamping * v.y * 5.0f);
+                mFrontWheel->ApplyForceToCenter(drag, true);
+                float w = mFrontWheel->GetAngularVelocity();
+                mFrontWheel->ApplyTorque(-w * mudDamping * 2.0f, true);
+            }
+            if (rearInMud || frontInMud) {
+                b2Vec2 cv = mChassis->GetLinearVelocity();
+                b2Vec2 cdrag(-mudDamping * cv.x * 15.0f, 0.0f);
+                mChassis->ApplyForceToCenter(cdrag, true);
+            }
         }
     }
 }

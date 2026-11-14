@@ -321,6 +321,8 @@ bool Config::LoadStages(const char* filepath) {
                     Stages[currentStage].has_bridges = 0;
                     Stages[currentStage].sky_color_top = 0xFFD87820;
                     Stages[currentStage].sky_color_bottom = 0xFFFFF0D0;
+                    Stages[currentStage].has_mud_pools = 0;
+                    Stages[currentStage].mud_damping = 0.0f;
                 }
             }
             continue;
@@ -339,6 +341,8 @@ bool Config::LoadStages(const char* filepath) {
                 Stages[currentStage].has_bridges = 0;
                 Stages[currentStage].sky_color_top = 0xFFD87820;
                 Stages[currentStage].sky_color_bottom = 0xFFFFF0D0;
+                Stages[currentStage].has_mud_pools = 0;
+                Stages[currentStage].mud_damping = 0.0f;
             } else {
                 currentStage = 0;
             }
@@ -365,6 +369,8 @@ bool Config::LoadStages(const char* filepath) {
                 else if (strcmp(key, "has_bridges") == 0) s.has_bridges = atoi(val);
                 else if (strcmp(key, "sky_color_top") == 0) s.sky_color_top = (uint32_t)strtoul(val, NULL, 0);
                 else if (strcmp(key, "sky_color_bottom") == 0) s.sky_color_bottom = (uint32_t)strtoul(val, NULL, 0);
+                else if (strcmp(key, "has_mud_pools") == 0) s.has_mud_pools = atoi(val);
+                else if (strcmp(key, "mud_damping") == 0) s.mud_damping = (float)atof(val);
             }
         }
     }

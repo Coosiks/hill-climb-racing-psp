@@ -368,6 +368,73 @@ float Terrain::GetHeightAtX(float x) const {
             return h;
         }
 
+        case STAGE_MOUNTAIN: {
+            // Steep alpine peaks and ridges with deep valleys
+            double w1 = 3.5 * sin((double)(t * 0.065f));
+            double w2 = 2.0 * cos((double)(t * 0.145f) + sin((double)(t * 0.035f)));
+            double w3 = 1.2 * sin((double)(t * 0.285f));
+            float k = clampf(t * 0.001f, 0.0f, 1.5f);
+            double s = (w1 + w2 + w3) * (0.8 + 0.4 * (double)k);
+            float h = (float)s * 1.6f;
+
+            // Bridge chasms every 4 chunks (120m) starting at chunk 1: span [39.0, 51.0] (10 planks x 1.2m)
+            float modX = fmodf(x, 120.0f);
+            if (modX < 0.0f) modX += 120.0f;
+            if (x >= 30.0f && modX >= 39.0f && modX <= 51.0f) {
+                float u = (modX - 39.0f) / 12.0f;
+                float dip = sinf(u * 3.14159265f) * 3.8f;
+                h -= dip;
+            }
+            return h;
+        }
+
+        case STAGE_MUDPOOL: {
+            // Rolling muddy hollows and ridges
+            double w1 = 1.8 * sin((double)(t * 0.085f));
+            double w2 = 1.4 * cos((double)(t * 0.175f));
+            double w3 = 0.8 * sin((double)t * 0.35f + w2);
+            double s = w1 + w2 * 0.7 + w3 * 0.4;
+            float h = (float)s * 1.3f;
+
+            // In mud basins [18.0, 32.0] of each 60m cycle, carve a muddy hollow depression
+            float modX = fmodf(x, 60.0f);
+            if (modX < 0.0f) modX += 60.0f;
+            if (x >= 15.0f && modX >= 18.0f && modX <= 32.0f) {
+                float u = (modX - 18.0f) / 14.0f;
+                float dip = sinf(u * 3.14159265f) * 1.8f;
+                h -= dip;
+            }
+            return h;
+        }
+
+        case STAGE_VOLCANO: {
+            // Jagged volcanic slopes and caldera rims
+            double w1 = 2.5 * sin((double)(t * 0.095f));
+            double w2 = 1.8 * sin((double)(t * 0.22f) + cos((double)(t * 0.08f)));
+            double w3 = 1.0 * cos((double)(t * 0.42f));
+            double s = w1 + w2 * 0.8 + w3 * 0.5;
+            float h = (float)s * 1.4f;
+
+            // Lava hollow depressions [20.0, 34.0] of each 60m cycle
+            float modX = fmodf(x, 60.0f);
+            if (modX < 0.0f) modX += 60.0f;
+            if (x >= 15.0f && modX >= 20.0f && modX <= 34.0f) {
+                float u = (modX - 20.0f) / 14.0f;
+                float dip = sinf(u * 3.14159265f) * 1.5f;
+                h -= dip;
+            }
+            return h;
+        }
+
+        case STAGE_BEACH: {
+            // Smooth sandy dunes and gentle oceanfront rolls
+            double w1 = 2.2 * sin((double)(t * 0.072f));
+            double w2 = 1.5 * cos((double)(t * 0.135f));
+            double w3 = 0.7 * sin((double)(t * 0.275f));
+            double s = w1 * 1.1 + w2 * 0.8 + w3 * 0.4;
+            return (float)s * 1.25f;
+        }
+
         case STAGE_COUNTRYSIDE:
         default: {
             double w1 = 2.0 * cos((double)(t * 0.10f));

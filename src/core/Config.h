@@ -72,7 +72,7 @@ struct VehicleConfig {
     float sprite_width;
     float sprite_height;
     int drive_type;          // 0 = RWD, 1 = FWD, 2 = AWD
-    int fourth_upgrade_type; // 0 = AWD, 1 = FUEL, 2 = AIR_CONTROL, 3 = DOWNFORCE
+    int fourth_upgrade_type; // 0 = AWD, 1 = FUEL, 2 = AIR_CONTROL, 3 = DOWNFORCE, 4 = STABILITY, 5 = BOOST
     float downforce_coeff;
     float downforce_max;
 };
@@ -93,6 +93,8 @@ struct StageConfig {
     int has_bridges;
     uint32_t sky_color_top;
     uint32_t sky_color_bottom;
+    int has_mud_pools;
+    float mud_damping;
 };
 
 class Config {
