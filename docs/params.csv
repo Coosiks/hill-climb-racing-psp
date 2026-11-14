@@ -183,3 +183,5 @@ STAGE_HAS_BRIDGES_FACTORY,1,design/TODO-TUNE,2026-11-14,Factory bridges flag
 STAGE_IS_NIGHT_HAUNTED,1,design/TODO-TUNE,2026-11-14,Haunted night mode flag
 STAGE_HAS_MUD_POOLS_HAUNTED,1,design/TODO-TUNE,2026-11-14,Haunted mud pools flag
 STAGE_HAS_MUD_POOLS_NUCLEAR,1,design/TODO-TUNE,2026-11-14,Nuclear Plant mud pools flag
+VEHICLE_UNLOCK_COST_TRAIN,1500000,extracted (1.30.0 @ 0x0faa95),2026-11-14,Train / Kiddie Express unlock price
+TRAIN_4TH_UPGRADE_TYPE,5,design/TODO-TUNE,2026-11-14,Train 4th upgrade slot (BOOST mapping from TORQUE)

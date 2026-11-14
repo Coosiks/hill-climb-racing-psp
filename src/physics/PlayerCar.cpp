@@ -80,6 +80,8 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     // 4th Upgrade: STABILITY (type 4) - increases base chassis angular damping
     if (mConfig && mConfig->fourth_upgrade_type == 4) {
         mChassis->SetAngularDamping(0.8f + 0.25f * (float)mAWDLevel);
+    } else if (mConfig && strcmp(mConfig->id, "train") == 0) {
+        mChassis->SetAngularDamping(0.6f); // Heavy locomotive angular damping
     }
 
     // 2. Create Wheels (offsets and properties from mConfig)

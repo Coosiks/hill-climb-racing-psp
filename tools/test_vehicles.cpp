@@ -27,33 +27,35 @@ int main() {
     // ----------------------------------------------------
     // Sub-test A: Config Parsing & 24 Vehicles Registry
     // ----------------------------------------------------
-    printf("[Sub-test A] Checking 24 vehicles configuration and hashes...\n");
+    printf("[Sub-test A] Checking 25 vehicles configuration and hashes...\n");
     bool loaded = Config::LoadVehicles("config/vehicles.cfg");
     if (!loaded) loaded = Config::LoadVehicles("data/vehicles.cfg");
     TEST_CHECK(loaded, "Failed to load vehicles.cfg");
-    TEST_CHECK(Config::VehicleCount >= 24, "Config::VehicleCount must be at least 24");
+    TEST_CHECK(Config::VehicleCount >= 25, "Config::VehicleCount must be at least 25");
 
-    const char* expectedIds[24] = {
+    const char* expectedIds[25] = {
         "jeep", "motocross", "monster_truck", "race_car",
         "tractor", "hippievan", "quadbike", "touristbus",
         "onewheeler", "screwfinger", "policecar", "ambulance",
         "electric", "dieseltruck", "rallycar", "dragster",
         "firetruck", "tank",
         "dunebuggy", "superoffroad", "truck", "minibike",
-        "bigfinger", "hotrod"
+        "bigfinger", "hotrod",
+        "train"
     };
-    int expectedCosts[24] = {
+    int expectedCosts[25] = {
         0, 75000, 100000, 250000,
         100000, 120000, 175000, 200000,
         150000, 300000, 350000, 400000,
         450000, 500000, 750000, 800000,
         800000, 1000000,
         800000, 1000000, 1000000, 1000000,
-        1200000, 1500000
+        1200000, 1500000,
+        1500000
     };
-    uint32_t hashes[24];
+    uint32_t hashes[25];
 
-    for (int i = 0; i < 24; ++i) {
+    for (int i = 0; i < 25; ++i) {
         const VehicleConfig& v = Config::Vehicles[i];
         TEST_CHECK(strcmp(v.id, expectedIds[i]) == 0, "Vehicle ID matches expected");
         TEST_CHECK(v.unlock_cost == expectedCosts[i], "Vehicle unlock cost matches expected");
@@ -61,9 +63,9 @@ int main() {
         printf("  Vehicle [%2d]: %-14s (hash 0x%08X, cost %7d)\n", i, v.id, hashes[i], v.unlock_cost);
     }
 
-    // Verify all 24 hashes are strictly unique
-    for (int i = 0; i < 24; ++i) {
-        for (int j = i + 1; j < 24; ++j) {
+    // Verify all 25 hashes are strictly unique
+    for (int i = 0; i < 25; ++i) {
+        for (int j = i + 1; j < 25; ++j) {
             TEST_CHECK(hashes[i] != hashes[j], "Vehicle hashes must be unique");
         }
     }
@@ -229,6 +231,22 @@ int main() {
         PlayerCar carTank(&world, b2Vec2(0.0f, 2.0f), 0, 0, 0, 0, tank);
         TEST_CHECK(carTank.GetChassisBody()->GetMass() > 5.0f, "Tank chassis mass must be heavy (> 5.0 kg)");
         TEST_CHECK(tank->drive_type == 2, "Tank drive type == 2 (4WD)");
+    }
+
+    // 11. Train / Kiddie Express (T-131a: Heavy locomotive chassis)
+    const VehicleConfig* train = Config::FindVehicleById("train");
+    TEST_CHECK(train != NULL, "Train must exist");
+    {
+        PlayerCar carTrain(&world, b2Vec2(0.0f, 2.0f), 0, 0, 0, 0, train);
+        float trainMass = carTrain.GetChassisBody()->GetMass();
+        printf("  Train chassis mass: %.4f kg\n", trainMass);
+        TEST_CHECK(trainMass > 3.4206f, "Train chassis mass must be strictly above median of 24 vehicles (> 3.4206 kg)");
+        TEST_CHECK(trainMass >= 8.0f && trainMass <= 10.5f, "Train chassis mass in target range ~8-10 kg");
+        float trainWheelbase = fabsf(train->front_wheel_offset[0] - train->rear_wheel_offset[0]);
+        float touristbusWheelbase = fabsf(touristbus.front_wheel_offset[0] - touristbus.rear_wheel_offset[0]);
+        TEST_CHECK(trainWheelbase > touristbusWheelbase, "Train wheelbase must be longer than touristbus");
+        TEST_CHECK(train->fourth_upgrade_type == 5, "Train 4th slot == 5 (BOOST)");
+        TEST_CHECK(train->drive_type == 2, "Train drive type == 2 (4WD)");
     }
 
     printf("\n  Authoritative Vehicle Physics Table (Box2D Simulation):\n");
