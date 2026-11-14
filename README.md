@@ -119,6 +119,7 @@ make -j$(nproc)
 | :--- | :--- | :--- |
 | **Газ / Наклон назад в воздухе** | `R-Trigger` или `Cross` | `Right Arrow` / `D` / `Space` |
 | **Тормоз / Наклон вперёд в воздухе** | `L-Trigger` или `Square` | `Left Arrow` / `A` / `Q` |
+| **Тяга сопла (Moonlander)** | `Triangle` или `D-pad Up` | `Up Arrow` / `W` |
 | **Старт / Выбор в меню** | `Cross` или `Start` | `Space` / `Enter` |
 | **Назад / Пауза** | `Circle` или `Start` | `Escape` / `P` |
 | **Апгрейд Engine / Susp / Tires / 4WD** | `Triangle` / `Square` / `Circle` / `Select` | Клавиши `1`, `2`, `3`, `4` |

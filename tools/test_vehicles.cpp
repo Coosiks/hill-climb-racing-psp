@@ -27,13 +27,13 @@ int main() {
     // ----------------------------------------------------
     // Sub-test A: Config Parsing & 24 Vehicles Registry
     // ----------------------------------------------------
-    printf("[Sub-test A] Checking 25 vehicles configuration and hashes...\n");
+    printf("[Sub-test A] Checking 29 vehicles configuration and hashes...\n");
     bool loaded = Config::LoadVehicles("config/vehicles.cfg");
     if (!loaded) loaded = Config::LoadVehicles("data/vehicles.cfg");
     TEST_CHECK(loaded, "Failed to load vehicles.cfg");
-    TEST_CHECK(Config::VehicleCount >= 25, "Config::VehicleCount must be at least 25");
+    TEST_CHECK(Config::VehicleCount >= 29, "Config::VehicleCount must be at least 29");
 
-    const char* expectedIds[25] = {
+    const char* expectedIds[29] = {
         "jeep", "motocross", "monster_truck", "race_car",
         "tractor", "hippievan", "quadbike", "touristbus",
         "onewheeler", "screwfinger", "policecar", "ambulance",
@@ -41,9 +41,10 @@ int main() {
         "firetruck", "tank",
         "dunebuggy", "superoffroad", "truck", "minibike",
         "bigfinger", "hotrod",
-        "train"
+        "train",
+        "snowmobile", "hovercraft", "moonlander", "sleigh"
     };
-    int expectedCosts[25] = {
+    int expectedCosts[29] = {
         0, 75000, 100000, 250000,
         100000, 120000, 175000, 200000,
         150000, 300000, 350000, 400000,
@@ -51,11 +52,12 @@ int main() {
         800000, 1000000,
         800000, 1000000, 1000000, 1000000,
         1200000, 1500000,
-        1500000
+        1500000,
+        1000000, 1000000, 1500000, 1000000
     };
-    uint32_t hashes[25];
+    uint32_t hashes[29];
 
-    for (int i = 0; i < 25; ++i) {
+    for (int i = 0; i < 29; ++i) {
         const VehicleConfig& v = Config::Vehicles[i];
         TEST_CHECK(strcmp(v.id, expectedIds[i]) == 0, "Vehicle ID matches expected");
         TEST_CHECK(v.unlock_cost == expectedCosts[i], "Vehicle unlock cost matches expected");
@@ -63,9 +65,9 @@ int main() {
         printf("  Vehicle [%2d]: %-14s (hash 0x%08X, cost %7d)\n", i, v.id, hashes[i], v.unlock_cost);
     }
 
-    // Verify all 25 hashes are strictly unique
-    for (int i = 0; i < 25; ++i) {
-        for (int j = i + 1; j < 25; ++j) {
+    // Verify all 29 hashes are strictly unique
+    for (int i = 0; i < 29; ++i) {
+        for (int j = i + 1; j < 29; ++j) {
             TEST_CHECK(hashes[i] != hashes[j], "Vehicle hashes must be unique");
         }
     }
@@ -248,6 +250,37 @@ int main() {
         TEST_CHECK(train->fourth_upgrade_type == 5, "Train 4th slot == 5 (BOOST)");
         TEST_CHECK(train->drive_type == 2, "Train drive type == 2 (4WD)");
     }
+
+    // 12. Snowmobile (T-131b: Mode 1 SKI_GLIDE, 4WD)
+    const VehicleConfig* snowmobile = Config::FindVehicleById("snowmobile");
+    TEST_CHECK(snowmobile != NULL, "Snowmobile must exist");
+    TEST_CHECK(snowmobile->special_physics_mode == 1, "Snowmobile special_physics_mode == 1 (SKI_GLIDE)");
+    TEST_CHECK(snowmobile->fourth_upgrade_type == 0, "Snowmobile 4th slot == 0 (4WD)");
+    TEST_CHECK(snowmobile->drive_type == 2, "Snowmobile drive type == 2 (4WD)");
+    TEST_CHECK(feq(snowmobile->ski_friction_mult, 0.35f), "Snowmobile ski friction mult == 0.35");
+    TEST_CHECK(feq(snowmobile->ski_mud_mult, 0.25f), "Snowmobile ski mud mult == 0.25");
+
+    // 13. Hovercraft (T-131b: Mode 2 HOVER_CUSHION, BOOST, hide_wheels)
+    const VehicleConfig* hovercraft = Config::FindVehicleById("hovercraft");
+    TEST_CHECK(hovercraft != NULL, "Hovercraft must exist");
+    TEST_CHECK(hovercraft->special_physics_mode == 2, "Hovercraft special_physics_mode == 2 (HOVER_CUSHION)");
+    TEST_CHECK(hovercraft->hide_wheels == 1, "Hovercraft hide_wheels == 1");
+    TEST_CHECK(hovercraft->fourth_upgrade_type == 5, "Hovercraft 4th slot == 5 (BOOST)");
+    TEST_CHECK(feq(hovercraft->hover_height, 1.20f), "Hovercraft hover height == 1.20m");
+
+    // 14. Moonlander (T-131b: Mode 3 THRUSTER_JET, BOOST)
+    const VehicleConfig* moonlander = Config::FindVehicleById("moonlander");
+    TEST_CHECK(moonlander != NULL, "Moonlander must exist");
+    TEST_CHECK(moonlander->special_physics_mode == 3, "Moonlander special_physics_mode == 3 (THRUSTER_JET)");
+    TEST_CHECK(moonlander->fourth_upgrade_type == 5, "Moonlander 4th slot == 5 (BOOST)");
+    TEST_CHECK(feq(moonlander->thruster_g_mult, 1.80f), "Moonlander thruster_g_mult == 1.80");
+
+    // 15. Sleigh (T-131b: Mode 1 SKI_GLIDE, BOOST, hide_wheels)
+    const VehicleConfig* sleigh = Config::FindVehicleById("sleigh");
+    TEST_CHECK(sleigh != NULL, "Sleigh must exist");
+    TEST_CHECK(sleigh->special_physics_mode == 1, "Sleigh special_physics_mode == 1 (SKI_GLIDE)");
+    TEST_CHECK(sleigh->hide_wheels == 1, "Sleigh hide_wheels == 1");
+    TEST_CHECK(sleigh->fourth_upgrade_type == 5, "Sleigh 4th slot == 5 (BOOST)");
 
     printf("\n  Authoritative Vehicle Physics Table (Box2D Simulation):\n");
     printf("  | Vehicle ID     | idHash     | R_front | R_rear | F-Wheel (kg) | R-Wheel (kg) | Chassis (kg) | Head (kg) | Total Mass (kg) | 4th Upgrade Type |\n");

@@ -87,6 +87,17 @@ int main() {
     TEST_CHECK(Config::VehicleJeep.fourth_upgrade_type == 0, "fourth_upgrade_type default");
     TEST_CHECK(feq(Config::VehicleJeep.downforce_coeff, 0.0f), "downforce_coeff default");
     TEST_CHECK(feq(Config::VehicleJeep.downforce_max, 150.0f), "downforce_max default");
+    TEST_CHECK(Config::VehicleJeep.special_physics_mode == 0, "special_physics_mode default");
+    TEST_CHECK(Config::VehicleJeep.hide_wheels == 0, "hide_wheels default");
+    TEST_CHECK(feq(Config::VehicleJeep.ski_friction_mult, 1.0f), "ski_friction_mult default");
+    TEST_CHECK(feq(Config::VehicleJeep.ski_mud_mult, 1.0f), "ski_mud_mult default");
+    TEST_CHECK(feq(Config::VehicleJeep.hover_height, 0.0f), "hover_height default");
+    TEST_CHECK(feq(Config::VehicleJeep.hover_k, 0.0f), "hover_k default");
+    TEST_CHECK(feq(Config::VehicleJeep.hover_c, 0.0f), "hover_c default");
+    TEST_CHECK(feq(Config::VehicleJeep.hover_thrust, 0.0f), "hover_thrust default");
+    TEST_CHECK(feq(Config::VehicleJeep.thruster_g_mult, 0.0f), "thruster_g_mult default");
+    TEST_CHECK(feq(Config::VehicleJeep.thruster_boost_per_level, 0.0f), "thruster_boost_per_level default");
+    TEST_CHECK(feq(Config::VehicleJeep.thruster_fuel_drain, 0.0f), "thruster_fuel_drain default");
 
     TEST_CHECK(feq(Config::Stages[0].gravity, -10.0f) && feq(Config::Stages[0].friction, 0.60f) && feq(Config::Stages[0].coin_multiplier, 1.25f), "stage 0 default");
     TEST_CHECK(feq(Config::Stages[1].gravity, -10.0f) && feq(Config::Stages[1].friction, 0.50f) && feq(Config::Stages[1].coin_multiplier, 1.75f), "stage 1 default");
@@ -183,7 +194,11 @@ int main() {
         "upgrade_mult_engine", "upgrade_mult_suspension", "upgrade_mult_tires", "upgrade_mult_awd",
         "body_texture", "wheel_texture", "front_wheel_texture", "rear_wheel_texture", "preview_texture",
         "front_wheel_radius", "rear_wheel_radius", "sprite_width", "sprite_height",
-        "drive_type", "fourth_upgrade_type", "downforce_coeff", "downforce_max"
+        "drive_type", "fourth_upgrade_type", "downforce_coeff", "downforce_max",
+        "special_physics_mode", "hide_wheels",
+        "ski_friction_mult", "ski_mud_mult",
+        "hover_height", "hover_k", "hover_c", "hover_thrust",
+        "thruster_g_mult", "thruster_boost_per_level", "thruster_fuel_drain"
     };
     int numVehicleKeys = sizeof(vehicleKeys) / sizeof(vehicleKeys[0]);
 
@@ -235,6 +250,17 @@ int main() {
         else if (strcmp(vehicleKeys[i], "fourth_upgrade_type") == 0) fprintf(tf, "fourth_upgrade_type = 3\n");
         else if (strcmp(vehicleKeys[i], "downforce_coeff") == 0) fprintf(tf, "downforce_coeff = 0.25\n");
         else if (strcmp(vehicleKeys[i], "downforce_max") == 0) fprintf(tf, "downforce_max = 180.0\n");
+        else if (strcmp(vehicleKeys[i], "special_physics_mode") == 0) fprintf(tf, "special_physics_mode = 2\n");
+        else if (strcmp(vehicleKeys[i], "hide_wheels") == 0) fprintf(tf, "hide_wheels = 1\n");
+        else if (strcmp(vehicleKeys[i], "ski_friction_mult") == 0) fprintf(tf, "ski_friction_mult = 0.45\n");
+        else if (strcmp(vehicleKeys[i], "ski_mud_mult") == 0) fprintf(tf, "ski_mud_mult = 0.35\n");
+        else if (strcmp(vehicleKeys[i], "hover_height") == 0) fprintf(tf, "hover_height = 1.45\n");
+        else if (strcmp(vehicleKeys[i], "hover_k") == 0) fprintf(tf, "hover_k = 52.0\n");
+        else if (strcmp(vehicleKeys[i], "hover_c") == 0) fprintf(tf, "hover_c = 9.5\n");
+        else if (strcmp(vehicleKeys[i], "hover_thrust") == 0) fprintf(tf, "hover_thrust = 42.0\n");
+        else if (strcmp(vehicleKeys[i], "thruster_g_mult") == 0) fprintf(tf, "thruster_g_mult = 2.10\n");
+        else if (strcmp(vehicleKeys[i], "thruster_boost_per_level") == 0) fprintf(tf, "thruster_boost_per_level = 0.08\n");
+        else if (strcmp(vehicleKeys[i], "thruster_fuel_drain") == 0) fprintf(tf, "thruster_fuel_drain = 0.065\n");
         fclose(tf);
 
         bool loaded = Config::LoadVehicles("tmp_test_vehicles.cfg");
@@ -286,6 +312,17 @@ int main() {
         else if (strcmp(vehicleKeys[i], "fourth_upgrade_type") == 0) ok = (Config::VehicleJeep.fourth_upgrade_type == 3);
         else if (strcmp(vehicleKeys[i], "downforce_coeff") == 0) ok = feq(Config::VehicleJeep.downforce_coeff, 0.25f);
         else if (strcmp(vehicleKeys[i], "downforce_max") == 0) ok = feq(Config::VehicleJeep.downforce_max, 180.0f);
+        else if (strcmp(vehicleKeys[i], "special_physics_mode") == 0) ok = (Config::VehicleJeep.special_physics_mode == 2);
+        else if (strcmp(vehicleKeys[i], "hide_wheels") == 0) ok = (Config::VehicleJeep.hide_wheels == 1);
+        else if (strcmp(vehicleKeys[i], "ski_friction_mult") == 0) ok = feq(Config::VehicleJeep.ski_friction_mult, 0.45f);
+        else if (strcmp(vehicleKeys[i], "ski_mud_mult") == 0) ok = feq(Config::VehicleJeep.ski_mud_mult, 0.35f);
+        else if (strcmp(vehicleKeys[i], "hover_height") == 0) ok = feq(Config::VehicleJeep.hover_height, 1.45f);
+        else if (strcmp(vehicleKeys[i], "hover_k") == 0) ok = feq(Config::VehicleJeep.hover_k, 52.0f);
+        else if (strcmp(vehicleKeys[i], "hover_c") == 0) ok = feq(Config::VehicleJeep.hover_c, 9.5f);
+        else if (strcmp(vehicleKeys[i], "hover_thrust") == 0) ok = feq(Config::VehicleJeep.hover_thrust, 42.0f);
+        else if (strcmp(vehicleKeys[i], "thruster_g_mult") == 0) ok = feq(Config::VehicleJeep.thruster_g_mult, 2.10f);
+        else if (strcmp(vehicleKeys[i], "thruster_boost_per_level") == 0) ok = feq(Config::VehicleJeep.thruster_boost_per_level, 0.08f);
+        else if (strcmp(vehicleKeys[i], "thruster_fuel_drain") == 0) ok = feq(Config::VehicleJeep.thruster_fuel_drain, 0.065f);
 
         if (!ok) {
             fprintf(stderr, "FAIL: Key '%s' in vehicles.cfg did not update struct field!\n", vehicleKeys[i]);
@@ -363,7 +400,7 @@ int main() {
 
     printf("\nTotal config keys tested: %d | Uncovered keys: %d\n", totalKeysCovered, uncoveredKeys);
     TEST_CHECK(uncoveredKeys == 0, "All keys must be covered");
-    TEST_CHECK(totalKeysCovered == 83, "All 83 config keys must be covered (21 physics + 45 vehicles + 17 stages)");
+    TEST_CHECK(totalKeysCovered == 94, "All 94 config keys must be covered (21 physics + 56 vehicles + 17 stages)");
 
     // ----------------------------------------------------
     // Sub-test 3: Dynamic Behavior Change Without Recompile

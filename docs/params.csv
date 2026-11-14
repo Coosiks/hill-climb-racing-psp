@@ -185,3 +185,22 @@ STAGE_HAS_MUD_POOLS_HAUNTED,1,design/TODO-TUNE,2026-11-14,Haunted mud pools flag
 STAGE_HAS_MUD_POOLS_NUCLEAR,1,design/TODO-TUNE,2026-11-14,Nuclear Plant mud pools flag
 VEHICLE_UNLOCK_COST_TRAIN,1500000,extracted (1.30.0 @ 0x0faa95),2026-11-14,Train / Kiddie Express unlock price
 TRAIN_4TH_UPGRADE_TYPE,5,design/TODO-TUNE,2026-11-14,Train 4th upgrade slot (BOOST mapping from TORQUE)
+VEHICLE_UNLOCK_COST_SNOWMOBILE,1000000,extracted (1.30.0 @ 0x0fa539),2026-11-15,Snowmobile unlock price
+VEHICLE_UNLOCK_COST_HOVERCRAFT,1000000,extracted (1.30.0 @ 0x0fa5b3),2026-11-15,Hovercraft unlock price
+VEHICLE_UNLOCK_COST_MOONLANDER,1500000,extracted (1.30.0 @ 0x0faee5),2026-11-15,Moonlander unlock price
+VEHICLE_UNLOCK_COST_SLEIGH,1000000,extracted (1.30.0 @ 0x0fb015),2026-11-15,Sleigh unlock price
+SNOWMOBILE_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-15,Snowmobile 4th upgrade slot (4WD)
+HOVERCRAFT_4TH_UPGRADE_TYPE,5,design/TODO-TUNE,2026-11-15,Hovercraft 4th upgrade slot (BOOST)
+MOONLANDER_4TH_UPGRADE_TYPE,5,design/TODO-TUNE,2026-11-15,Moonlander 4th upgrade slot (BOOST)
+SLEIGH_4TH_UPGRADE_TYPE,5,design/TODO-TUNE,2026-11-15,Sleigh 4th upgrade slot (BOOST)
+SPECIAL_PHYSICS_MODE_DEFAULT,0,design/TODO-TUNE,2026-11-15,Special physics mode flag (0=normal 1=ski 2=hover 3=thruster)
+HIDE_WHEELS_DEFAULT,0,design/TODO-TUNE,2026-11-15,Wheel rendering visibility flag (0=show 1=hide)
+SKI_FRICTION_MULT,0.35,design/TODO-TUNE,2026-11-15,Friction multiplier for ski mode on terrain
+SKI_MUD_MULT,0.25,design/TODO-TUNE,2026-11-15,Mud resistance multiplier for ski mode
+HOVER_HEIGHT,1.20,design/TODO-TUNE,2026-11-15,Target hover cushion clearance height in meters
+HOVER_K,45.0,design/TODO-TUNE,2026-11-15,Hover cushion spring stiffness constant
+HOVER_C,8.0,design/TODO-TUNE,2026-11-15,Hover cushion damping constant
+HOVER_THRUST,35.0,design/TODO-TUNE,2026-11-15,Hover forward thrust force magnitude
+THRUSTER_G_MULT,1.80,design/TODO-TUNE,2026-11-15,Moonlander vertical thruster acceleration relative to gravity
+THRUSTER_BOOST_PER_LEVEL,0.05,design/TODO-TUNE,2026-11-15,Thruster force scaling per upgrade level
+THRUSTER_FUEL_DRAIN,0.04,design/TODO-TUNE,2026-11-15,Thruster fuel consumption rate per physics step

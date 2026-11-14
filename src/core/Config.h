@@ -75,6 +75,17 @@ struct VehicleConfig {
     int fourth_upgrade_type; // 0 = AWD, 1 = FUEL, 2 = AIR_CONTROL, 3 = DOWNFORCE, 4 = STABILITY, 5 = BOOST
     float downforce_coeff;
     float downforce_max;
+    int special_physics_mode; // 0 = STANDARD, 1 = SKI_GLIDE, 2 = HOVER_CUSHION, 3 = THRUSTER_JET
+    int hide_wheels;          // 0 = render wheels, 1 = hide support wheels
+    float ski_friction_mult;
+    float ski_mud_mult;
+    float hover_height;
+    float hover_k;
+    float hover_c;
+    float hover_thrust;
+    float thruster_g_mult;
+    float thruster_boost_per_level;
+    float thruster_fuel_drain;
 };
 
 struct StageConfig {

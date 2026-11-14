@@ -28,6 +28,8 @@ public:
     void Accelerate();
     void Decelerate();
     void Idle();
+    void SetThruster(bool active) { mThrusterActive = active; }
+    bool IsThrusterActive() const { return mThrusterActive; }
 
     b2Vec2 GetPosition() const;
     b2Vec2 GetInterpolatedPosition(float alpha) const;
@@ -104,6 +106,7 @@ private:
     bool mOutOfFuel;
     bool mThrottleActive;
     bool mBrakeActive;
+    bool mThrusterActive;
 
     // Dynamic smoothing and stunt tracking
     float mThrottleRamp;

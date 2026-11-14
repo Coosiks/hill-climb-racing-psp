@@ -75,17 +75,28 @@ VehicleConfig Config::VehicleJeep = {
     2,                          // drive_type: 2 = AWD
     0,                          // fourth_upgrade_type: 0 = AWD
     0.0f,                       // downforce_coeff
-    150.0f                      // downforce_max
+    150.0f,                     // downforce_max
+    0,                          // special_physics_mode: 0 = STANDARD
+    0,                          // hide_wheels: 0 = show
+    1.0f,                       // ski_friction_mult
+    1.0f,                       // ski_mud_mult
+    0.0f,                       // hover_height
+    0.0f,                       // hover_k
+    0.0f,                       // hover_c
+    0.0f,                       // hover_thrust
+    0.0f,                       // thruster_g_mult
+    0.0f,                       // thruster_boost_per_level
+    0.0f                        // thruster_fuel_drain
 };
 
 VehicleConfig Config::Vehicles[MAX_CONFIG_VEHICLES] = { Config::VehicleJeep };
 int           Config::VehicleCount = 1;
 
 StageConfig Config::Stages[MAX_CONFIG_STAGES] = {
-    { "countryside", "Countryside", 0,     -10.0f, 0.60f, 1.25f, "assets/terrain-ground.png", "assets/terrain-surface.png", "assets/audio/bgmusic00.ogg" },
-    { "desert",      "Desert",      10000, -10.0f, 0.50f, 1.75f, "assets/desert-ground.png",  "assets/desert-surface.png",  "assets/audio/bgmusic01.ogg" },
-    { "arctic",      "Arctic",      20000, -10.0f, 0.15f, 1.95f, "assets/arctic-ground.png",  "assets/arctic-surface.png",  "assets/audio/bgmusic00.ogg" },
-    { "moon",        "Moon",        50000, -3.5f,  0.80f, 1.95f, "assets/moon-ground.png",    "assets/moon-surface.png",    "assets/audio/bgmusic01.ogg" }
+    { "countryside", "Countryside", 0,      -10.0f, 0.60f, 1.25f, "assets/terrain-ground.png", "assets/terrain-surface.png", "assets/audio/bgmusic00.ogg" },
+    { "desert",      "Desert",      35000,  -10.0f, 0.50f, 1.75f, "assets/desert-ground.png",  "assets/desert-surface.png",  "assets/audio/bgmusic01.ogg" },
+    { "arctic",      "Arctic",      75000,  -10.0f, 0.15f, 1.95f, "assets/arctic-ground.png",  "assets/arctic-surface.png",  "assets/audio/bgmusic00.ogg" },
+    { "moon",        "Moon",        175000, -3.5f,  0.80f, 1.95f, "assets/moon-ground.png",    "assets/moon-surface.png",    "assets/audio/bgmusic01.ogg" }
 };
 int Config::StageCount = 4;
 
@@ -275,6 +286,17 @@ bool Config::LoadVehicles(const char* filepath) {
                 else if (strcmp(key, "upgrade_mult_suspension") == 0) v.upg_mult_suspension = (float)atof(val);
                 else if (strcmp(key, "upgrade_mult_tires") == 0) v.upg_mult_tires = (float)atof(val);
                 else if (strcmp(key, "upgrade_mult_awd") == 0) v.upg_mult_awd = (float)atof(val);
+                else if (strcmp(key, "special_physics_mode") == 0) v.special_physics_mode = atoi(val);
+                else if (strcmp(key, "hide_wheels") == 0) v.hide_wheels = atoi(val);
+                else if (strcmp(key, "ski_friction_mult") == 0) v.ski_friction_mult = (float)atof(val);
+                else if (strcmp(key, "ski_mud_mult") == 0) v.ski_mud_mult = (float)atof(val);
+                else if (strcmp(key, "hover_height") == 0) v.hover_height = (float)atof(val);
+                else if (strcmp(key, "hover_k") == 0) v.hover_k = (float)atof(val);
+                else if (strcmp(key, "hover_c") == 0) v.hover_c = (float)atof(val);
+                else if (strcmp(key, "hover_thrust") == 0) v.hover_thrust = (float)atof(val);
+                else if (strcmp(key, "thruster_g_mult") == 0) v.thruster_g_mult = (float)atof(val);
+                else if (strcmp(key, "thruster_boost_per_level") == 0) v.thruster_boost_per_level = (float)atof(val);
+                else if (strcmp(key, "thruster_fuel_drain") == 0) v.thruster_fuel_drain = (float)atof(val);
             }
         }
     }

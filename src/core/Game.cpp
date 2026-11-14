@@ -708,6 +708,14 @@ void Game::UpdatePhysicsStep(float dt) {
         mCar->Idle();
     }
 
+    // Thruster Jet control (Moonlander)
+    if (sBenchmarkMode) {
+        mCar->SetThruster(false);
+    } else {
+        bool thruster = (System::ButtonsHeld & (PSP_CTRL_TRIANGLE | PSP_CTRL_UP)) != 0;
+        mCar->SetThruster(thruster);
+    }
+
     // Capture previous transforms right before physics integration
     mCar->CapturePreviousTransforms();
 
