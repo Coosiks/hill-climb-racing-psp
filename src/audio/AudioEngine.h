@@ -40,6 +40,8 @@ public:
     static void ResumeAll();
     static bool IsPaused();
 
+    // INVARIANT: mMusicVolume scales ONLY the streaming background music channel.
+    // Motor sound, vehicles SFX, and UI clicks/coins scale strictly with mSFXVolume.
     static void SetMusicVolume(float vol);
     static void SetSFXVolume(float vol);
     static float GetMusicVolume();

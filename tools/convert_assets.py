@@ -46,11 +46,23 @@ def extract_sleigh_sprite_from_atlas(atlas_png_path, plist_path, out_png_path):
     if not frames:
         return False
 
-    chosen_frame_key = None
-    for k in frames.keys():
-        if "sleigh" in k.lower():
-            chosen_frame_key = k
-            break
+    all_keys = list(frames.keys())
+    print(f"[ATLAS] Sleigh candidate frames in {plist_path}: {all_keys}")
+
+    # Prioritize body/chassis/sleigh without runner/ski/reindeer/circle
+    def sleigh_score(k):
+        kl = k.lower()
+        if "reindeer" in kl or "circle" in kl or "runner" in kl or "ski" in kl or "leg" in kl:
+            return -100
+        score = 0
+        if "sleigh" in kl:
+            score += 50
+        if "small" in kl or "body" in kl or "chassis" in kl or "hull" in kl:
+            score += 30
+        return score
+
+    sorted_candidates = sorted(all_keys, key=sleigh_score, reverse=True)
+    chosen_frame_key = sorted_candidates[0] if sorted_candidates and sleigh_score(sorted_candidates[0]) > -50 else None
     if not chosen_frame_key:
         chosen_frame_key = next(iter(frames.keys()))
 
@@ -61,6 +73,7 @@ def extract_sleigh_sprite_from_atlas(atlas_png_path, plist_path, out_png_path):
     rotated = finfo.get("rotated", False) or finfo.get("textureRotated", False)
     source_size_str = finfo.get("sourceSize") or finfo.get("spriteSourceSize")
     source_color_rect_str = finfo.get("sourceColorRect") or finfo.get("spriteColorRect")
+    offset_str = finfo.get("offset") or finfo.get("spriteOffset")
 
     if not frame_str:
         return False
@@ -97,6 +110,12 @@ def extract_sleigh_sprite_from_atlas(atlas_png_path, plist_path, out_png_path):
                     cr_nums = parse_plist_rect(source_color_rect_str)
                     if len(cr_nums) >= 4:
                         paste_x, paste_y = cr_nums[0], cr_nums[1]
+                elif offset_str:
+                    off_nums = parse_plist_rect(offset_str)
+                    if len(off_nums) >= 2:
+                        ox, oy = off_nums[0], off_nums[1]
+                        paste_x = (sw - fw) // 2 + ox
+                        paste_y = (sh - fh) // 2 - oy
                 final_img.paste(cropped, (paste_x, paste_y), cropped)
 
     os.makedirs(os.path.dirname(out_png_path), exist_ok=True)

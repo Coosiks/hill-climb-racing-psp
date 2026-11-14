@@ -184,7 +184,7 @@ int AudioEngine::AudioThread(SceSize args, void* argp) {
                 unsigned int maxPosFP = (unsigned int)(mEngineBuffer.sampleCount) << 16;
                 short* engSamples = mEngineBuffer.samples;
                 int engChannels = mEngineBuffer.channels;
-                int volFactor = (int)(mMusicVolume * 180.0f);
+                int volFactor = (int)(mSFXVolume * 180.0f);
 
                 for (int i = 0; i < AUDIO_BUF_SAMPLES; ++i) {
                     int sIdx = (enginePosFP >> 16);
@@ -333,7 +333,7 @@ void AudioEngine::AudioCallback(void* userdata, Uint8* stream, int len) {
         unsigned int maxPosFP = (unsigned int)(mEngineBuffer.sampleCount) << 16;
         short* engSamples = mEngineBuffer.samples;
         int engChannels = mEngineBuffer.channels;
-        int volFactor = (int)(mMusicVolume * 180.0f);
+        int volFactor = (int)(mSFXVolume * 180.0f);
 
         for (int i = 0; i < samplesCount; ++i) {
             int sIdx = (sPCEnginePosFP >> 16);
