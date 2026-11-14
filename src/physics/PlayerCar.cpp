@@ -551,6 +551,20 @@ void PlayerCar::Update(float dt) {
             mChassis->ApplyForceToCenter(b2Vec2(0.0f, -downforce), true);
         }
     }
+
+    // 7. Aerodynamic Air Drag (T-117)
+    if (mChassis && Config::Physics.air_drag_coeff > 0.0f) {
+        b2Vec2 v = mChassis->GetLinearVelocity();
+        float speed = v.Length();
+        if (speed > 0.01f) {
+            float dragMag = Config::Physics.air_drag_coeff * speed * speed;
+            float maxDrag = mChassis->GetMass() * 100.0f;
+            if (dragMag > maxDrag) dragMag = maxDrag;
+
+            b2Vec2 dragForce = (-dragMag / speed) * v;
+            mChassis->ApplyForceToCenter(dragForce, true);
+        }
+    }
 }
 
 float PlayerCar::GetAirPitchTorque() const {

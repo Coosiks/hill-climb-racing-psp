@@ -23,6 +23,7 @@ struct PhysicsConfig {
     float air_time_bonus_rate;
     float wheelie_threshold;
     int wheelie_bonus_coins;
+    float air_drag_coeff;
     float camera_lead_x;
     float camera_lead_y;
     float camera_smoothing;

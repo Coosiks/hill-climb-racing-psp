@@ -90,4 +90,9 @@ RACECAR_FRONT_WHEEL_RADIUS,0.36,design/TODO-TUNE,2026-11-14,Race car small low-p
 RACECAR_REAR_WHEEL_RADIUS,0.42,design/TODO-TUNE,2026-11-14,Race car rear drive wheel radius
 RACECAR_DOWNFORCE_COEFF,0.15,design/TODO-TUNE,2026-11-14,Aerodynamic downforce coefficient k in F_y = -k * v^2
 RACECAR_DOWNFORCE_MAX_CLAMP,150.0,design/TODO-TUNE,2026-11-14,Maximum downforce clamp limit in Newtons
+AIR_DRAG_COEFF,0.02,design/TODO-TUNE,2026-11-14,Aerodynamic quadratic drag coefficient c_drag in F_drag = -c_drag * |v| * v
+ENGINE_PITCH_MIN,0.50,design/TODO-TUNE,2026-11-14,Minimum playback rate clamp for engine audio loop
+ENGINE_PITCH_MAX,2.00,design/TODO-TUNE,2026-11-14,Maximum playback rate clamp for engine audio loop
+ENGINE_PITCH_IDLE,0.60,design/TODO-TUNE,2026-11-14,Target engine pitch at zero throttle / idle rpm
+MAX_BATCH_SPRITES,256,design/TODO-TUNE,2026-11-14,Renderer2D static sprite quad batch buffer capacity (1536 vertices)
 

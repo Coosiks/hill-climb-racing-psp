@@ -15,6 +15,7 @@ PhysicsConfig Config::Physics = {
     250.0f,         // air_time_bonus_rate
     1.50f,          // wheelie_threshold
     500,            // wheelie_bonus_coins
+    0.0f,           // air_drag_coeff (default 0.0f for legacy test parity; overridden by physics.cfg)
     3.5f,           // camera_lead_x
     1.2f,           // camera_lead_y
     0.12f,          // camera_smoothing
@@ -146,6 +147,7 @@ bool Config::LoadPhysics(const char* filepath) {
             else if (strcmp(key, "air_time_bonus_rate") == 0) Physics.air_time_bonus_rate = (float)atof(val);
             else if (strcmp(key, "wheelie_threshold") == 0) Physics.wheelie_threshold = (float)atof(val);
             else if (strcmp(key, "wheelie_bonus_coins") == 0) Physics.wheelie_bonus_coins = atoi(val);
+            else if (strcmp(key, "air_drag_coeff") == 0) Physics.air_drag_coeff = (float)atof(val);
             else if (strcmp(key, "lead_x") == 0 || strcmp(key, "camera_lead_x") == 0) Physics.camera_lead_x = (float)atof(val);
             else if (strcmp(key, "lead_y") == 0 || strcmp(key, "camera_lead_y") == 0) Physics.camera_lead_y = (float)atof(val);
             else if (strcmp(key, "smoothing") == 0 || strcmp(key, "camera_smoothing") == 0) Physics.camera_smoothing = (float)atof(val);
