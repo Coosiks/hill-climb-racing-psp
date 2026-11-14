@@ -13,6 +13,23 @@ int PlayerInfo::TiresLevel = 0;
 int PlayerInfo::AWDLevel = 0;
 int PlayerInfo::HighScores[STAGE_COUNT] = { 0 };
 
+static const char* const kStageTags[] = {
+    "countryside", "desert", "arctic", "moon",
+    "highway", "cave", "mars", "forest",
+    "mountain", "mudpool", "volcano", "beach",
+    "rollercoaster", "night", "rooftops", "junkyard",
+    "construction", "rainbow", "seasons", "bootcamp",
+    "xmas", "alienplanet", "arcticcave", "ragnarok"
+};
+static_assert(sizeof(kStageTags)/sizeof(kStageTags[0]) == STAGE_COUNT, "kStageTags count must match STAGE_COUNT");
+
+const char* PlayerInfo::StageTagAt(int i) {
+    if (i < 0 || i >= STAGE_COUNT) {
+        return NULL;
+    }
+    return kStageTags[i];
+}
+
 uint32_t PlayerInfo::CalculateCRC32(const void* data, size_t length) {
     static uint32_t table[256];
     static bool haveTable = false;
@@ -277,16 +294,9 @@ void PlayerInfo::SyncToLegacy() {
         EngineLevel = SuspensionLevel = TiresLevel = AWDLevel = 0;
     }
 
-    const char* stageTags[STAGE_COUNT] = {
-        "countryside", "desert", "arctic", "moon",
-        "highway", "cave", "mars", "forest",
-        "mountain", "mudpool", "volcano", "beach",
-        "rollercoaster", "night", "rooftops", "junkyard",
-        "construction", "rainbow", "seasons", "bootcamp",
-        "xmas", "alienplanet", "arcticcave", "ragnarok"
-    };
     for (int i = 0; i < STAGE_COUNT; ++i) {
-        SavedStageEntry* s = GetStageEntry(HashId(stageTags[i]));
+        if (!kStageTags[i]) continue;
+        SavedStageEntry* s = GetStageEntry(HashId(kStageTags[i]));
         HighScores[i] = s ? s->bestDistance : 0;
     }
 }
@@ -309,16 +319,9 @@ void PlayerInfo::SyncFromLegacy() {
         }
     }
 
-    const char* stageTags[STAGE_COUNT] = {
-        "countryside", "desert", "arctic", "moon",
-        "highway", "cave", "mars", "forest",
-        "mountain", "mudpool", "volcano", "beach",
-        "rollercoaster", "night", "rooftops", "junkyard",
-        "construction", "rainbow", "seasons", "bootcamp",
-        "xmas", "alienplanet", "arcticcave", "ragnarok"
-    };
     for (int i = 0; i < STAGE_COUNT; ++i) {
-        SavedStageEntry* s = GetOrCreateStageEntry(HashId(stageTags[i]));
+        if (!kStageTags[i]) continue;
+        SavedStageEntry* s = GetOrCreateStageEntry(HashId(kStageTags[i]));
         if (s && s->bestDistance != HighScores[i]) {
             s->bestDistance = HighScores[i];
             sDirty = true;

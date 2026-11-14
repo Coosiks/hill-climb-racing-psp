@@ -100,6 +100,7 @@ public:
     static void             SetStageRecord(uint32_t idHash, int32_t distance);
     static SavedStageEntry* GetStageEntry(uint32_t idHash);
     static SavedStageEntry* GetOrCreateStageEntry(uint32_t idHash);
+    static const char*      StageTagAt(int i);
 
     // Dirty state management
     static bool IsDirty();

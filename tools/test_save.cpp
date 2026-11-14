@@ -463,11 +463,29 @@ int main() {
     printf("  Dual hash deduplication verified: vehicleCount decremented to 1, max levels and unlock merged!\n");
     printf("  -> SUBTEST 8 PASSED\n\n");
 
+    // -------------------------------------------------------------
+    // Sub-test 9: H13 Stage Tag Array & Desync Guard Verification
+    // -------------------------------------------------------------
+    printf("[SUBTEST 9] H13 Stage tag array & desync guard verification...\n");
+    for (int i = 0; i < STAGE_COUNT; ++i) {
+        const char* tag = PlayerInfo::StageTagAt(i);
+        assert(tag != NULL);
+        assert(strlen(tag) > 0);
+        assert(PlayerInfo::HashId(tag) != 0);
+        printf("  Stage [%2d]: tag=\"%s\", hash=0x%08X\n", i, tag, PlayerInfo::HashId(tag));
+    }
+    // Out-of-bounds guards
+    assert(PlayerInfo::StageTagAt(-1) == NULL);
+    assert(PlayerInfo::StageTagAt(STAGE_COUNT) == NULL);
+    assert(PlayerInfo::StageTagAt(STAGE_COUNT + 10) == NULL);
+    printf("  Out-of-bounds queries verified (returned NULL)\n");
+    printf("  -> SUBTEST 9 PASSED\n\n");
+
     // Cleanup
     CleanupTestFiles(testBase);
 
     printf("===================================================\n");
-    printf("ALL 8 SUB-TESTS OF test_save PASSED SUCCESSFULLY!\n");
+    printf("ALL 9 SUB-TESTS OF test_save PASSED SUCCESSFULLY!\n");
     printf("===================================================\n");
     return 0;
 }
