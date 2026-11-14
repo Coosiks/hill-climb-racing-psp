@@ -51,6 +51,13 @@ public:
     static float GetTargetPitch();
     static bool IsEngineActive();
 
+    // Streaming Music API (T-132)
+    static bool PlayMusic(const char* filepath);
+    static void StopMusic();
+    static void UpdateMusicStream();
+    static bool IsMusicPlaying();
+    static int GetMusicUnderrunCount();
+
     // Fast 16-bit PCM WAV loader (zero runtime decode overhead)
     static bool LoadWav(const char* filepath, SoundBuffer* outBuf);
 

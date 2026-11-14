@@ -28,6 +28,22 @@ volatile bool AudioEngine::mAudioRunning = false;
 SDL_AudioDeviceID AudioEngine::mAudioDevice = 0;
 #endif
 
+#define MUSIC_RING_BUF_SAMPLES 32768
+static FILE* sMusicFile = NULL;
+static char sCurrentMusicPath[128] = { 0 };
+static long sMusicDataStart = 0;
+static long sMusicDataBytes = 0;
+static long sMusicFileBytesRead = 0;
+static short sMusicRingBuf[MUSIC_RING_BUF_SAMPLES];
+static int sMusicRingHead = 0;
+static int sMusicRingTail = 0;
+static volatile int sMusicRingCount = 0;
+static volatile bool sMusicPlaying = false;
+static int sMusicSampleRate = 22050;
+static int sMusicChannels = 1;
+static unsigned int sMusicPosFP = 0;
+static volatile int sMusicUnderrunCount = 0;
+
 bool AudioEngine::LoadWavFromMemory(const void* data, size_t size, SoundBuffer* outBuf) {
     if (!data || size < 44 || !outBuf) return false;
     const unsigned char* p = (const unsigned char*)data;
@@ -234,6 +250,45 @@ int AudioEngine::AudioThread(SceSize args, void* argp) {
                     sfxCurrentIndex = -1;
                 }
             }
+
+            // 3. Mix Streaming Music Channel (T-132)
+            if (sMusicPlaying && sMusicRingCount > 0 && mMusicVolume > 0.001f) {
+                float musicRatio = (sMusicSampleRate > 0) ? ((float)sMusicSampleRate / 44100.0f) : 0.5f;
+                unsigned int musicStepFP = (unsigned int)(musicRatio * 65536.0f);
+                int musicVol = (int)(mMusicVolume * 256.0f);
+
+                for (int i = 0; i < AUDIO_BUF_SAMPLES; ++i) {
+                    if (sMusicRingCount <= 1) {
+                        sMusicUnderrunCount++;
+                        break;
+                    }
+
+                    short musicSample = sMusicRingBuf[sMusicRingTail];
+                    musicSample = (short)((musicSample * musicVol) >> 8);
+
+                    int left = outputBuffer[i * 2 + 0] + musicSample;
+                    int right = outputBuffer[i * 2 + 1] + musicSample;
+
+                    if (left > 32767) left = 32767;
+                    if (left < -32768) left = -32768;
+                    if (right > 32767) right = 32767;
+                    if (right < -32768) right = -32768;
+
+                    outputBuffer[i * 2 + 0] = (short)left;
+                    outputBuffer[i * 2 + 1] = (short)right;
+
+                    sMusicPosFP += musicStepFP;
+                    while (sMusicPosFP >= 65536) {
+                        sMusicPosFP -= 65536;
+                        sMusicRingTail = (sMusicRingTail + 1) % MUSIC_RING_BUF_SAMPLES;
+                        sMusicRingCount--;
+                        if (sMusicRingCount <= 0) break;
+                    }
+                }
+            }
+            if (sMusicPlaying && sMusicRingCount < 16384) {
+                UpdateMusicStream();
+            }
         }
 
         sceAudioOutputPannedBlocking(mChannelEngine, PSP_AUDIO_VOLUME_MAX, PSP_AUDIO_VOLUME_MAX, outputBuffer);
@@ -284,6 +339,7 @@ bool AudioEngine::Init() {
 }
 
 void AudioEngine::Shutdown() {
+    StopMusic();
     mAudioRunning = false;
     if (mAudioThreadId >= 0) {
         sceKernelWaitThreadEnd(mAudioThreadId, NULL);
@@ -381,6 +437,45 @@ void AudioEngine::AudioCallback(void* userdata, Uint8* stream, int len) {
             sPCSfxCurrentIndex = -1;
         }
     }
+
+    // 3. Mix Streaming Music Channel (T-132)
+    if (sMusicPlaying && sMusicRingCount > 0 && mMusicVolume > 0.001f) {
+        float musicRatio = (sMusicSampleRate > 0) ? ((float)sMusicSampleRate / 44100.0f) : 0.5f;
+        unsigned int musicStepFP = (unsigned int)(musicRatio * 65536.0f);
+        int musicVol = (int)(mMusicVolume * 256.0f);
+
+        for (int i = 0; i < samplesCount; ++i) {
+            if (sMusicRingCount <= 1) {
+                sMusicUnderrunCount++;
+                break;
+            }
+
+            short musicSample = sMusicRingBuf[sMusicRingTail];
+            musicSample = (short)((musicSample * musicVol) >> 8);
+
+            int left = outputBuffer[i * 2 + 0] + musicSample;
+            int right = outputBuffer[i * 2 + 1] + musicSample;
+
+            if (left > 32767) left = 32767;
+            if (left < -32768) left = -32768;
+            if (right > 32767) right = 32767;
+            if (right < -32768) right = -32768;
+
+            outputBuffer[i * 2 + 0] = (short)left;
+            outputBuffer[i * 2 + 1] = (short)right;
+
+            sMusicPosFP += musicStepFP;
+            while (sMusicPosFP >= 65536) {
+                sMusicPosFP -= 65536;
+                sMusicRingTail = (sMusicRingTail + 1) % MUSIC_RING_BUF_SAMPLES;
+                sMusicRingCount--;
+                if (sMusicRingCount <= 0) break;
+            }
+        }
+    }
+    if (sMusicPlaying && sMusicRingCount < 16384) {
+        UpdateMusicStream();
+    }
 }
 
 bool AudioEngine::Init() {
@@ -426,6 +521,7 @@ bool AudioEngine::Init() {
 }
 
 void AudioEngine::Shutdown() {
+    StopMusic();
     if (mAudioDevice > 0) {
         SDL_CloseAudioDevice(mAudioDevice);
         mAudioDevice = 0;
@@ -511,4 +607,195 @@ float AudioEngine::GetTargetPitch() {
 
 bool AudioEngine::IsEngineActive() {
     return mEngineActive;
+}
+
+// -----------------------------------------------------------------------------
+// Streaming Music API (T-132)
+// -----------------------------------------------------------------------------
+void AudioEngine::UpdateMusicStream() {
+    if (!sMusicPlaying || !sMusicFile) return;
+
+    int freeSamples = MUSIC_RING_BUF_SAMPLES - sMusicRingCount;
+    if (freeSamples < 1024) return;
+
+    while (freeSamples >= 512 && sMusicPlaying) {
+        int toRead = freeSamples > 2048 ? 2048 : freeSamples;
+        int bytesToRead = toRead * (int)sizeof(short);
+
+        long remainingBytes = sMusicDataBytes - sMusicFileBytesRead;
+        if (remainingBytes <= 0) {
+            fseek(sMusicFile, sMusicDataStart, SEEK_SET);
+            sMusicFileBytesRead = 0;
+            remainingBytes = sMusicDataBytes;
+        }
+
+        if (bytesToRead > remainingBytes) {
+            bytesToRead = (int)remainingBytes;
+            toRead = bytesToRead / (int)sizeof(short);
+        }
+        if (toRead <= 0) break;
+
+        int spaceToEnd = MUSIC_RING_BUF_SAMPLES - sMusicRingHead;
+        int chunk1 = toRead < spaceToEnd ? toRead : spaceToEnd;
+        size_t read1 = fread(&sMusicRingBuf[sMusicRingHead], sizeof(short), chunk1, sMusicFile);
+        sMusicRingHead = (sMusicRingHead + (int)read1) % MUSIC_RING_BUF_SAMPLES;
+        sMusicRingCount += (int)read1;
+        sMusicFileBytesRead += (long)(read1 * sizeof(short));
+        freeSamples -= (int)read1;
+
+        if (chunk1 < toRead && read1 == (size_t)chunk1) {
+            int chunk2 = toRead - chunk1;
+            size_t read2 = fread(&sMusicRingBuf[sMusicRingHead], sizeof(short), chunk2, sMusicFile);
+            sMusicRingHead = (sMusicRingHead + (int)read2) % MUSIC_RING_BUF_SAMPLES;
+            sMusicRingCount += (int)read2;
+            sMusicFileBytesRead += (long)(read2 * sizeof(short));
+            freeSamples -= (int)read2;
+        }
+
+        if (read1 == 0) {
+            fseek(sMusicFile, sMusicDataStart, SEEK_SET);
+            sMusicFileBytesRead = 0;
+            break;
+        }
+    }
+}
+
+bool AudioEngine::PlayMusic(const char* filepath) {
+    if (!filepath || filepath[0] == '\0') {
+        StopMusic();
+        return false;
+    }
+
+    if (sMusicPlaying && strcmp(sCurrentMusicPath, filepath) == 0) {
+        return true;
+    }
+
+    StopMusic();
+
+    FILE* f = fopen(filepath, "rb");
+    if (!f) {
+        char altPath[160];
+        strncpy(altPath, filepath, sizeof(altPath) - 1);
+        altPath[sizeof(altPath) - 1] = '\0';
+        char* ext = strrchr(altPath, '.');
+        if (ext && strcmp(ext, ".ogg") == 0) {
+            strcpy(ext, ".wav");
+            f = fopen(altPath, "rb");
+        } else if (ext && strcmp(ext, ".wav") == 0) {
+            strcpy(ext, ".ogg");
+            f = fopen(altPath, "rb");
+        }
+    }
+#if defined(__PSP__)
+    if (!f) {
+        char msPath[192];
+        snprintf(msPath, sizeof(msPath), "ms0:/PSP/GAME/HCR/%s", filepath);
+        f = fopen(msPath, "rb");
+        if (!f) {
+            char* ext = strrchr(msPath, '.');
+            if (ext && strcmp(ext, ".ogg") == 0) {
+                strcpy(ext, ".wav");
+                f = fopen(msPath, "rb");
+            }
+        }
+    }
+#endif
+
+    if (!f) {
+        return false;
+    }
+
+    // Parse WAV header (RIFF PCM)
+    char header[12];
+    if (fread(header, 1, 12, f) != 12 || memcmp(header, "RIFF", 4) != 0 || memcmp(header + 8, "WAVE", 4) != 0) {
+        fclose(f);
+        return false;
+    }
+
+    int channels = 0;
+    int sampleRate = 0;
+    int bitsPerSample = 0;
+    long dataStart = 0;
+    long dataBytes = 0;
+
+    while (!feof(f)) {
+        char chunkId[4];
+        if (fread(chunkId, 1, 4, f) != 4) break;
+        unsigned int chunkSize = 0;
+        if (fread(&chunkSize, 1, 4, f) != 4) break;
+
+        long chunkDataPos = ftell(f);
+        if (memcmp(chunkId, "fmt ", 4) == 0 && chunkSize >= 16) {
+            unsigned char fmtBuf[16];
+            if (fread(fmtBuf, 1, 16, f) != 16) {
+                fclose(f);
+                return false;
+            }
+            unsigned short format = *(const unsigned short*)(fmtBuf + 0);
+            if (format != 1) { // PCM only
+                fclose(f);
+                return false;
+            }
+            channels = *(const unsigned short*)(fmtBuf + 2);
+            sampleRate = *(const unsigned int*)(fmtBuf + 4);
+            bitsPerSample = *(const unsigned short*)(fmtBuf + 14);
+        } else if (memcmp(chunkId, "data", 4) == 0) {
+            dataStart = chunkDataPos;
+            dataBytes = chunkSize;
+            break;
+        }
+        fseek(f, chunkDataPos + chunkSize, SEEK_SET);
+    }
+
+    if (channels <= 0 || sampleRate <= 0 || bitsPerSample != 16 || dataBytes <= 0) {
+        fclose(f);
+        return false;
+    }
+
+    fseek(f, 0, SEEK_END);
+    long totalFileBytes = ftell(f);
+    if (dataStart + dataBytes > totalFileBytes) {
+        dataBytes = totalFileBytes - dataStart;
+    }
+    fseek(f, dataStart, SEEK_SET);
+
+    sMusicFile = f;
+    strncpy(sCurrentMusicPath, filepath, sizeof(sCurrentMusicPath) - 1);
+    sCurrentMusicPath[sizeof(sCurrentMusicPath) - 1] = '\0';
+    sMusicDataStart = dataStart;
+    sMusicDataBytes = dataBytes;
+    sMusicFileBytesRead = 0;
+    sMusicSampleRate = sampleRate;
+    sMusicChannels = channels;
+    sMusicRingHead = 0;
+    sMusicRingTail = 0;
+    sMusicRingCount = 0;
+    sMusicPosFP = 0;
+    sMusicUnderrunCount = 0;
+    sMusicPlaying = true;
+
+    // Pre-fill ring buffer to 100% capacity before starting playback
+    UpdateMusicStream();
+    return true;
+}
+
+void AudioEngine::StopMusic() {
+    sMusicPlaying = false;
+    if (sMusicFile) {
+        fclose(sMusicFile);
+        sMusicFile = NULL;
+    }
+    sCurrentMusicPath[0] = '\0';
+    sMusicRingHead = 0;
+    sMusicRingTail = 0;
+    sMusicRingCount = 0;
+    sMusicPosFP = 0;
+}
+
+bool AudioEngine::IsMusicPlaying() {
+    return sMusicPlaying;
+}
+
+int AudioEngine::GetMusicUnderrunCount() {
+    return sMusicUnderrunCount;
 }

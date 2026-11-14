@@ -319,7 +319,7 @@ def get_target_format(filename, cli_format):
     # Default: 5551 for terrain ground/surface, pedals, buttons, fonts
     return FORMAT_RGBA5551
 
-def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode="auto", swizzle=True, convert_audio=True):
+def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode="auto", swizzle=True, convert_audio=True, convert_music=True):
     print("==================================================")
     print("   Hill Climb Racing: Asset Preprocessing Pipeline")
     print("==================================================")
@@ -374,9 +374,13 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
                     with open(dst_path, "wb") as f:
                         f.write(data)
                     if convert_audio:
-                        wav_path = os.path.splitext(dst_path)[0] + ".wav"
-                        if convert_audio_to_wav(data, wav_path):
-                            audio_count += 1
+                        is_music = any(m in entry.lower() for m in ["bgmusic", "music", "jinglebells"])
+                        if is_music and not convert_music:
+                            pass
+                        else:
+                            wav_path = os.path.splitext(dst_path)[0] + ".wav"
+                            if convert_audio_to_wav(data, wav_path):
+                                audio_count += 1
                     processed_count += 1
                 else:
                     os.makedirs(os.path.dirname(dst_path), exist_ok=True)
@@ -418,9 +422,13 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
                         os.makedirs(os.path.dirname(dst_path), exist_ok=True)
                         shutil.copy2(src_path, dst_path)
                     if convert_audio:
-                        wav_path = os.path.splitext(dst_path)[0] + ".wav"
-                        if convert_audio_to_wav(src_path, wav_path):
-                            audio_count += 1
+                        is_music = any(m in f.lower() for m in ["bgmusic", "music", "jinglebells"])
+                        if is_music and not convert_music:
+                            pass
+                        else:
+                            wav_path = os.path.splitext(dst_path)[0] + ".wav"
+                            if convert_audio_to_wav(src_path, wav_path):
+                                audio_count += 1
                     processed_count += 1
                 else:
                     if src_path != dst_path:
@@ -461,6 +469,7 @@ def main():
     parser.add_argument("--format", choices=["5551", "8888", "auto"], default="auto", help="Texture format (default: auto)")
     parser.add_argument("--no-swizzle", action="store_true", help="Disable PSP GE hardware texture swizzling")
     parser.add_argument("--no-audio", action="store_true", help="Disable audio conversion to 22050Hz WAV")
+    parser.add_argument("--no-music", action="store_true", help="Disable background music tracks conversion")
 
     args = parser.parse_args()
 
@@ -486,7 +495,8 @@ def main():
         out_dir=args.out,
         format_mode=args.format,
         swizzle=not args.no_swizzle,
-        convert_audio=not args.no_audio
+        convert_audio=not args.no_audio,
+        convert_music=not args.no_music
     )
 
 if __name__ == '__main__':

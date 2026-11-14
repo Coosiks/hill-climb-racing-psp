@@ -265,11 +265,20 @@ void Game::StartRace() {
     ParticleSystem::Init();
     ParticleSystem::Reset();
 
+    // Start stage music streaming (T-132)
+    if (mCurrentStage >= 0 && mCurrentStage < Config::StageCount) {
+        const char* stageMusic = Config::Stages[mCurrentStage].music;
+        if (stageMusic && stageMusic[0] != '\0') {
+            AudioEngine::PlayMusic(stageMusic);
+        }
+    }
+
     AudioEngine::PlaySFX(SFX_CLICK);
     HCR_Log("StartRace: complete, state = STATE_PLAYING");
 }
 
 void Game::EndRace() {
+    AudioEngine::StopMusic();
     AudioEngine::UpdateEngineSound(0.0f, false);
     mAccumulator = 0.0f;
     ParticleSystem::Reset();
@@ -874,10 +883,11 @@ void Game::UpdatePlaying(float frameTime) {
         mRenderAlpha = 1.0f;
     }
 
-    // Engine Audio
+    // Engine Audio & Music Stream
     if (mCar) {
         bool carActive = !mCar->IsDead() && !mCar->IsOutOfFuel();
         AudioEngine::UpdateEngineSound(mCar->GetEngineRev(), carActive, frameTime);
+        AudioEngine::UpdateMusicStream();
     }
 
     // Camera follow (tracks interpolated car position for jitter-free smoothness)
