@@ -144,6 +144,12 @@ add_executable(test_texture
 )
 target_link_libraries(test_texture ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
 
+add_executable(test_save
+    tools/test_save.cpp
+    src/core/PlayerInfo.cpp
+)
+target_link_libraries(test_save m pthread)
+
 
 
 
