@@ -114,12 +114,24 @@ def get_target_format(filename, cli_format):
         return FORMAT_RGBA8888
 
     # auto mode:
-    # 8888 for high-detail vehicle and driver components
     fname = os.path.basename(filename).lower()
-    high_detail = ["car.png", "tire.png", "driver-body.png", "driver-head.png", "antenna.png", "bridgewoodblock.png"]
-    if fname in high_detail:
+
+    # Garage and stage preview icons, coins, and canisters use RGBA5551 to preserve PSP RAM
+    if fname.startswith("car-icon-") or fname.startswith("stage-icon-") or "coin" in fname or "gas" in fname:
+        return FORMAT_RGBA5551
+
+    # High-detail vehicle body and wheel components in RGBA8888
+    vehicle_keywords = [
+        "car.png", "tire.png", "car-", "bike-", "-tire", "wheel", "tank-", "tractor", "driver-"
+    ]
+    if any(k in fname for k in vehicle_keywords):
         return FORMAT_RGBA8888
-    # 5551 for terrain ground/surface, icons, pedals, buttons, fonts
+
+    # High-detail props
+    if fname in ["antenna.png", "bridgewoodblock.png"]:
+        return FORMAT_RGBA8888
+
+    # Default: 5551 for terrain ground/surface, pedals, buttons, fonts
     return FORMAT_RGBA5551
 
 def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode="auto", swizzle=True):

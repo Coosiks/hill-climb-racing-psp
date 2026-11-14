@@ -1,0 +1,186 @@
+================================================================================
+  Hill Climb Racing v1.30.0 Automated Reverse Engineering Dump
+================================================================================
+
+APK Size:   44591710 bytes
+APK SHA256: d21df47ee110baf1e9e5b3cdd8c6aa815b180473c8b42d48a044bde0bbfacb26
+SO Size:    4254944 bytes (libgame_x86.so)
+SO SHA256:  0a8a1ebf405e7830fd25a77442f571ac8c69221eb36f931a28ccb177eab1aa3e
+
+--------------------------------------------------------------------------------
+1. RTTI PlayerCar Classes (29 found)
+--------------------------------------------------------------------------------
+   1. PlayerCarAmbulance
+   2. PlayerCarBigMonster
+   3. PlayerCarBike
+   4. PlayerCarDieselTruck
+   5. PlayerCarDragster
+   6. PlayerCarDuneBuggy
+   7. PlayerCarElectricCar
+   8. PlayerCarFireTruck
+   9. PlayerCarHippieVan
+  10. PlayerCarHotrod
+  11. PlayerCarHoverCraft
+  12. PlayerCarJeep
+  13. PlayerCarMiniBike
+  14. PlayerCarMonsterTruck
+  15. PlayerCarMoonLander
+  16. PlayerCarOneWheeler
+  17. PlayerCarPoliceCar
+  18. PlayerCarQuadBike
+  19. PlayerCarRaceCar
+  20. PlayerCarRallyCar
+  21. PlayerCarScrewFinger
+  22. PlayerCarSleigh
+  23. PlayerCarSnowMobile
+  24. PlayerCarSuperOffroad
+  25. PlayerCarTank
+  26. PlayerCarTouristbus
+  27. PlayerCarTractor
+  28. PlayerCarTrain
+  29. PlayerCarTruck
+
+--------------------------------------------------------------------------------
+2. RTTI Stage Classes (28 found)
+--------------------------------------------------------------------------------
+   1. StageAlienPlanet
+   2. StageArctic
+   3. StageArcticCave
+   4. StageBeach
+   5. StageBootCamp
+   6. StageCave
+   7. StageChristmas
+   8. StageConstruction
+   9. StageCountrySide
+  10. StageDesert
+  11. StageFactory
+  12. StageForest
+  13. StageHaunted
+  14. StageHighway
+  15. StageJunkyard
+  16. StageMars
+  17. StageMoon
+  18. StageMountain
+  19. StageMudPool
+  20. StageNight
+  21. StageNorthpole
+  22. StageNuclear
+  23. StageRagnarok
+  24. StageRainbow
+  25. StageRollercoaster
+  26. StageRoofTops
+  27. StageSeasons
+  28. StageVolcano
+
+--------------------------------------------------------------------------------
+3. Registered Vehicles from libgame.so Registration Table (29 found)
+--------------------------------------------------------------------------------
+Idx  ID              Name                 Cost       Icon                           Disasm Addr
+-----------------------------------------------------------------------------------------------
+1    jeep            JEEP                 0          car-icon-jeep.png              0xf7387
+2    bike            MOTOCROSS BIKE       75000      car-icon-motocross-bike.png    0xf75b5
+3    monster         MONSTER TRUCK        100000     car-icon-monster.png           0xf77e9
+4    tractor         TRACTOR              100000     car-icon-tractor.png           0xf7a1d
+5    hippievan       HIPPIE VAN           120000     car-icon-hippievan.png         0xf7c51
+6    onewheeler      ONEWHEELER           150000     car-icon-onewheeler.png        0xf7e85
+7    quadbike        QUAD BIKE            175000     car-icon-quadbike.png          0xf80b9
+8    touristbus      TOURIST BUS          200000     car-icon-touristbus.png        0xf82ed
+9    racecar         RACE CAR             250000     car-icon-racecar.png           0xf8521
+10   screwfinger     FINGER SCREW         300000     car-icon-screw-finger.png      0xf8755
+11   policecar       POLICE CAR           350000     car-icon-policecar.png         0xf8989
+12   ambulance       AMBULANCE            400000     car-icon-ambulance.png         0xf8bbd
+13   electric        ELECTRIC CAR         450000     car-icon-electric.png          0xf8df1
+14   dieseltruck     SUPER DIESEL 4X4     500000     car-icon-4x4.png               0xf9025
+15   rallycar        RALLY CAR            750000     car-icon-rallycar.png          0xf9259
+16   dragster        DRAGSTER             800000     car-icon-dragster.png          0xf948d
+17   firetruck       FIRE TRUCK           800000     car-icon-firetruck.png         0xf96c1
+18   tank            TANK                 1000000    car-icon-tank.png              0xf98f5
+19   snowmobile      SNOW MOBILE          1000000    car-icon-snowmobile.png        0xf9b29
+20   superoffroad    SUPER OFFROAD        1000000    car-icon-super-offroad.png     0xf9d5d
+21   truck           TRUCK                1000000    car-icon-truck.png             0xf9f91
+22   dunebuggy       DUNE BUGGY           800000     car-icon-dunebuggy.png         0xfa1c5
+23   hovercraft      HOVERCRAFT           1000000    car-icon-hovercraft.png        0xfa3f9
+24   minibike        MINIBIKE             1000000    car-icon-minibike.png          0xfa62d
+25   bigfinger       BIG FINGER           1200000    car-icon-bigfinger.png         0xfa861
+26   train           KIDDIE EXPRESS       1500000    car-icon-train.png             0xfaa95
+27   moonlander      MOONLANDER           1500000    car-icon-moonlander.png        0xfacc9
+28   hotrod          HOT ROD              1500000    car-icon-hotrod.png            0xfaefd
+29   sleigh          SLEIGH               1000000    car-icon-sleigh.png            0xfb131
+
+--------------------------------------------------------------------------------
+4. Registered Stages from libgame.so Registration Table (30 found)
+--------------------------------------------------------------------------------
+Idx  ID              Cost       Icon                             Disasm Addr
+--------------------------------------------------------------------------------
+1    countryside     0          stage-icon-countryside.png       0x14c38e
+2    seasons         50000      stage-icon-seasons.png           0x14c407
+3    desert          35000      stage-icon-desert.png            0x14c483
+4    arctic          75000      stage-icon-arctic.png            0x14c4ff
+5    highway         125000     stage-icon-highway.png           0x14c57b
+6    cave            150000     stage-icon-cave.png              0x14c5f7
+7    moon            175000     stage-icon-moon.png              0x14c673
+8    bootcamp        200000     stage-icon-bootcamp.png          0x14c6ef
+9    mars            250000     stage-icon-mars.png              0x14c76b
+10   xmas            600000     stage-icon-xmas.png              0x14c7e7
+11   xmas            300000     stage-icon-xmas.png              0x14c84a
+12   alienplanet     750000     stage-icon-alienplanet.png       0x14c8c6
+13   arcticcave      800000     stage-icon-arctic-cave.png       0x14c942
+14   forest          850000     stage-icon-forest.png            0x14c9be
+15   mountain        850000     stage-icon-cliffs.png            0x14ca3a
+16   ragnarok        1000000    stage-icon-ragnarok.png          0x14cab6
+17   mudpool         1000000    stage-icon-mud.png               0x14cb32
+18   volcano         1000000    stage-icon-volcano.png           0x14cbae
+19   beach           1000000    stage-icon-beach.png             0x14cc2a
+20   factory         1000000    stage-icon-factory.png           0x14cca6
+21   rollercoaster   1200000    stage-icon-rollercoaster.png     0x14cd28
+22   night           1200000    stage-icon-night.png             0x14cda4
+23   rooftops        1200000    stage-icon-rooftops.png          0x14ce20
+24   junkyard        1400000    stage-icon-junkyard.png          0x14ce9c
+25   construction    1400000    stage-icon-construction.png      0x14cf18
+26   rainbow         1500000    stage-icon-rainbow.png           0x14cf9e
+27   rainbow         1500000    stage-icon-rainbow.png           0x14d005
+28   haunted         1500000    stage-icon-haunted.png           0x14d081
+29   northpole       1500000    stage-icon-northpole.png         0x14d0fd
+30   nuclear         1500000    stage-icon-nuclear.png           0x14d179
+
+--------------------------------------------------------------------------------
+5. Key Initial Vehicles Physical & Visual Profiles (Batch 7 Focus)
+--------------------------------------------------------------------------------
+Vehicle 1: Jeep (Hill Climber)
+  - id: jeep
+  - unlock_cost: 0 (extracted @ 0x0f7387)
+  - body_texture: assets/Car.png
+  - wheel_texture: assets/Tire.png
+  - front_wheel_radius: 0.40m, rear_wheel_radius: 0.40m
+  - drive_type: AWD (0)
+  - 4th_upgrade: 4WD
+
+Vehicle 2: Motocross Bike
+  - id: bike
+  - unlock_cost: 75000 (extracted @ 0x0f75b5)
+  - body_texture: assets/bike-motocross.png
+  - wheel_texture: assets/bike-tire.png
+  - preview_texture: assets/car-icon-motocross-bike.png
+  - front_wheel_radius: 0.45m, rear_wheel_radius: 0.45m
+  - drive_type: RWD (0)
+  - 4th_upgrade: MID-AIR CONTROL (bike_rotation @ 0x0027c7c4, 2)
+
+Vehicle 3: Monster Truck
+  - id: monster
+  - unlock_cost: 100000 (extracted @ 0x0f77e9)
+  - body_texture: assets/car-monster.png
+  - wheel_texture: assets/car-monster-tire.png
+  - preview_texture: assets/car-icon-monster.png
+  - front_wheel_radius: 0.65m, rear_wheel_radius: 0.65m
+  - drive_type: AWD (2)
+  - 4th_upgrade: AWD (0)
+
+Vehicle 4: Race Car
+  - id: racecar
+  - unlock_cost: 250000 (extracted @ 0x0f8521)
+  - body_texture: assets/car-racecar.png
+  - wheel_texture: assets/Tire.png
+  - preview_texture: assets/car-icon-racecar.png
+  - front_wheel_radius: 0.36m, rear_wheel_radius: 0.42m
+  - drive_type: RWD (0)
+  - 4th_upgrade: DOWNFORCE (3)

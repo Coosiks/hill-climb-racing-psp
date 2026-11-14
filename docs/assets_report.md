@@ -175,4 +175,22 @@ Offset  Size  Type      Field       Description
 - Total header size: **16 bytes**.
 - Loading on PSP: Direct DMA-friendly `fread` into 16-byte aligned heap buffer (`memalign(16, size)`). Zero runtime decompression overhead (`stb_image.h` completely removed).
 
+---
+
+## 8. Expansion to Hill Climb Racing v1.30.0 (T-120)
+
+### 8.1 1.30.0 Content Inventory & Scale
+The release APK of v1.30.0 contains **1,152 assets** (939 PNG textures, 70 audio tracks, 44 particle plists).
+Key content metrics:
+- **Vehicles:** 29 unique vehicles (`PlayerCar*` classes in RTTI, starting from Jeep, Motocross Bike, Monster Truck, Tractor up to Sleigh).
+- **Stages:** 28 unique stages (`Stage*` classes in RTTI, from Countryside, Seasons, Desert, Arctic up to Nuclear Plant).
+- **Inventory Registry:** Detailed in `docs/hcr_1300_inventory.md`.
+- **Extraction Dump:** Automated extraction verified in `docs/bench/re_1300_dump.txt` via `tools/extract_1300_info.py`.
+
+### 8.2 Converter Automation (`tools/convert_assets.py`)
+- Full APK conversion processes all 939 PNG textures into `.tex` format.
+- Vehicle bodies and wheels are classified as `RGBA8888` for visual fidelity.
+- Carousel preview cards (`car-icon-*`, `stage-icon-*`), coins, and canisters are classified as `RGBA5551` to minimize RAM usage.
+- Lazy asset loading ensures preview card footprint remains under **0.2 MB** during garage browsing on PSP-1000.
+
 

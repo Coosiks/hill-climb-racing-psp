@@ -56,14 +56,29 @@ CAMERA_MIN_ZOOM,0.8,design/TODO-TUNE,2026-11-14,Minimum camera zoom bound
 CAMERA_MAX_ZOOM,1.2,design/TODO-TUNE,2026-11-14,Maximum camera zoom bound
 CHUNK_GEN_VERTICES_PER_STEP,8,design/TODO-TUNE,2026-11-14,Amortized vertex generation batch size per step
 MAX_TEXTURE_DIMENSION_PSP,512,design/TODO-TUNE,2026-11-14,Maximum POT texture dimension supported by PSP GE
-STAGE_UNLOCK_COST_COUNTRYSIDE,0,design/TODO-TUNE,2026-11-14,Starter stage unlock price
-STAGE_UNLOCK_COST_DESERT,10000,design/TODO-TUNE,2026-11-14,Desert unlock price
-STAGE_UNLOCK_COST_ARCTIC,20000,design/TODO-TUNE,2026-11-14,Arctic unlock price
-STAGE_UNLOCK_COST_MOON,50000,design/TODO-TUNE,2026-11-14,Moon unlock price
-VEHICLE_UNLOCK_COST_JEEP,0,design/TODO-TUNE,2026-11-14,Starter vehicle unlock price
+STAGE_UNLOCK_COST_COUNTRYSIDE,0,extracted (1.30.0 @ 0x14c38e),2026-11-14,Countryside starter stage unlock price
+STAGE_UNLOCK_COST_SEASONS,50000,extracted (1.30.0 @ 0x14c407),2026-11-14,Seasons unlock price
+STAGE_UNLOCK_COST_DESERT,35000,extracted (1.30.0 @ 0x14c483),2026-11-14,Desert unlock price in 1.30.0
+STAGE_UNLOCK_COST_ARCTIC,75000,extracted (1.30.0 @ 0x14c4ff),2026-11-14,Arctic unlock price in 1.30.0
+STAGE_UNLOCK_COST_HIGHWAY,125000,extracted (1.30.0 @ 0x14c57b),2026-11-14,Highway unlock price in 1.30.0
+STAGE_UNLOCK_COST_CAVE,150000,extracted (1.30.0 @ 0x14c5f7),2026-11-14,Cave unlock price in 1.30.0
+STAGE_UNLOCK_COST_MOON,175000,extracted (1.30.0 @ 0x14c673),2026-11-14,Moon unlock price in 1.30.0
+VEHICLE_UNLOCK_COST_JEEP,0,extracted (1.30.0 @ 0x0f7387),2026-11-14,Starter vehicle unlock price
+VEHICLE_UNLOCK_COST_BIKE,75000,extracted (1.30.0 @ 0x0f75b5),2026-11-14,Motocross Bike unlock price
+VEHICLE_UNLOCK_COST_MONSTER,100000,extracted (1.30.0 @ 0x0f77e9),2026-11-14,Monster Truck unlock price
+VEHICLE_UNLOCK_COST_TRACTOR,100000,extracted (1.30.0 @ 0x0f7a1d),2026-11-14,Tractor unlock price
+VEHICLE_UNLOCK_COST_RACECAR,250000,extracted (1.30.0 @ 0x0f8521),2026-11-14,Race Car unlock price
 UPGRADE_BASE_COST_JEEP,1000,design/TODO-TUNE,2026-11-14,Base tier upgrade cost multiplier
 UPGRADE_MAX_LEVEL_JEEP,20,design/TODO-TUNE,2026-11-14,Maximum upgrade level per slot
 JEEP_UPGRADE_MULT_FUEL,1.05,design/TODO-TUNE,2026-11-14,Fuel tank capacity multiplier per level
-MAX_CONFIG_VEHICLES,32,design/TODO-TUNE,2026-11-14,Max vehicles supported by config and save systems
-MAX_CONFIG_STAGES,32,design/TODO-TUNE,2026-11-14,Max stages supported by config and save systems
+MAX_CONFIG_VEHICLES,64,design/TODO-TUNE,2026-11-14,Max vehicles supported by config and save systems
+MAX_CONFIG_STAGES,64,design/TODO-TUNE,2026-11-14,Max stages supported by config and save systems
+BIKE_WHEEL_RADIUS,0.45,design/TODO-TUNE,2026-11-14,Motocross front/rear wheel radius
+BIKE_AIR_PITCH_TORQUE,18.0,design/TODO-TUNE,2026-11-14,Mid-air control pitch torque for motocross bike
+MONSTER_WHEEL_RADIUS,0.65,design/TODO-TUNE,2026-11-14,Monster truck oversize wheel radius
+MONSTER_BASE_MOTOR_TORQUE,18.0,design/TODO-TUNE,2026-11-14,Supercharged engine torque for monster truck
+RACECAR_FRONT_WHEEL_RADIUS,0.36,design/TODO-TUNE,2026-11-14,Race car small low-profile front wheel radius
+RACECAR_REAR_WHEEL_RADIUS,0.42,design/TODO-TUNE,2026-11-14,Race car rear drive wheel radius
+RACECAR_DOWNFORCE_COEFF,0.15,design/TODO-TUNE,2026-11-14,Aerodynamic downforce coefficient k in F_y = -k * v^2
+RACECAR_DOWNFORCE_MAX_CLAMP,150.0,design/TODO-TUNE,2026-11-14,Maximum downforce clamp limit in Newtons
 
