@@ -53,6 +53,15 @@ struct SavePayload {
 static_assert(sizeof(SavePayload) == 1556, "SavePayload size must be exactly 1556 bytes");
 static_assert(sizeof(SavePayload) % 4 == 0, "SavePayload must have 4-byte natural alignment");
 
+// MIPS Allegrex 4-byte natural alignment assertions.
+// On PSP (MIPS R4000 derivative), unaligned 32-bit reads/writes trigger hardware Address Error Exceptions.
+// Explicit padding ensures all 32-bit fields reside at offsets divisible by 4.
+static_assert(offsetof(SavedVehicleEntry, idHash) % 4 == 0, "MIPS alignment");
+static_assert(offsetof(SavedStageEntry, idHash) % 4 == 0, "MIPS alignment");
+static_assert(offsetof(SavedStageEntry, bestDistance) % 4 == 0, "MIPS alignment");
+static_assert(offsetof(SavePayload, vehicles) % 4 == 0, "MIPS alignment");
+static_assert(offsetof(SavePayload, stages) % 4 == 0, "MIPS alignment");
+
 #pragma pack(pop)
 
 class PlayerInfo {

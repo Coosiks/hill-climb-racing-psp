@@ -295,11 +295,57 @@ int main() {
     printf("  Legacy migration verified and persisted into new 'HCRS' format!\n");
     printf("  -> SUBTEST 6 PASSED\n\n");
 
+    // [SUBTEST 7] Unaligned Buffer Deserialization (MIPS Safety)
+    printf("[SUBTEST 7] Unaligned Buffer Deserialization (MIPS Safety)...\n");
+    struct SaveFile {
+        SaveHeader header;
+        SavePayload payload;
+    };
+
+    SaveFile sourceSave;
+    memset(&sourceSave, 0, sizeof(sourceSave));
+    memcpy(sourceSave.header.magic, "HCRS", 4);
+    sourceSave.header.version = 1;
+    sourceSave.header.payloadSize = sizeof(SavePayload);
+    sourceSave.payload.coins = 987654321;
+    sourceSave.payload.selectedVehicleIdHash = 0x12345678;
+    sourceSave.payload.selectedStageIdHash = 0x87654321;
+    sourceSave.payload.vehicleCount = 1;
+    sourceSave.payload.vehicles[0].idHash = 0x12345678;
+    sourceSave.payload.vehicles[0].unlocked = 1;
+    sourceSave.payload.vehicles[0].levelEngine = 15;
+    sourceSave.header.crc32 = PlayerInfo::CalculateCRC32(&sourceSave.payload, sizeof(SavePayload));
+
+    alignas(4) uint8_t rawBuf[sizeof(SaveFile) + 4];
+    uint8_t* unalignedPtr = rawBuf + 1; // +1 offset guarantees non-4-byte alignment
+    assert(((uintptr_t)unalignedPtr % 4) != 0);
+
+    // Copy valid serialized image to unaligned pointer
+    memcpy(unalignedPtr, &sourceSave, sizeof(SaveFile));
+
+    // Deserialization via memcpy into aligned stack structures (safe on MIPS Allegrex)
+    SaveHeader destHeader;
+    SavePayload destPayload;
+    memcpy(&destHeader, unalignedPtr, sizeof(SaveHeader));
+    memcpy(&destPayload, unalignedPtr + sizeof(SaveHeader), sizeof(SavePayload));
+
+    assert(memcmp(destHeader.magic, "HCRS", 4) == 0);
+    assert(destHeader.version == 1);
+    assert(destHeader.payloadSize == sizeof(SavePayload));
+    assert(destHeader.crc32 == sourceSave.header.crc32);
+    assert(PlayerInfo::CalculateCRC32(&destPayload, sizeof(SavePayload)) == destHeader.crc32);
+    assert(destPayload.coins == 987654321);
+    assert(destPayload.selectedVehicleIdHash == 0x12345678);
+    assert(destPayload.vehicles[0].levelEngine == 15);
+
+    printf("  Unaligned buffer read (+1 byte offset) via memcpy verified bit-exact and safe!\n");
+    printf("  -> SUBTEST 7 PASSED\n\n");
+
     // Cleanup
     CleanupTestFiles(testBase);
 
     printf("===================================================\n");
-    printf("ALL 6 SUB-TESTS OF test_save PASSED SUCCESSFULLY!\n");
+    printf("ALL 7 SUB-TESTS OF test_save PASSED SUCCESSFULLY!\n");
     printf("===================================================\n");
     return 0;
 }
