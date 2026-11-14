@@ -210,8 +210,8 @@ int main() {
         }
         printf("  Bridge structure verified: 10 dynamic planks (CAT_TERRAIN) + 11 revolute joints with [-0.25, +0.25] rad limits.\n");
 
-        // Spawn car before bridge at X = 35m and drive across
-        b2Vec2 carStart(35.0f, terrainForest.GetHeightAtX(35.0f) + 1.5f);
+        // Spawn car onto the bridge entrance at X = 40.0m and drive across
+        b2Vec2 carStart(40.0f, 2.2f);
         PlayerCar carForest(physicsForest.GetWorld(), carStart, 15, 15, 15, 15, &Config::Vehicles[0]);
 
         float minBridgeCarY = 999.0f;
