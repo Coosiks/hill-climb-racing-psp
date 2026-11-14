@@ -35,9 +35,8 @@ static long sMusicDataStart = 0;
 static long sMusicDataBytes = 0;
 static long sMusicFileBytesRead = 0;
 static short sMusicRingBuf[MUSIC_RING_BUF_SAMPLES];
-static int sMusicRingHead = 0;
-static int sMusicRingTail = 0;
-static volatile int sMusicRingCount = 0;
+static volatile int sMusicRingHead = 0;
+static volatile int sMusicRingTail = 0;
 static volatile bool sMusicPlaying = false;
 static int sMusicSampleRate = 22050;
 static int sMusicChannels = 1;
@@ -251,43 +250,52 @@ int AudioEngine::AudioThread(SceSize args, void* argp) {
                 }
             }
 
-            // 3. Mix Streaming Music Channel (T-132)
-            if (sMusicPlaying && sMusicRingCount > 0 && mMusicVolume > 0.001f) {
-                float musicRatio = (sMusicSampleRate > 0) ? ((float)sMusicSampleRate / 44100.0f) : 0.5f;
-                unsigned int musicStepFP = (unsigned int)(musicRatio * 65536.0f);
-                int musicVol = (int)(mMusicVolume * 256.0f);
+            // 3. Mix Streaming Music Channel (T-132, H17c lock-free SPSC)
+            if (sMusicPlaying && mMusicVolume > 0.001f) {
+                int head = sMusicRingHead;
+                int tail = sMusicRingTail;
+                int avail = (head - tail + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
 
-                for (int i = 0; i < AUDIO_BUF_SAMPLES; ++i) {
-                    if (sMusicRingCount <= 1) {
-                        sMusicUnderrunCount++;
-                        break;
-                    }
+                if (avail > 0) {
+                    float musicRatio = (sMusicSampleRate > 0) ? ((float)sMusicSampleRate / 44100.0f) : 0.5f;
+                    unsigned int musicStepFP = (unsigned int)(musicRatio * 65536.0f);
+                    int musicVol = (int)(mMusicVolume * 256.0f);
 
-                    short musicSample = sMusicRingBuf[sMusicRingTail];
-                    musicSample = (short)((musicSample * musicVol) >> 8);
+                    for (int i = 0; i < AUDIO_BUF_SAMPLES; ++i) {
+                        head = sMusicRingHead;
+                        avail = (head - tail + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
 
-                    int left = outputBuffer[i * 2 + 0] + musicSample;
-                    int right = outputBuffer[i * 2 + 1] + musicSample;
+                        if (avail <= 1) {
+                            sMusicUnderrunCount++;
+                            break;
+                        }
 
-                    if (left > 32767) left = 32767;
-                    if (left < -32768) left = -32768;
-                    if (right > 32767) right = 32767;
-                    if (right < -32768) right = -32768;
+                        short musicSample = sMusicRingBuf[tail];
+                        musicSample = (short)((musicSample * musicVol) >> 8);
 
-                    outputBuffer[i * 2 + 0] = (short)left;
-                    outputBuffer[i * 2 + 1] = (short)right;
+                        int left = outputBuffer[i * 2 + 0] + musicSample;
+                        int right = outputBuffer[i * 2 + 1] + musicSample;
 
-                    sMusicPosFP += musicStepFP;
-                    while (sMusicPosFP >= 65536) {
-                        sMusicPosFP -= 65536;
-                        sMusicRingTail = (sMusicRingTail + 1) % MUSIC_RING_BUF_SAMPLES;
-                        sMusicRingCount--;
-                        if (sMusicRingCount <= 0) break;
+                        if (left > 32767) left = 32767;
+                        if (left < -32768) left = -32768;
+                        if (right > 32767) right = 32767;
+                        if (right < -32768) right = -32768;
+
+                        outputBuffer[i * 2 + 0] = (short)left;
+                        outputBuffer[i * 2 + 1] = (short)right;
+
+                        sMusicPosFP += musicStepFP;
+                        while (sMusicPosFP >= 65536) {
+                            sMusicPosFP -= 65536;
+                            tail = (tail + 1) % MUSIC_RING_BUF_SAMPLES;
+                            __sync_synchronize();
+                            sMusicRingTail = tail;
+                            head = sMusicRingHead;
+                            avail = (head - tail + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
+                            if (avail <= 0) break;
+                        }
                     }
                 }
-            }
-            if (sMusicPlaying && sMusicRingCount < 16384) {
-                UpdateMusicStream();
             }
         }
 
@@ -438,43 +446,52 @@ void AudioEngine::AudioCallback(void* userdata, Uint8* stream, int len) {
         }
     }
 
-    // 3. Mix Streaming Music Channel (T-132)
-    if (sMusicPlaying && sMusicRingCount > 0 && mMusicVolume > 0.001f) {
-        float musicRatio = (sMusicSampleRate > 0) ? ((float)sMusicSampleRate / 44100.0f) : 0.5f;
-        unsigned int musicStepFP = (unsigned int)(musicRatio * 65536.0f);
-        int musicVol = (int)(mMusicVolume * 256.0f);
+    // 3. Mix Streaming Music Channel (T-132, H17c lock-free SPSC)
+    if (sMusicPlaying && mMusicVolume > 0.001f) {
+        int head = sMusicRingHead;
+        int tail = sMusicRingTail;
+        int avail = (head - tail + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
 
-        for (int i = 0; i < samplesCount; ++i) {
-            if (sMusicRingCount <= 1) {
-                sMusicUnderrunCount++;
-                break;
-            }
+        if (avail > 0) {
+            float musicRatio = (sMusicSampleRate > 0) ? ((float)sMusicSampleRate / 44100.0f) : 0.5f;
+            unsigned int musicStepFP = (unsigned int)(musicRatio * 65536.0f);
+            int musicVol = (int)(mMusicVolume * 256.0f);
 
-            short musicSample = sMusicRingBuf[sMusicRingTail];
-            musicSample = (short)((musicSample * musicVol) >> 8);
+            for (int i = 0; i < samplesCount; ++i) {
+                head = sMusicRingHead;
+                avail = (head - tail + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
 
-            int left = outputBuffer[i * 2 + 0] + musicSample;
-            int right = outputBuffer[i * 2 + 1] + musicSample;
+                if (avail <= 1) {
+                    sMusicUnderrunCount++;
+                    break;
+                }
 
-            if (left > 32767) left = 32767;
-            if (left < -32768) left = -32768;
-            if (right > 32767) right = 32767;
-            if (right < -32768) right = -32768;
+                short musicSample = sMusicRingBuf[tail];
+                musicSample = (short)((musicSample * musicVol) >> 8);
 
-            outputBuffer[i * 2 + 0] = (short)left;
-            outputBuffer[i * 2 + 1] = (short)right;
+                int left = outputBuffer[i * 2 + 0] + musicSample;
+                int right = outputBuffer[i * 2 + 1] + musicSample;
 
-            sMusicPosFP += musicStepFP;
-            while (sMusicPosFP >= 65536) {
-                sMusicPosFP -= 65536;
-                sMusicRingTail = (sMusicRingTail + 1) % MUSIC_RING_BUF_SAMPLES;
-                sMusicRingCount--;
-                if (sMusicRingCount <= 0) break;
+                if (left > 32767) left = 32767;
+                if (left < -32768) left = -32768;
+                if (right > 32767) right = 32767;
+                if (right < -32768) right = -32768;
+
+                outputBuffer[i * 2 + 0] = (short)left;
+                outputBuffer[i * 2 + 1] = (short)right;
+
+                sMusicPosFP += musicStepFP;
+                while (sMusicPosFP >= 65536) {
+                    sMusicPosFP -= 65536;
+                    tail = (tail + 1) % MUSIC_RING_BUF_SAMPLES;
+                    __sync_synchronize();
+                    sMusicRingTail = tail;
+                    head = sMusicRingHead;
+                    avail = (head - tail + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
+                    if (avail <= 0) break;
+                }
             }
         }
-    }
-    if (sMusicPlaying && sMusicRingCount < 16384) {
-        UpdateMusicStream();
     }
 }
 
@@ -610,12 +627,14 @@ bool AudioEngine::IsEngineActive() {
 }
 
 // -----------------------------------------------------------------------------
-// Streaming Music API (T-132)
+// Streaming Music API (T-132, H17c lock-free SPSC)
 // -----------------------------------------------------------------------------
 void AudioEngine::UpdateMusicStream() {
     if (!sMusicPlaying || !sMusicFile) return;
 
-    int freeSamples = MUSIC_RING_BUF_SAMPLES - sMusicRingCount;
+    int head = sMusicRingHead;
+    int tail = sMusicRingTail;
+    int freeSamples = (tail - head - 1 + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
     if (freeSamples < 1024) return;
 
     while (freeSamples >= 512 && sMusicPlaying) {
@@ -635,28 +654,32 @@ void AudioEngine::UpdateMusicStream() {
         }
         if (toRead <= 0) break;
 
-        int spaceToEnd = MUSIC_RING_BUF_SAMPLES - sMusicRingHead;
+        int spaceToEnd = MUSIC_RING_BUF_SAMPLES - head;
         int chunk1 = toRead < spaceToEnd ? toRead : spaceToEnd;
-        size_t read1 = fread(&sMusicRingBuf[sMusicRingHead], sizeof(short), chunk1, sMusicFile);
-        sMusicRingHead = (sMusicRingHead + (int)read1) % MUSIC_RING_BUF_SAMPLES;
-        sMusicRingCount += (int)read1;
+        size_t read1 = fread(&sMusicRingBuf[head], sizeof(short), chunk1, sMusicFile);
+        head = (head + (int)read1) % MUSIC_RING_BUF_SAMPLES;
         sMusicFileBytesRead += (long)(read1 * sizeof(short));
         freeSamples -= (int)read1;
 
         if (chunk1 < toRead && read1 == (size_t)chunk1) {
             int chunk2 = toRead - chunk1;
-            size_t read2 = fread(&sMusicRingBuf[sMusicRingHead], sizeof(short), chunk2, sMusicFile);
-            sMusicRingHead = (sMusicRingHead + (int)read2) % MUSIC_RING_BUF_SAMPLES;
-            sMusicRingCount += (int)read2;
+            size_t read2 = fread(&sMusicRingBuf[head], sizeof(short), chunk2, sMusicFile);
+            head = (head + (int)read2) % MUSIC_RING_BUF_SAMPLES;
             sMusicFileBytesRead += (long)(read2 * sizeof(short));
             freeSamples -= (int)read2;
         }
+
+        __sync_synchronize();
+        sMusicRingHead = head;
 
         if (read1 == 0) {
             fseek(sMusicFile, sMusicDataStart, SEEK_SET);
             sMusicFileBytesRead = 0;
             break;
         }
+
+        tail = sMusicRingTail;
+        freeSamples = (tail - head - 1 + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
     }
 }
 
@@ -775,7 +798,6 @@ bool AudioEngine::PlayMusic(const char* filepath) {
     sMusicChannels = channels;
     sMusicRingHead = 0;
     sMusicRingTail = 0;
-    sMusicRingCount = 0;
     sMusicPosFP = 0;
     sMusicUnderrunCount = 0;
     sMusicPlaying = true;
@@ -794,7 +816,6 @@ void AudioEngine::StopMusic() {
     sCurrentMusicPath[0] = '\0';
     sMusicRingHead = 0;
     sMusicRingTail = 0;
-    sMusicRingCount = 0;
     sMusicPosFP = 0;
 }
 
@@ -804,4 +825,12 @@ bool AudioEngine::IsMusicPlaying() {
 
 int AudioEngine::GetMusicUnderrunCount() {
     return sMusicUnderrunCount;
+}
+
+int AudioEngine::GetMusicRingSampleCount() {
+    return (sMusicRingHead - sMusicRingTail + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
+}
+
+int AudioEngine::GetMusicRingCapacity() {
+    return MUSIC_RING_BUF_SAMPLES - 1;
 }
