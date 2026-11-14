@@ -81,7 +81,7 @@ static void RunHeightfieldHashBenchmark() {
 
 Game::Game()
     : mState(STATE_GARAGE), mCurrentStage(0), mCurrentVehicle(0),
-      mGarageTab(0), mSelectedUpgradeSlot(0),
+      mGarageTab(0), mSelectedUpgradeSlot(0), mPauseMenuIndex(0),
       mPhysics(NULL), mTerrain(NULL), mCar(NULL),
       mSessionCoins(0), mRaceCollectedCoins(0), mRaceTrickBonusCoins(0),
       mRaceDistanceBonusCoins(0), mIsNewRecord(false),
@@ -250,6 +250,7 @@ void Game::StartRace() {
     mRaceDistanceBonusCoins = 0;
     mIsNewRecord = false;
     mMaxDistance = 0.0f;
+    mPauseMenuIndex = 0;
     mStuntTimer = 0.0f;
     mStuntName = NULL;
     mStuntCoins = 0;
@@ -341,6 +342,10 @@ void Game::Run() {
             case STATE_PLAYING:
                 UpdatePlaying(frameTime);
                 break;
+            case STATE_PAUSE:
+                mAccumulator = 0.0f;
+                UpdatePause();
+                break;
             case STATE_GAMEOVER:
                 mAccumulator = 0.0f;
                 UpdateGameOver();
@@ -355,6 +360,9 @@ void Game::Run() {
                 break;
             case STATE_PLAYING:
                 RenderPlaying();
+                break;
+            case STATE_PAUSE:
+                RenderPause();
                 break;
             case STATE_GAMEOVER:
                 RenderGameOver();
@@ -753,9 +761,19 @@ void Game::UpdatePhysicsStep(float dt) {
     mCar->Update(dt);
     mTerrain->Update(pos.x);
 
-    // Update Distance
+    // Update Distance and Distance Bonus Coins (T-133)
     if (pos.x > mMaxDistance) {
+        float step = (Config::Physics.distance_bonus_step > 0.0f) ? Config::Physics.distance_bonus_step : 100.0f;
+        int coinsPerStep = (Config::Physics.distance_bonus_coins > 0) ? Config::Physics.distance_bonus_coins : 500;
+        int oldStepIdx = (int)(mMaxDistance / step);
         mMaxDistance = pos.x;
+        int newStepIdx = (int)(mMaxDistance / step);
+        if (newStepIdx > oldStepIdx) {
+            int added = (newStepIdx - oldStepIdx) * coinsPerStep;
+            mRaceDistanceBonusCoins += added;
+            mSessionCoins += added;
+            AudioEngine::PlaySFX(SFX_COIN);
+        }
     }
 
     // Stunt Tracking
@@ -858,6 +876,16 @@ void Game::UpdatePhysicsStep(float dt) {
 
 void Game::UpdatePlaying(float frameTime) {
     if (!mCar || !mPhysics || !mTerrain) return;
+
+    // Check Pause Toggle (T-133)
+    if (System::ButtonsPressed & PSP_CTRL_START) {
+        mState = STATE_PAUSE;
+        mPauseMenuIndex = 0;
+        mAccumulator = 0.0f;
+        AudioEngine::PauseAll();
+        AudioEngine::PlaySFX(SFX_CLICK);
+        return;
+    }
 
     if (frameTime > 0.10f) frameTime = 0.10f; // Protection against spiral of death
     mAccumulator += frameTime;
@@ -1055,6 +1083,107 @@ void Game::RenderHUD() {
     Renderer2D::DrawSpriteScreen(&mTexPedalGas, PSP_SCREEN_WIDTH - 75, PSP_SCREEN_HEIGHT - 65, 55, 55, gasColor);
 }
 
+void Game::UpdatePause() {
+    mAccumulator = 0.0f;
+    mLastTime = System::GetTimeSeconds();
+
+    // Toggle resume with Start
+    if (System::ButtonsPressed & PSP_CTRL_START) {
+        mState = STATE_PLAYING;
+        mAccumulator = 0.0f;
+        mLastTime = System::GetTimeSeconds();
+        AudioEngine::ResumeAll();
+        AudioEngine::PlaySFX(SFX_CLICK);
+        return;
+    }
+
+    // Menu Navigation: Up / Down
+    if (System::ButtonsPressed & PSP_CTRL_UP) {
+        mPauseMenuIndex = (mPauseMenuIndex - 1 + 3) % 3;
+        AudioEngine::PlaySFX(SFX_CLICK);
+    }
+    if (System::ButtonsPressed & PSP_CTRL_DOWN) {
+        mPauseMenuIndex = (mPauseMenuIndex + 1) % 3;
+        AudioEngine::PlaySFX(SFX_CLICK);
+    }
+
+    // Select with Cross
+    if (System::ButtonsPressed & PSP_CTRL_CROSS) {
+        AudioEngine::PlaySFX(SFX_CLICK);
+        if (mPauseMenuIndex == 0) {
+            // Resume
+            mState = STATE_PLAYING;
+            mAccumulator = 0.0f;
+            mLastTime = System::GetTimeSeconds();
+            AudioEngine::ResumeAll();
+        } else if (mPauseMenuIndex == 1) {
+            // Restart
+            AudioEngine::ResumeAll();
+            EndRace();
+            StartRace();
+        } else if (mPauseMenuIndex == 2) {
+            // Garage
+            AudioEngine::ResumeAll();
+            EndRace();
+            mState = STATE_GARAGE;
+        }
+    }
+
+    // Circle acts as Resume / Cancel
+    if (System::ButtonsPressed & PSP_CTRL_CIRCLE) {
+        mState = STATE_PLAYING;
+        mAccumulator = 0.0f;
+        mLastTime = System::GetTimeSeconds();
+        AudioEngine::ResumeAll();
+        AudioEngine::PlaySFX(SFX_CLICK);
+    }
+}
+
+void Game::RenderPause() {
+    // 1. Render current race scene frozen in background
+    RenderPlaying();
+
+    // 2. Full-screen semi-transparent dark overlay
+    Renderer2D::SetupScreenSpace();
+    Renderer2D::DrawFilledRect(0, 0, PSP_SCREEN_WIDTH, PSP_SCREEN_HEIGHT, 0x88000000);
+
+    // 3. Pause Dialog Box
+    float boxW = 240.0f;
+    float boxH = 170.0f;
+    float boxX = ((float)PSP_SCREEN_WIDTH - boxW) * 0.5f;
+    float boxY = ((float)PSP_SCREEN_HEIGHT - boxH) * 0.5f;
+
+    Renderer2D::DrawFilledRect(boxX, boxY, boxW, boxH, 0xEE1E1E24);
+    Renderer2D::DrawFilledRect(boxX, boxY, boxW, 1.0f, 0xFF4A4A58);
+    Renderer2D::DrawFilledRect(boxX, boxY + boxH - 1.0f, boxW, 1.0f, 0xFF4A4A58);
+    Renderer2D::DrawFilledRect(boxX, boxY + 1.0f, 1.0f, boxH - 2.0f, 0xFF4A4A58);
+    Renderer2D::DrawFilledRect(boxX + boxW - 1.0f, boxY + 1.0f, 1.0f, boxH - 2.0f, 0xFF4A4A58);
+
+    const char* title = "GAME PAUSED";
+    float tw = mFont.GetTextWidth(title, 0.50f);
+    mFont.DrawText(title, boxX + (boxW - tw) * 0.5f, boxY + 16, 0.50f, 0xFFFFFFFF);
+
+    const char* options[3] = { "RESUME", "RESTART", "GARAGE" };
+    for (int i = 0; i < 3; ++i) {
+        float optY = boxY + 54 + (float)i * 32.0f;
+        bool selected = (i == mPauseMenuIndex);
+
+        if (selected) {
+            Renderer2D::DrawFilledRect(boxX + 24, optY - 4, boxW - 48, 26, 0xFF358525);
+        } else {
+            Renderer2D::DrawFilledRect(boxX + 24, optY - 4, boxW - 48, 26, 0x442C2C35);
+        }
+
+        float ow = mFont.GetTextWidth(options[i], 0.40f);
+        uint32_t col = selected ? 0xFFFFFFFF : 0xFFAAAAAA;
+        mFont.DrawText(options[i], boxX + (boxW - ow) * 0.5f, optY + 1, 0.40f, col);
+    }
+
+    const char* hint = "[X] Select    [START] Resume";
+    float hw = mFont.GetTextWidth(hint, 0.30f);
+    mFont.DrawText(hint, boxX + (boxW - hw) * 0.5f, boxY + boxH - 18, 0.30f, 0xFF888899);
+}
+
 void Game::UpdateGameOver() {
     AudioEngine::UpdateEngineSound(0.0f, false);
 
@@ -1111,13 +1240,16 @@ void Game::RenderGameOver() {
     }
 
     snprintf(buf, sizeof(buf), "COINS: +%d", mRaceCollectedCoins);
-    mFont.DrawText(buf, 80, 110, 0.38f, 0xFF00E5FF);
+    mFont.DrawText(buf, 80, 106, 0.36f, 0xFF00E5FF);
 
     snprintf(buf, sizeof(buf), "TRICKS: +%d", mRaceTrickBonusCoins);
-    mFont.DrawText(buf, 80, 132, 0.38f, 0xFF55FF55);
+    mFont.DrawText(buf, 80, 124, 0.36f, 0xFF55FF55);
+
+    snprintf(buf, sizeof(buf), "DISTANCE BONUS: +%d", mRaceDistanceBonusCoins);
+    mFont.DrawText(buf, 80, 142, 0.36f, 0xFFFFAA00);
 
     snprintf(buf, sizeof(buf), "TOTAL COINS: %lld", (long long)PlayerInfo::GetCoins());
-    mFont.DrawText(buf, 80, 154, 0.38f, 0xFFE0E0E0);
+    mFont.DrawText(buf, 80, 160, 0.36f, 0xFFE0E0E0);
 
     // Buttons
     // [X] Retry

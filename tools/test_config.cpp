@@ -45,6 +45,8 @@ int main() {
     TEST_CHECK(feq(Config::Physics.wheelie_threshold, 1.50f), "wheelie_threshold default");
     TEST_CHECK(Config::Physics.wheelie_bonus_coins == 500, "wheelie_bonus_coins default");
     TEST_CHECK(feq(Config::Physics.air_drag_coeff, 0.0f), "air_drag_coeff default");
+    TEST_CHECK(feq(Config::Physics.distance_bonus_step, 100.0f), "distance_bonus_step default");
+    TEST_CHECK(Config::Physics.distance_bonus_coins == 500, "distance_bonus_coins default");
     TEST_CHECK(feq(Config::Physics.camera_lead_x, 3.5f), "camera_lead_x default");
     TEST_CHECK(feq(Config::Physics.camera_lead_y, 1.2f), "camera_lead_y default");
     TEST_CHECK(feq(Config::Physics.camera_smoothing, 0.12f), "camera_smoothing default");
@@ -115,6 +117,7 @@ int main() {
         "ptm_ratio", "fixed_timestep", "velocity_iterations", "position_iterations", "max_sub_steps",
         "max_fuel", "fuel_drain_idle", "fuel_drain_drive", "flip_bonus_coins", "air_time_threshold",
         "air_time_bonus_rate", "wheelie_threshold", "wheelie_bonus_coins", "air_drag_coeff",
+        "distance_bonus_step", "distance_bonus_coins",
         "lead_x", "lead_y", "smoothing", "zoom_base", "zoom_speed_factor", "min_zoom", "max_zoom"
     };
     int numPhysicsKeys = sizeof(physicsKeys) / sizeof(physicsKeys[0]);
@@ -136,6 +139,8 @@ int main() {
         else if (strcmp(physicsKeys[i], "wheelie_threshold") == 0) fprintf(tf, "wheelie_threshold = 2.25\n");
         else if (strcmp(physicsKeys[i], "wheelie_bonus_coins") == 0) fprintf(tf, "wheelie_bonus_coins = 750\n");
         else if (strcmp(physicsKeys[i], "air_drag_coeff") == 0) fprintf(tf, "air_drag_coeff = 0.045\n");
+        else if (strcmp(physicsKeys[i], "distance_bonus_step") == 0) fprintf(tf, "distance_bonus_step = 250.0\n");
+        else if (strcmp(physicsKeys[i], "distance_bonus_coins") == 0) fprintf(tf, "distance_bonus_coins = 1500\n");
         else if (strcmp(physicsKeys[i], "lead_x") == 0) fprintf(tf, "lead_x = 4.8\n");
         else if (strcmp(physicsKeys[i], "lead_y") == 0) fprintf(tf, "lead_y = 2.1\n");
         else if (strcmp(physicsKeys[i], "smoothing") == 0) fprintf(tf, "smoothing = 0.22\n");
@@ -163,6 +168,8 @@ int main() {
         else if (strcmp(physicsKeys[i], "wheelie_threshold") == 0) ok = feq(Config::Physics.wheelie_threshold, 2.25f);
         else if (strcmp(physicsKeys[i], "wheelie_bonus_coins") == 0) ok = (Config::Physics.wheelie_bonus_coins == 750);
         else if (strcmp(physicsKeys[i], "air_drag_coeff") == 0) ok = feq(Config::Physics.air_drag_coeff, 0.045f);
+        else if (strcmp(physicsKeys[i], "distance_bonus_step") == 0) ok = feq(Config::Physics.distance_bonus_step, 250.0f);
+        else if (strcmp(physicsKeys[i], "distance_bonus_coins") == 0) ok = (Config::Physics.distance_bonus_coins == 1500);
         else if (strcmp(physicsKeys[i], "lead_x") == 0) ok = feq(Config::Physics.camera_lead_x, 4.8f);
         else if (strcmp(physicsKeys[i], "lead_y") == 0) ok = feq(Config::Physics.camera_lead_y, 2.1f);
         else if (strcmp(physicsKeys[i], "smoothing") == 0) ok = feq(Config::Physics.camera_smoothing, 0.22f);
@@ -400,7 +407,7 @@ int main() {
 
     printf("\nTotal config keys tested: %d | Uncovered keys: %d\n", totalKeysCovered, uncoveredKeys);
     TEST_CHECK(uncoveredKeys == 0, "All keys must be covered");
-    TEST_CHECK(totalKeysCovered == 94, "All 94 config keys must be covered (21 physics + 56 vehicles + 17 stages)");
+    TEST_CHECK(totalKeysCovered == 96, "All 96 config keys must be covered (23 physics + 56 vehicles + 17 stages)");
 
     // ----------------------------------------------------
     // Sub-test 3: Dynamic Behavior Change Without Recompile

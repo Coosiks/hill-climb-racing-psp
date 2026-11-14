@@ -32,6 +32,86 @@ def parse_plist_rect(val):
     nums = [int(float(n)) for n in re.findall(r"[-+]?\d*\.?\d+", str(val))]
     return nums
 
+def extract_frame_from_atlas(atlas_png_path, plist_path, target_frame_name, out_png_path):
+    if not (os.path.isfile(atlas_png_path) and os.path.isfile(plist_path)):
+        return False
+    try:
+        with open(plist_path, "rb") as f:
+            pl = plistlib.load(f)
+    except Exception as e:
+        print(f"Warning: Failed to parse plist {plist_path}: {e}")
+        return False
+
+    frames = pl.get("frames", {})
+    if not frames:
+        return False
+
+    chosen_frame_key = None
+    if target_frame_name in frames:
+        chosen_frame_key = target_frame_name
+    else:
+        for k in frames.keys():
+            if target_frame_name.lower() in k.lower():
+                chosen_frame_key = k
+                break
+    if not chosen_frame_key:
+        return False
+
+    finfo = frames[chosen_frame_key]
+    frame_str = finfo.get("frame") or finfo.get("textureRect")
+    rotated = finfo.get("rotated", False) or finfo.get("textureRotated", False)
+    source_size_str = finfo.get("sourceSize") or finfo.get("spriteSourceSize")
+    source_color_rect_str = finfo.get("sourceColorRect") or finfo.get("spriteColorRect")
+    offset_str = finfo.get("offset") or finfo.get("spriteOffset")
+
+    if not frame_str:
+        return False
+
+    f_nums = parse_plist_rect(frame_str)
+    if len(f_nums) < 4:
+        return False
+    fx, fy, fw, fh = f_nums[0], f_nums[1], f_nums[2], f_nums[3]
+
+    try:
+        atlas_img = Image.open(atlas_png_path).convert("RGBA")
+    except Exception as e:
+        print(f"Warning: Failed to open atlas image {atlas_png_path}: {e}")
+        return False
+
+    if rotated:
+        crop_box = (fx, fy, fx + fh, fy + fw)
+    else:
+        crop_box = (fx, fy, fx + fw, fy + fh)
+
+    cropped = atlas_img.crop(crop_box)
+    if rotated:
+        cropped = cropped.transpose(Image.ROTATE_270)
+
+    final_img = cropped
+    if source_size_str:
+        ss_nums = parse_plist_rect(source_size_str)
+        if len(ss_nums) >= 2:
+            sw, sh = ss_nums[0], ss_nums[1]
+            if sw > 0 and sh > 0:
+                final_img = Image.new("RGBA", (sw, sh), (0, 0, 0, 0))
+                paste_x, paste_y = 0, 0
+                if source_color_rect_str:
+                    cr_nums = parse_plist_rect(source_color_rect_str)
+                    if len(cr_nums) >= 4:
+                        paste_x, paste_y = cr_nums[0], cr_nums[1]
+                elif offset_str:
+                    off_nums = parse_plist_rect(offset_str)
+                    if len(off_nums) >= 2:
+                        ox, oy = off_nums[0], off_nums[1]
+                        paste_x = (sw - fw) // 2 + ox
+                        paste_y = (sh - fh) // 2 - oy
+                final_img.paste(cropped, (paste_x, paste_y), cropped)
+
+    os.makedirs(os.path.dirname(out_png_path), exist_ok=True)
+    final_img.save(out_png_path, "PNG")
+    print(f"[ATLAS] Successfully extracted '{chosen_frame_key}' to {out_png_path} ({final_img.size[0]}x{final_img.size[1]})")
+    return True
+
 def extract_sleigh_sprite_from_atlas(atlas_png_path, plist_path, out_png_path):
     if not (os.path.isfile(atlas_png_path) and os.path.isfile(plist_path)):
         return False
@@ -453,6 +533,25 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
             "size": fsize
         })
         processed_count += 1
+
+    # Extract hippievan chassis and tire from atlas/car-hippievan.plist if available
+    hv_atlas_png = os.path.join(out_dir, "atlas", "car-hippievan.png")
+    hv_atlas_plist = os.path.join(out_dir, "atlas", "car-hippievan.plist")
+    for frame_target in ["car-hippievan-chassis.png", "car-hippievan-tire.png"]:
+        dst_png = os.path.join(out_dir, frame_target)
+        dst_tex = os.path.splitext(dst_png)[0] + ".tex"
+        if extract_frame_from_atlas(hv_atlas_png, hv_atlas_plist, frame_target, dst_png):
+            fmt = FORMAT_RGBA8888
+            ow, oh, pw, ph, fcode, fsize = convert_image_to_tex(dst_png, dst_tex, target_format=fmt, swizzle=swizzle)
+            manifest.append({
+                "file": frame_target,
+                "tex": os.path.basename(dst_tex),
+                "orig": f"{ow}x{oh}",
+                "pot": f"{pw}x{ph}",
+                "format": "RGBA8888",
+                "size": fsize
+            })
+            processed_count += 1
 
     print(f"\nProcessing complete! Successfully processed {processed_count} files into '{out_dir}'.")
     print(f"Converted {len(manifest)} textures to PSP-native swizzled .tex format.")

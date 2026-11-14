@@ -204,3 +204,5 @@ HOVER_THRUST,35.0,design/TODO-TUNE,2026-11-15,Hover forward thrust force magnitu
 THRUSTER_G_MULT,1.80,design/TODO-TUNE,2026-11-15,Moonlander vertical thruster acceleration relative to gravity
 THRUSTER_BOOST_PER_LEVEL,0.05,design/TODO-TUNE,2026-11-15,Thruster force scaling per upgrade level
 THRUSTER_FUEL_DRAIN,0.04,design/TODO-TUNE,2026-11-15,Thruster fuel consumption rate per physics step
+DISTANCE_BONUS_STEP,100.0,design/TODO-TUNE,2026-11-15,Distance threshold interval in meters for awarding distance bonus coins
+DISTANCE_BONUS_COINS,500,design/TODO-TUNE,2026-11-15,Coins awarded upon crossing each distance interval

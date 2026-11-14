@@ -15,6 +15,7 @@
 enum GameState {
     STATE_GARAGE,
     STATE_PLAYING,
+    STATE_PAUSE,
     STATE_GAMEOVER
 };
 
@@ -47,6 +48,8 @@ public:
 
     GameState GetState() const { return mState; }
     void SetState(GameState state) { mState = state; }
+    int GetPauseMenuIndex() const { return mPauseMenuIndex; }
+    void SetPauseMenuIndex(int idx) { mPauseMenuIndex = idx; }
     int GetCurrentStage() const { return mCurrentStage; }
     void SetCurrentStage(int stage) { mCurrentStage = stage; }
     int GetCurrentVehicle() const { return mCurrentVehicle; }
@@ -62,6 +65,7 @@ private:
     int mCurrentVehicle;
     int mGarageTab;
     int mSelectedUpgradeSlot;
+    int mPauseMenuIndex;
 
     PhysicsWorld* mPhysics;
     Terrain* mTerrain;
@@ -118,6 +122,9 @@ private:
 
     void UpdatePlaying(float frameTime);
     void RenderPlaying();
+
+    void UpdatePause();
+    void RenderPause();
 
     void UpdateGameOver();
     void RenderGameOver();
