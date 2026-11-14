@@ -28,12 +28,13 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [x] **T-111 (tools, render):** Rewrite `convert_assets.py` with CLI argparse, ZIP extraction, POT padding, Lanczos downscale >512, swizzled .tex pipeline and loader, eliminating runtime PNG decompression on PSP.
 - [x] **T-112 (core):** Cross-platform heightfield determinism: verified bit-exact match between glibc and newlib soft-float (4 stages, 0-2000m, 4001 pts).
 - [ ] **T-113 (tune):** Tune stunt bonuses (TODO-TUNE), add air-time bonus and fuel capacity upgrade.
-- [ ] **T-114 (docs):** Audit params.csv classification (design vs RE), clean vendor folder, strip release binaries.
-- [ ] **T-115 (release):** Release v0.1.0-beta.2 with updated notes, changelog, and clean artifacts.
+- [x] **T-114 (docs, vendor):** Prune unused Box2D samples/docs, audit params.csv classification, close M0 documentation debt (`T-002_to_T-005_summary.md`).
+- [ ] **T-115 (release):** Release v0.1.0-beta.2 with updated notes, changelog, and clean artifacts (next release milestone).
 - [x] **T-116 (core):** Fix PSP-1000 heap allocation budget: replace fixed 24 MB request with dynamic allocation (`PSP_HEAP_SIZE_KB(-1024)`).
 - [ ] **T-118 (test):** Tighten seam crossing deltaVx metric in `test_terrain.cpp` (isolate natural curvature gradient from ghost-jolt collisions).
 - [x] **T-119 (perf):** Amortize terrain chunk generation into 8-vertex slices per step, eliminating the 10.9 ms frame spike on PSP-1000.
 - [x] **H3 (evidence):** Commit authentic PSP benchmark telemetry outputs (`heightfield_hashes_psp.txt` & `perf_snapshot.txt`) to `docs/bench/`.
+- [x] **H4 (save):** Enforce MIPS Allegrex 4-byte natural alignment static assertions in `PlayerInfo.h`, sync 64-capacity limits, and fix T-030 report errata.
 
 ---
 
@@ -61,7 +62,7 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 ## [ ] Milestone M3: Vehicles, Garage, Upgrades & Persistent Save System
 - [x] **T-030 (save):** Implement atomic key-value save storage with magic header, versioning, CRC32 checksum, and `.bak` fallback.
 - [x] **T-031 (garage):** Garage menu system with upgrade purchasing (Engine, Suspension, Tires, 4WD) and stage selector.
-- [ ] **T-032 (vehicle):** Calibrate secondary vehicles (Motocross Bike, Monster Truck, Tractor) via `vehicles.cfg`.
+- [x] **T-032 (vehicle):** Multi-vehicle architecture in `PlayerCar` with drivetrain types, specialized 4th-slot mechanics, and initial 4 vehicles (Jeep, Motocross, Monster Truck, Race Car) via `vehicles.cfg`.
 
 ---
 
@@ -83,5 +84,5 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 ---
 
 ## [ ] Milestone M6: Content Parity 1.30.0
-- [ ] **T-120 (content):** Vehicles & Stages 1.30.0 Expansion: add configuration, visual assets (.tex), and physical calibration for 29 vehicles and 27 stages to reach parity with Hill Climb Racing v1.30.0.
+- [x] **T-120 (content, re):** Vehicles & Stages 1.30.0 reverse engineering: automated extraction script `extract_1300_info.py`, disassembly dump `re_1300_dump.txt`, content registry `hcr_1300_inventory.md` for 29 vehicles and 28 stages, and RGBA5551/RGBA8888 classification in `convert_assets.py`.
 
