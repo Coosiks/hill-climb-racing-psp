@@ -260,8 +260,31 @@ void Game::StartRace() {
 #if defined(__PSP__)
     u32 tp0 = sceKernelGetSystemTimeLow();
 #endif
-    b2Vec2 startPos(0.0f, 2.5f);
     const VehicleConfig* vConfig = Config::GetVehicle(mCurrentVehicle);
+
+    // Calculate safe spawn height based on ground height, wheel radius and offsets (BUG-014)
+    float rR = (vConfig && vConfig->rear_wheel_radius > 0.0f) ? vConfig->rear_wheel_radius : (vConfig ? vConfig->wheel_radius : 0.40f);
+    float rF = (vConfig && vConfig->front_wheel_radius > 0.0f) ? vConfig->front_wheel_radius : (vConfig ? vConfig->wheel_radius : 0.40f);
+    float maxR = (rR > rF) ? rR : rF;
+    float offYR = vConfig ? vConfig->rear_wheel_offset[1] : -0.50f;
+    float offYF = vConfig ? vConfig->front_wheel_offset[1] : -0.50f;
+    float minOffY = (offYR < offYF) ? offYR : offYF;
+    float absMinOffsetY = fabsf(minOffY);
+
+    float groundH = mTerrain ? mTerrain->GetHeightAtX(0.0f) : 0.0f;
+    float startY = groundH + maxR + absMinOffsetY + 0.25f;
+
+    if (mTerrain && mTerrain->HasCeiling()) {
+        float ceilH = mTerrain->GetCeilingHeightAtX(0.0f);
+        float headOffY = vConfig ? vConfig->driver_head_offset[1] : 0.50f;
+        float headR = vConfig ? vConfig->driver_head_radius : 0.24f;
+        float maxAllowedY = ceilH - headOffY - headR - 0.5f;
+        if (startY > maxAllowedY) {
+            startY = maxAllowedY;
+        }
+    }
+    b2Vec2 startPos(0.0f, startY);
+
     uint32_t vHash = PlayerInfo::HashId(vConfig ? vConfig->id : "jeep");
     SavedVehicleEntry* vEntry = PlayerInfo::GetVehicleEntry(vHash);
     int eng  = vEntry ? vEntry->levelEngine : PlayerInfo::EngineLevel;
@@ -289,7 +312,7 @@ void Game::StartRace() {
     mOutOfFuelStopTimer = 0.0f;
     mOutOfFuelFallbackTimer = 0.0f;
     mCameraX = 0.0f;
-    mCameraY = 2.0f;
+    mCameraY = startY;
     mLastTime = System::GetTimeSeconds();
     mAccumulator = 0.0f;
     mRenderAlpha = 1.0f;
