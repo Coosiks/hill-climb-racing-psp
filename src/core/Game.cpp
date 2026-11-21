@@ -5,10 +5,15 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#ifndef GIT_SHA
+#define GIT_SHA "unknown"
+#endif
+
 #if defined(__PSP__)
 #include <psprtc.h>
 static u64 sTotalStepTicks = 0;
 static int sStepCount = 0;
+static u32 sBootStartUs = 0;
 #endif
 
 static bool sBenchmarkMode = false;
@@ -117,7 +122,7 @@ Game::Game()
       mPhysics(NULL), mTerrain(NULL), mCar(NULL),
       mSessionCoins(0), mRaceCollectedCoins(0), mRaceTrickBonusCoins(0),
       mRaceDistanceBonusCoins(0), mIsNewRecord(false),
-      mMaxDistance(0.0f), mGameOverReasonDriverDown(false),
+      mMaxDistance(0.0f), mGameOverReasonDriverDown(false), mResultsCommitted(false),
       mStuntTimer(0.0f), mStuntName(NULL), mStuntCoins(0),
       mOutOfFuelStopTimer(0.0f), mOutOfFuelFallbackTimer(0.0f),
       mCameraX(0.0f), mCameraY(0.0f), mCameraZoom(1.0f),
@@ -163,6 +168,8 @@ bool Game::CanStartRace() const {
 }
 
 void Game::CommitRaceResults() {
+    if (mResultsCommitted) return;
+    mResultsCommitted = true;
     PlayerInfo::AddCoins(mSessionCoins);
     mIsNewRecord = false;
     if (mCurrentStage >= 0 && mCurrentStage < Config::StageCount) {
@@ -180,6 +187,10 @@ void Game::CommitRaceResults() {
 }
 
 bool Game::Init() {
+#if defined(__PSP__)
+    sBootStartUs = sceKernelGetSystemTimeLow();
+#endif
+    HCR_Log("[BOOT] sha=%s date=%s %s", GIT_SHA, __DATE__, __TIME__);
     PlayerInfo::Load();
     AudioEngine::Init();
 
@@ -304,6 +315,7 @@ void Game::StartRace() {
     mRaceTrickBonusCoins = 0;
     mRaceDistanceBonusCoins = 0;
     mIsNewRecord = false;
+    mResultsCommitted = false;
     mMaxDistance = 0.0f;
     mPauseMenuIndex = 0;
     mStuntTimer = 0.0f;
@@ -379,6 +391,9 @@ void Game::OnFuelCollected() {
 }
 
 void Game::Run() {
+#if defined(__PSP__)
+    bool firstGarageFrame = true;
+#endif
     mLastTime = System::GetTimeSeconds();
     mAccumulator = 0.0f;
 
@@ -426,6 +441,12 @@ void Game::Run() {
 
         Renderer2D::EndFrame();
         System::EndFrame();
+#if defined(__PSP__)
+        if (firstGarageFrame && mState == STATE_GARAGE) {
+            firstGarageFrame = false;
+            HCR_Log("[BOOT] garage_ready_us=%u", (unsigned int)(sceKernelGetSystemTimeLow() - sBootStartUs));
+        }
+#endif
     }
 }
 
@@ -433,9 +454,6 @@ void Game::UpdateGarage() {
     static bool sCheckedBenchmark = false;
     if (!sCheckedBenchmark) {
         sCheckedBenchmark = true;
-#if defined(__PSP__)
-        RunHeightfieldHashBenchmark();
-#endif
         FILE* bf = fopen("benchmark.txt", "r");
         if (!bf) bf = fopen("ms0:/PSP/GAME/HCR/benchmark.txt", "r");
         if (bf) {
@@ -1174,11 +1192,13 @@ void Game::UpdatePause() {
         } else if (mPauseMenuIndex == 1) {
             // Restart
             AudioEngine::ResumeAll();
+            CommitRaceResults();
             EndRace();
             StartRace();
         } else if (mPauseMenuIndex == 2) {
             // Garage
             AudioEngine::ResumeAll();
+            CommitRaceResults();
             EndRace();
             mState = STATE_GARAGE;
         }

@@ -78,3 +78,12 @@ $(error build.mak not found at $(PSPSDK)/lib — psp-config trusts $$PSPDEV; che
 endif
 include $(PSPSDK)/lib/build.mak
 
+GIT_SHA := $(or $(shell git rev-parse HEAD 2>/dev/null),unknown)
+# Recompile the boot stamp when HEAD changes, even on incremental builds.
+src/core/Game.o: CXXFLAGS += -DGIT_SHA=\"$(GIT_SHA)\"
+src/core/Game.o: hcr-git-$(GIT_SHA).stamp
+
+hcr-git-$(GIT_SHA).stamp:
+	$(RM) hcr-git-*.stamp
+	touch $@
+

@@ -16,8 +16,9 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
       mRearJoint(NULL), mFrontJoint(NULL), mNeckJoint(NULL),
       mConfig(vConfig ? vConfig : &Config::VehicleJeep),
       mTerrain(terrain),
-      mFuel(Config::Physics.max_fuel * powf((vConfig && (vConfig->fourth_upgrade_type == 2 || vConfig->fourth_upgrade_type == 3)) ? 1.0f : (vConfig ? vConfig : &Config::VehicleJeep)->upg_mult_fuel, (float)awdLvl)),
-      mMaxFuel(Config::Physics.max_fuel * powf((vConfig && (vConfig->fourth_upgrade_type == 2 || vConfig->fourth_upgrade_type == 3)) ? 1.0f : (vConfig ? vConfig : &Config::VehicleJeep)->upg_mult_fuel, (float)awdLvl)),
+      mFuel(Config::Physics.max_fuel * (mConfig->fourth_upgrade_type == 1
+              ? powf(mConfig->upg_mult_fuel, (float)awdLvl) : 1.0f)),
+      mMaxFuel(mFuel),
       mEngineRev(0.0f), mIsDead(false), mOutOfFuel(false),
       mThrottleActive(false), mBrakeActive(false), mThrusterActive(false),
       mThrottleRamp(0.0f), mAirTime(0.0f), mAirRotation(0.0f), mLastAngle(0.0f), mFlipsCount(0),
@@ -133,7 +134,7 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     mFrontWheel->CreateFixture(&fwfd);
 
     // 3. Create Wheel Joints (Suspension from mConfig)
-    float springFreq = mConfig->base_spring_freq + (mSuspensionLevel * 0.40f);
+    float springFreq = mConfig->base_spring_freq * powf(mConfig->upg_mult_suspension, (float)mSuspensionLevel);
     float springDamp = mConfig->base_spring_damp;
     b2Vec2 axis(0.0f, 1.0f); // Upwards
 

@@ -160,23 +160,36 @@ int main() {
     TEST_CHECK(feq(baseMaxFuel, 100.0f), "Base fuel capacity at level 0 must be 100.0f");
     TEST_CHECK(feq(car0.GetFuel(), 100.0f), "Initial fuel must equal max fuel");
 
-    // Car with level 5 fuel/AWD upgrade (upg_mult_fuel = 1.05)
-    int upgLevel = 5;
-    PlayerCar carUpgraded(world.GetWorld(), startPos, 10, 5, 8, upgLevel, &Config::Vehicles[0]);
-    float expectedMaxFuel = 100.0f * powf(Config::Vehicles[0].upg_mult_fuel, (float)upgLevel);
-    TEST_CHECK(feq(carUpgraded.GetMaxFuel(), expectedMaxFuel), "Fuel capacity must scale by (upg_mult_fuel ^ level)");
-    TEST_CHECK(feq(carUpgraded.GetFuel(), expectedMaxFuel), "Initial fuel must equal scaled max fuel");
+    const VehicleConfig* jeep = Config::FindVehicleById("jeep");
+    const VehicleConfig* electric = Config::FindVehicleById("electric");
+    TEST_CHECK(jeep && jeep->fourth_upgrade_type == 0, "Jeep must use a non-FUEL slot");
+    TEST_CHECK(electric && electric->fourth_upgrade_type == 1, "Electric must use a FUEL slot");
+    const int upgLevel = 5;
+    PlayerCar carUpgraded(world.GetWorld(), startPos, 10, upgLevel, 8, upgLevel, jeep);
+    const float expectedMaxFuel = 100.0f;
+    bool fuelOk = true;
+    for (int level = 0; level <= maxLevel; ++level) {
+        PlayerCar awd(world.GetWorld(), startPos, 0, 0, 0, level, jeep);
+        PlayerCar fuel(world.GetWorld(), startPos, 0, 0, 0, level, electric);
+        const float expectedElectric = 100.0f * powf(1.05f, (float)level);
+        printf("  fuel lvl%d jeep=%.6f electric=%.6f\n", level, awd.GetMaxFuel(), fuel.GetMaxFuel());
+        fuelOk &= feq(awd.GetMaxFuel(), expectedMaxFuel) && feq(awd.GetFuel(), expectedMaxFuel) &&
+                  feq(fuel.GetMaxFuel(), expectedElectric) && feq(fuel.GetFuel(), expectedElectric);
+    }
 
     // Refuel test
     carUpgraded.AddFuel(500.0f);
-    TEST_CHECK(feq(carUpgraded.GetFuel(), expectedMaxFuel), "AddFuel must clamp to scaled max fuel");
+    const bool refuelOk = feq(carUpgraded.GetFuel(), expectedMaxFuel);
 
     // Suspension frequency scaling
     float rearFreq0 = car0.GetRearJoint()->GetSpringFrequencyHz();
     float rearFreqUpg = carUpgraded.GetRearJoint()->GetSpringFrequencyHz();
-    float expectedFreq = Config::Vehicles[0].base_spring_freq + (5 * 0.40f);
+    float expectedFreq = jeep->base_spring_freq * powf(jeep->upg_mult_suspension, (float)upgLevel);
+    printf("  jeep suspension lvl%d actual=%.6f expected=%.6f Hz\n", upgLevel, rearFreqUpg, expectedFreq);
+    TEST_CHECK(fuelOk, "Only FUEL upgrades must scale max and initial fuel");
+    TEST_CHECK(refuelOk, "AddFuel must clamp to max fuel");
     TEST_CHECK(feq(rearFreq0, Config::Vehicles[0].base_spring_freq), "Level 0 spring frequency must equal base");
-    TEST_CHECK(feq(rearFreqUpg, expectedFreq), "Upgraded spring frequency must equal base + lvl*0.40");
+    TEST_CHECK(feq(rearFreqUpg, expectedFreq), "Upgraded spring frequency must equal base * multiplier^level");
 
     printf("  [PASS] Fuel capacity and suspension frequency dynamically scale with upgrade tiers\n\n");
 

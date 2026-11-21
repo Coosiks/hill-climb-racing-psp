@@ -80,6 +80,7 @@ private:
     bool mIsNewRecord;
     float mMaxDistance;
     bool mGameOverReasonDriverDown;
+    bool mResultsCommitted;
 
     // Stunt bonus banner
     float mStuntTimer;

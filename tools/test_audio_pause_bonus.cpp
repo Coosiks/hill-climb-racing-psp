@@ -344,6 +344,88 @@ int main(int argc, char** argv) {
         printf("  -> Sub-test C PASS: Distance milestone bonuses calculated & persisted correctly.\n\n");
     }
 
+    // -------------------------------------------------------------
+    // Sub-test D: Race Results Commitment on Pause Restart / Garage (BUG-007)
+    // -------------------------------------------------------------
+    printf("[Sub-test D] Race Results Commitment on Pause (Restart & Garage) & Double-Commit Guard...\n");
+    {
+        CleanupTestSaveFiles("save");
+        Config::LoadAll();
+        PlayerInfo::Reset();
+
+        // 1. Pause -> Garage (index 2)
+        uint64_t wallet0 = PlayerInfo::GetCoins();
+        Game game;
+        game.SetCurrentStage(0);
+        game.SetCurrentVehicle(0);
+        game.StartRace();
+
+        game.OnCoinCollected(100);
+        TeleportCar(game, 105.0f);
+        game.UpdatePhysicsStep(1.0f / 60.0f); // awards 500 distance bonus
+        int session1 = game.GetSessionCoins();
+        const uint32_t stageHash = PlayerInfo::HashId(Config::Stages[0].id);
+        const int record1 = (int)game.GetMaxDistance();
+        TEST_CHECK(game.GetRaceDistanceBonusCoins() > 0, "Garage case must earn a distance bonus");
+
+        game.SetState(STATE_PAUSE);
+        game.SetPauseMenuIndex(2); // Garage option
+        System::ButtonsPressed = PSP_CTRL_CROSS;
+        game.UpdatePause();
+        System::ButtonsPressed = 0;
+
+        TEST_CHECK(game.GetState() == STATE_GARAGE, "Game state must transition to STATE_GARAGE");
+        uint64_t garageCoins = PlayerInfo::GetCoins();
+        int garageRecord = PlayerInfo::GetStageRecord(stageHash);
+        printf("  Pause -> GARAGE: wallet=%llu expected=%llu record=%d expected=%d\n",
+               (unsigned long long)garageCoins, (unsigned long long)(wallet0 + session1), garageRecord, record1);
+
+        // 2. Pause -> Restart (index 1)
+        uint64_t wallet1 = PlayerInfo::GetCoins();
+        game.StartRace();
+        game.OnCoinCollected(100);
+        TeleportCar(game, 215.0f);
+        game.UpdatePhysicsStep(1.0f / 60.0f); // awards 1000 distance bonus
+        int session2 = game.GetSessionCoins();
+        const int record2 = (int)game.GetMaxDistance();
+        TEST_CHECK(game.GetRaceDistanceBonusCoins() > 0, "Restart case must earn a distance bonus");
+
+        game.SetState(STATE_PAUSE);
+        game.SetPauseMenuIndex(1); // Restart option
+        System::ButtonsPressed = PSP_CTRL_CROSS;
+        game.UpdatePause();
+        System::ButtonsPressed = 0;
+
+        TEST_CHECK(game.GetState() == STATE_PLAYING, "Restart must start a new race");
+        uint64_t restartCoins = PlayerInfo::GetCoins();
+        int restartRecord = PlayerInfo::GetStageRecord(stageHash);
+        printf("  Pause -> RESTART: wallet=%llu expected=%llu record=%d expected=%d\n",
+               (unsigned long long)restartCoins, (unsigned long long)(wallet1 + session2), restartRecord, record2);
+
+        // 3. Game-Over path double-commit check
+        uint64_t wallet2 = PlayerInfo::GetCoins();
+        game.OnCoinCollected(50);
+        int session3 = game.GetSessionCoins();
+        game.OnDriverDown(); // Commit #1
+        TEST_CHECK(game.GetState() == STATE_GAMEOVER, "Driver down must transition to game over");
+        const uint64_t firstCommit = PlayerInfo::GetCoins();
+        game.CommitRaceResults(); // Extraneous call #2
+        const uint64_t secondCommit = PlayerInfo::GetCoins();
+        printf("  Driver down: first=%llu second=%llu expected=%llu\n",
+               (unsigned long long)firstCommit, (unsigned long long)secondCommit,
+               (unsigned long long)(wallet2 + session3));
+
+        game.EndRace();
+        CleanupTestSaveFiles("save");
+        TEST_CHECK(garageCoins == wallet0 + (uint64_t)session1, "Coins lost on Pause -> GARAGE");
+        TEST_CHECK(garageRecord == record1, "Record lost on Pause -> GARAGE");
+        TEST_CHECK(restartCoins == wallet1 + (uint64_t)session2, "Coins lost on Pause -> RESTART");
+        TEST_CHECK(restartRecord == record2, "Record lost on Pause -> RESTART");
+        TEST_CHECK(firstCommit == wallet2 + (uint64_t)session3, "Driver down must commit results");
+        TEST_CHECK(secondCommit == firstCommit, "Double-commit detected on Game-Over path");
+        printf("  -> Sub-test D PASS: Pause Restart/Garage results commitment and double-commit protection verified.\n\n");
+    }
+
     printf("=================================================================\n");
     printf("   TEST 23 PASSED: All Audio, Pause & Bonus Checks Succeeded!    \n");
     printf("=================================================================\n");
