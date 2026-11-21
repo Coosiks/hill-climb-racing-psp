@@ -283,6 +283,17 @@ void Game::StartRace() {
     float absMinOffsetY = fabsf(minOffY);
 
     float groundH = mTerrain ? mTerrain->GetHeightAtX(0.0f) : 0.0f;
+    if (mTerrain && vConfig) {
+        // Keep the h(0) clearance as a minimum. Wide vehicles can span a rise.
+        const float rearEdge = vConfig->rear_wheel_offset[0] - rR;
+        const float frontEdge = vConfig->front_wheel_offset[0] + rF;
+        groundH = fmaxf(groundH, fmaxf(mTerrain->GetHeightAtX(rearEdge),
+                                      mTerrain->GetHeightAtX(frontEdge)));
+        for (float x = ceilf(rearEdge / CHUNK_STEP_METERS) * CHUNK_STEP_METERS;
+             x < frontEdge; x += CHUNK_STEP_METERS) {
+            groundH = fmaxf(groundH, mTerrain->GetHeightAtX(x));
+        }
+    }
     float startY = groundH + maxR + absMinOffsetY + 0.25f;
 
     if (mTerrain && mTerrain->HasCeiling()) {

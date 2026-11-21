@@ -128,6 +128,7 @@ static int RunDrop(const VehicleConfig& config, int level, const char* csvPath) 
 }
 
 int main() {
+    const int base = RunDrop(Config::VehicleJeep, 0, "suspension_droptest.csv");
     Config::LoadAll();
     const VehicleConfig* jeep = Config::FindVehicleById("jeep");
     if (!jeep || Config::VehicleCount != 29) return 1;
@@ -141,7 +142,6 @@ int main() {
         printf("%s,%.6f,%.6f\n", config.id, base.GetRearJoint()->GetSpringFrequencyHz(),
                upgraded.GetRearJoint()->GetSpringFrequencyHz());
     }
-    const int base = RunDrop(Config::VehicleJeep, 0, "suspension_droptest.csv");
     const int upgraded = RunDrop(*jeep, 20, "suspension_droptest_lvl20.csv");
     return base || upgraded;
 }
