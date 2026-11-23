@@ -122,13 +122,23 @@ This roadmap outlines all milestones from M0 through M5. Each task has a unique 
 - [x] **H16 (audio):** Real-time audio routing and SFX mixing in `AudioEngine` (engine pitch, skid, coin/fuel SFX).
 - [x] **T-132 (audio):** Streaming background music architecture with 16.16 fixed-point phase accumulator resampler and loop seam handling.
 - [x] **T-133 (game, hud):** State machine pause mode (`STATE_PAUSE`), Start button toggling, and distance bonus coin awards every 100m.
-- [x] **Test 23:** 23rd automated regression test (`test_audio_pause_distance`) verifying audio routing, pause state, and distance milestone rewards.
+- [x] **Test 23:** 23rd automated regression test (`test_audio_pause_bonus`) verifying audio routing, pause state, and distance milestone rewards.
 - [x] **H17a (assets):** Resolve stage texture paths to APK reality across 19 stages in `config/stages.cfg`; document canonical spring variant for Seasons (`terrain-seasons-spring.png`) and fallback ground textures (`cave`, `rooftops`, `construction`, `ragnarok` $\to$ `terrain-ground.png`); add comprehensive audit to `tools/convert_assets.py` enforcing 100% texture and music coverage.
 - [x] **H17b (audio):** Normalize audio path in `AudioEngine::PlayMusic`: try path as-is, fallback on `.ogg` $\to$ `.wav` replacement; verify mono 22050 Hz 16-bit PCM; document 2 generic music tracks vs per-stage music from `libgame.so` in params and roadmap.
 - [x] **H17c (audio):** Implement strict lock-free SPSC streaming ring buffer in `AudioEngine` (capacity $N-1 = 32767$, dynamic sample counting via modular distance, elimination of non-atomic `sMusicRingCount`, memory barriers via `__sync_synchronize()`, verified via 60s stress test with zero corruption).
 - [x] **T-052b (validation):** Authentic re-validation on PPSSPP with real telemetry and asset audit (0 texture load errors, fresh `perf_snapshot.txt`, 28/28 heightfield hashes `match=YES`, visual inspection suite).
 - [x] **T-115b (release):** Prepare v0.1.0-beta.3 release notes, packages (`hcr-psp-v0.1.0-beta.3.zip`, `hcr-pc-v0.1.0-beta.3-linux.tar.gz`), checksums, changelog, and documentation.
 - [ ] **Test 24:** 24th automated regression test (`test_assets_music_ring`) covering asset audit, music normalization, and lock-free SPSC buffer.
+
+---
+
+## [x] Milestone: Stabilization Batch 1 (Feature Freeze)
+- **Документация и отчет:** [BUGS.md](BUGS.md), [agent_reports/BUG-batch1.md](agent_reports/BUG-batch1.md), [CI Run 44953276259](https://github.com/Coosiks/hill-climb-racing-psp/actions/runs/44953276259).
+- [x] **BUG-014 (physics, core):** Dynamic vehicle spawn height over terrain footprint (`CHUNK_STEP_METERS` grid scan) and 25th automated CI regression test (`test_spawn_clearance`, 0/84 failures).
+- [x] **BUG-007 (game, economy):** Atomic commitment of coins and distance records on pause menu restart/garage transitions with double-commit protection (`test_audio_pause_bonus` Sub-test D).
+- [x] **BUG-008 (perf, boot):** Gated cold boot heightfield benchmark execution via `benchmark.txt` marker, reducing cold startup time from 17.7s to ~0.5s.
+- [x] **BUG-009 (economy, garage):** Restrict fuel upgrade tank capacity scaling strictly to vehicles with 4th slot `type == 1` (`FUEL`).
+- [x] **BUG-004 (physics, vehicle):** Correct suspension spring frequency upgrade formula to geometric progression `base * powf(mult, lvl)`.
 
 
 
