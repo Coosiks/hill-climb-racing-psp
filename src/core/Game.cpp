@@ -124,7 +124,7 @@ Game::Game()
       mRaceDistanceBonusCoins(0), mIsNewRecord(false),
       mMaxDistance(0.0f), mGameOverReasonDriverDown(false), mResultsCommitted(false),
       mStuntTimer(0.0f), mStuntName(NULL), mStuntCoins(0),
-      mOutOfFuelStopTimer(0.0f), mOutOfFuelFallbackTimer(0.0f),
+      mOutOfFuelStopTimer(0.0f), mOutOfFuelFallbackTimer(0.0f), mGameOverTimer(0.0f),
       mCameraX(0.0f), mCameraY(0.0f), mCameraZoom(1.0f),
       mLastTime(0.0), mAccumulator(0.0f), mRenderAlpha(1.0f) {
 }
@@ -143,9 +143,18 @@ static float sAssetLoadTimeCar = 0.0f;
 void Game::LoadStagePreview() {
     mTexStagePreview.Destroy();
     if (mCurrentStage >= 0 && mCurrentStage < Config::StageCount) {
+        const char* id = Config::Stages[mCurrentStage].id;
+        const char* iconId = id;
+        if (strcmp(id, "mountain") == 0) iconId = "cliffs";
+        else if (strcmp(id, "mudpool") == 0) iconId = "mud";
+        else if (strcmp(id, "arcticcave") == 0) iconId = "arctic-cave";
+
         char path[128];
-        snprintf(path, sizeof(path), "assets/stage-icon-%s.png", Config::Stages[mCurrentStage].id);
-        mTexStagePreview.LoadPNG(path);
+        snprintf(path, sizeof(path), "assets/stage-icon-%s.png", iconId);
+        if (!mTexStagePreview.LoadPNG(path)) {
+            snprintf(path, sizeof(path), "assets/stage-icon-%s.png", id);
+            mTexStagePreview.LoadPNG(path);
+        }
     }
 }
 
@@ -200,7 +209,6 @@ bool Game::Init() {
 
     mFont.Load("assets/fonts/gamefont.fnt", "assets/fonts/gamefont_0.png");
 
-    mTexLogo.LoadPNG("assets/game-logo.png");
     mTexCoinIcon.LoadPNG("assets/coin-icon.png");
     mTexFuelIcon.LoadPNG("assets/fuel-icon.png");
     mTexPedalGas.LoadPNG("assets/lowres-pedal-gas-normal.png");
@@ -298,6 +306,16 @@ void Game::StartRace() {
 
     if (mTerrain && mTerrain->HasCeiling()) {
         float ceilH = mTerrain->GetCeilingHeightAtX(0.0f);
+        if (vConfig) {
+            const float rearEdge = vConfig->rear_wheel_offset[0] - rR;
+            const float frontEdge = vConfig->front_wheel_offset[0] + rF;
+            ceilH = fminf(ceilH, fminf(mTerrain->GetCeilingHeightAtX(rearEdge),
+                                       mTerrain->GetCeilingHeightAtX(frontEdge)));
+            for (float x = ceilf(rearEdge / CHUNK_STEP_METERS) * CHUNK_STEP_METERS;
+                 x < frontEdge; x += CHUNK_STEP_METERS) {
+                ceilH = fminf(ceilH, mTerrain->GetCeilingHeightAtX(x));
+            }
+        }
         float headOffY = vConfig ? vConfig->driver_head_offset[1] : 0.50f;
         float headR = vConfig ? vConfig->driver_head_radius : 0.24f;
         float maxAllowedY = ceilH - headOffY - headR - 0.5f;
@@ -314,6 +332,10 @@ void Game::StartRace() {
     int tire = vEntry ? vEntry->levelTires : PlayerInfo::TiresLevel;
     int awd  = vEntry ? vEntry->level4th : PlayerInfo::AWDLevel;
 
+#if defined(__PSP__)
+    sTotalStepTicks = 0;
+    sStepCount = 0;
+#endif
     mCar = new PlayerCar(mPhysics->GetWorld(), startPos, eng, susp, tire, awd, vConfig, mTerrain);
 #if defined(__PSP__)
     u32 tp1 = sceKernelGetSystemTimeLow();
@@ -334,6 +356,7 @@ void Game::StartRace() {
     mStuntCoins = 0;
     mOutOfFuelStopTimer = 0.0f;
     mOutOfFuelFallbackTimer = 0.0f;
+    mGameOverTimer = 0.0f;
     mCameraX = 0.0f;
     mCameraY = startY;
     mLastTime = System::GetTimeSeconds();
@@ -343,6 +366,8 @@ void Game::StartRace() {
 
     ParticleSystem::Init();
     ParticleSystem::Reset();
+
+    AudioEngine::LoadVehicleEngine(vConfig ? vConfig->id : "jeep");
 
     // Start stage music streaming (T-132)
     if (mCurrentStage >= 0 && mCurrentStage < Config::StageCount) {
@@ -379,6 +404,7 @@ void Game::EndRace() {
 void Game::OnDriverDown() {
     if (mState == STATE_PLAYING) {
         mGameOverReasonDriverDown = true;
+        mGameOverTimer = 0.0f;
         if (mCar) mCar->Kill();
         AudioEngine::PlaySFX(SFX_CRACK);
         mState = STATE_GAMEOVER;
@@ -396,7 +422,9 @@ void Game::OnCoinCollected(int value) {
 
 void Game::OnFuelCollected() {
     if (mCar) {
-        mCar->AddFuel(Config::Physics.max_fuel);
+        float maxF = mCar->GetMaxFuel();
+        if (maxF <= 0.0f) maxF = Config::Physics.max_fuel;
+        mCar->AddFuel(maxF);
     }
     AudioEngine::PlaySFX(SFX_REFUEL);
 }
@@ -429,7 +457,7 @@ void Game::Run() {
                 break;
             case STATE_GAMEOVER:
                 mAccumulator = 0.0f;
-                UpdateGameOver();
+                UpdateGameOver(frameTime);
                 break;
         }
 
@@ -499,7 +527,10 @@ void Game::UpdateGarage() {
             if (Config::StageCount > 0) {
                 mCurrentStage = (mCurrentStage - 1 + Config::StageCount) % Config::StageCount;
                 LoadStagePreview();
-                PlayerInfo::SetSelectedStageIdHash(PlayerInfo::HashId(Config::Stages[mCurrentStage].id));
+                uint32_t sHash = PlayerInfo::HashId(Config::Stages[mCurrentStage].id);
+                if (PlayerInfo::IsStageUnlocked(sHash)) {
+                    PlayerInfo::SetSelectedStageIdHash(sHash);
+                }
                 AudioEngine::PlaySFX(SFX_CLICK);
             }
         }
@@ -507,7 +538,10 @@ void Game::UpdateGarage() {
             if (Config::StageCount > 0) {
                 mCurrentStage = (mCurrentStage + 1) % Config::StageCount;
                 LoadStagePreview();
-                PlayerInfo::SetSelectedStageIdHash(PlayerInfo::HashId(Config::Stages[mCurrentStage].id));
+                uint32_t sHash = PlayerInfo::HashId(Config::Stages[mCurrentStage].id);
+                if (PlayerInfo::IsStageUnlocked(sHash)) {
+                    PlayerInfo::SetSelectedStageIdHash(sHash);
+                }
                 AudioEngine::PlaySFX(SFX_CLICK);
             }
         }
@@ -518,8 +552,11 @@ void Game::UpdateGarage() {
                 if (PlayerInfo::GetCoins() >= cost) {
                     PlayerInfo::AddCoins(-cost);
                     PlayerInfo::UnlockStage(sHash);
+                    PlayerInfo::SetSelectedStageIdHash(sHash);
                     PlayerInfo::Save();
                     AudioEngine::PlaySFX(SFX_COIN);
+                } else {
+                    AudioEngine::PlaySFX(SFX_CLICK);
                 }
             } else {
                 StartRace();
@@ -531,7 +568,10 @@ void Game::UpdateGarage() {
             if (Config::VehicleCount > 0) {
                 mCurrentVehicle = (mCurrentVehicle - 1 + Config::VehicleCount) % Config::VehicleCount;
                 LoadVehiclePreview();
-                PlayerInfo::SetSelectedVehicleIdHash(PlayerInfo::HashId(Config::Vehicles[mCurrentVehicle].id));
+                uint32_t vHash = PlayerInfo::HashId(Config::Vehicles[mCurrentVehicle].id);
+                if (PlayerInfo::IsVehicleUnlocked(vHash)) {
+                    PlayerInfo::SetSelectedVehicleIdHash(vHash);
+                }
                 AudioEngine::PlaySFX(SFX_CLICK);
             }
         }
@@ -539,7 +579,10 @@ void Game::UpdateGarage() {
             if (Config::VehicleCount > 0) {
                 mCurrentVehicle = (mCurrentVehicle + 1) % Config::VehicleCount;
                 LoadVehiclePreview();
-                PlayerInfo::SetSelectedVehicleIdHash(PlayerInfo::HashId(Config::Vehicles[mCurrentVehicle].id));
+                uint32_t vHash = PlayerInfo::HashId(Config::Vehicles[mCurrentVehicle].id);
+                if (PlayerInfo::IsVehicleUnlocked(vHash)) {
+                    PlayerInfo::SetSelectedVehicleIdHash(vHash);
+                }
                 AudioEngine::PlaySFX(SFX_CLICK);
             }
         }
@@ -553,6 +596,8 @@ void Game::UpdateGarage() {
                     PlayerInfo::SetSelectedVehicleIdHash(vHash);
                     PlayerInfo::Save();
                     AudioEngine::PlaySFX(SFX_COIN);
+                } else {
+                    AudioEngine::PlaySFX(SFX_CLICK);
                 }
             } else {
                 mGarageTab = 2; // Jump to Upgrades tab
@@ -579,14 +624,20 @@ void Game::UpdateGarage() {
 
         if (slotToUpgrade >= 0) {
             uint32_t vHash = PlayerInfo::HashId(Config::Vehicles[mCurrentVehicle].id);
-            int curLevel = PlayerInfo::GetVehicleUpgrade(vHash, slotToUpgrade);
-            int maxLevel = Config::Vehicles[mCurrentVehicle].max_upgrade_level;
-            int cost = GetUpgradeCost(curLevel);
-            if (PlayerInfo::GetCoins() >= cost && curLevel < maxLevel) {
-                PlayerInfo::AddCoins(-cost);
-                PlayerInfo::SetVehicleUpgrade(vHash, slotToUpgrade, curLevel + 1);
-                PlayerInfo::Save();
-                AudioEngine::PlaySFX(SFX_UPGRADE);
+            if (!PlayerInfo::IsVehicleUnlocked(vHash)) {
+                AudioEngine::PlaySFX(SFX_CLICK);
+            } else {
+                int curLevel = PlayerInfo::GetVehicleUpgrade(vHash, slotToUpgrade);
+                int maxLevel = Config::Vehicles[mCurrentVehicle].max_upgrade_level;
+                int cost = GetUpgradeCost(curLevel, Config::Vehicles[mCurrentVehicle].base_upgrade_cost);
+                if (PlayerInfo::GetCoins() >= cost && curLevel < maxLevel) {
+                    PlayerInfo::AddCoins(-cost);
+                    PlayerInfo::SetVehicleUpgrade(vHash, slotToUpgrade, curLevel + 1);
+                    PlayerInfo::Save();
+                    AudioEngine::PlaySFX(SFX_UPGRADE);
+                } else {
+                    AudioEngine::PlaySFX(SFX_CLICK);
+                }
             }
         }
     }
@@ -600,11 +651,11 @@ void Game::UpdateGarage() {
 void Game::RenderGarage() {
     Renderer2D::SetupScreenSpace();
 
-    // Dark dirt background
-    Renderer2D::DrawFilledRect(0, 0, PSP_SCREEN_WIDTH, PSP_SCREEN_HEIGHT, 0xFF181512);
+    // Dark dirt background (ABGR: 0xAABBGGRR)
+    Renderer2D::DrawFilledRect(0, 0, PSP_SCREEN_WIDTH, PSP_SCREEN_HEIGHT, 0xFF121518);
 
     // Title bar (0..34)
-    Renderer2D::DrawFilledRect(0, 0, PSP_SCREEN_WIDTH, 34, 0xFF352518);
+    Renderer2D::DrawFilledRect(0, 0, PSP_SCREEN_WIDTH, 34, 0xFF182535);
     mFont.DrawText("HILL CLIMB RACING", 16, 7, 0.45f, 0xFFFFFFFF);
 
     // Coins in top right
@@ -615,27 +666,27 @@ void Game::RenderGarage() {
     mFont.DrawText(strBuf, PSP_SCREEN_WIDTH - 4 - coinTextW, 7, 0.45f, 0xFF00E5FF);
 
     // Navigation Tabs bar (35..58)
-    Renderer2D::DrawFilledRect(0, 35, PSP_SCREEN_WIDTH, 24, 0xFF261A10);
+    Renderer2D::DrawFilledRect(0, 35, PSP_SCREEN_WIDTH, 24, 0xFF101A26);
     const char* tabs[3] = { "[L] STAGES", "VEHICLES", "UPGRADES [R]" };
     float tabW = PSP_SCREEN_WIDTH / 3.0f;
     for (int t = 0; t < 3; ++t) {
         if (t == mGarageTab) {
-            Renderer2D::DrawFilledRect(t * tabW, 35, tabW, 24, 0xFF5A3C24);
-            mFont.DrawText(tabs[t], t * tabW + (tabW - mFont.GetTextWidth(tabs[t], 0.35f)) * 0.5f, 39, 0.35f, 0xFF00E5FF);
+            Renderer2D::DrawFilledRect(t * tabW, 35, tabW, 24, 0xFF243C5A);
+            mFont.DrawText(tabs[t], t * tabW + (tabW - mFont.GetTextWidth(tabs[t], 0.31f)) * 0.5f, 38, 0.31f, 0xFF00E5FF);
         } else {
-            mFont.DrawText(tabs[t], t * tabW + (tabW - mFont.GetTextWidth(tabs[t], 0.32f)) * 0.5f, 40, 0.32f, 0xFF888888);
+            mFont.DrawText(tabs[t], t * tabW + (tabW - mFont.GetTextWidth(tabs[t], 0.29f)) * 0.5f, 39, 0.29f, 0xFF888888);
         }
     }
 
     if (mGarageTab == 0) {
         // Tab 0: Stage Selection
-        Renderer2D::DrawFilledRect(15, 63, PSP_SCREEN_WIDTH - 30, 148, 0xFF352518);
+        Renderer2D::DrawFilledRect(15, 63, PSP_SCREEN_WIDTH - 30, 148, 0xFF182535);
 
         uint32_t sHash = PlayerInfo::HashId(Config::Stages[mCurrentStage].id);
         bool isUnlocked = PlayerInfo::IsStageUnlocked(sHash);
 
-        // Preview Card (Lazy loaded)
-        if (isUnlocked) {
+        // Preview Card (Lazy loaded, guarded against unloaded textures)
+        if (isUnlocked && mTexStagePreview.GetWidth() > 0) {
             Renderer2D::DrawSpriteScreen(&mTexStagePreview, 25, 75, 110, 72);
         } else {
             Renderer2D::DrawSpriteScreen(&mTexStageLocked, 25, 75, 110, 72);
@@ -650,7 +701,7 @@ void Game::RenderGarage() {
 
         int bestRecord = PlayerInfo::GetStageRecord(sHash);
         snprintf(strBuf, sizeof(strBuf), "BEST RECORD: %d METERS", bestRecord);
-        mFont.DrawText(strBuf, 145, 122, 0.35f, 0xFF88DDFF);
+        mFont.DrawText(strBuf, 145, 122, 0.35f, 0xFFFFDD88);
 
         if (isUnlocked) {
             mFont.DrawText("STATUS: UNLOCKED", 145, 148, 0.35f, 0xFF55FF55);
@@ -658,19 +709,19 @@ void Game::RenderGarage() {
         } else {
             int cost = Config::Stages[mCurrentStage].unlock_cost;
             snprintf(strBuf, sizeof(strBuf), "UNLOCK COST: %d COINS", cost);
-            mFont.DrawText(strBuf, 145, 148, 0.35f, 0xFFFFCC00);
+            mFont.DrawText(strBuf, 145, 148, 0.35f, 0xFF00CCFF);
 
             if (PlayerInfo::GetCoins() >= cost) {
                 Renderer2D::DrawFilledRect(145, 172, 170, 28, 0xFF257518);
                 mFont.DrawText("[X] UNLOCK STAGE", 160, 178, 0.35f, 0xFFFFFFFF);
             } else {
-                Renderer2D::DrawFilledRect(145, 172, 170, 28, 0xFF552222);
+                Renderer2D::DrawFilledRect(145, 172, 170, 28, 0xFF222255);
                 mFont.DrawText("NEED MORE COINS", 160, 178, 0.35f, 0xFFAAAAAA);
             }
         }
     } else if (mGarageTab == 1) {
         // Tab 1: Vehicle Selection
-        Renderer2D::DrawFilledRect(15, 63, PSP_SCREEN_WIDTH - 30, 148, 0xFF352518);
+        Renderer2D::DrawFilledRect(15, 63, PSP_SCREEN_WIDTH - 30, 148, 0xFF182535);
 
         uint32_t vHash = PlayerInfo::HashId(Config::Vehicles[mCurrentVehicle].id);
         bool isUnlocked = PlayerInfo::IsVehicleUnlocked(vHash);
@@ -688,27 +739,33 @@ void Game::RenderGarage() {
 
         if (isUnlocked) {
             mFont.DrawText("STATUS: UNLOCKED & EQUIPPED", 145, 125, 0.35f, 0xFF55FF55);
-            Renderer2D::DrawFilledRect(145, 155, 170, 28, 0xFF355520);
+            Renderer2D::DrawFilledRect(145, 155, 170, 28, 0xFF205535);
             mFont.DrawText("[X] TUNE UPGRADES", 160, 161, 0.35f, 0xFFFFFFFF);
             mFont.DrawText("< LEFT / RIGHT TO BROWSE VEHICLES >", 120, 192, 0.32f, 0xFFCCCCCC);
         } else {
             int cost = Config::Vehicles[mCurrentVehicle].unlock_cost;
             snprintf(strBuf, sizeof(strBuf), "UNLOCK COST: %d COINS", cost);
-            mFont.DrawText(strBuf, 145, 125, 0.35f, 0xFFFFCC00);
+            mFont.DrawText(strBuf, 145, 125, 0.35f, 0xFF00CCFF);
 
             if (PlayerInfo::GetCoins() >= cost) {
                 Renderer2D::DrawFilledRect(145, 155, 170, 28, 0xFF257518);
                 mFont.DrawText("[X] UNLOCK VEHICLE", 155, 161, 0.35f, 0xFFFFFFFF);
             } else {
-                Renderer2D::DrawFilledRect(145, 155, 170, 28, 0xFF552222);
+                Renderer2D::DrawFilledRect(145, 155, 170, 28, 0xFF222255);
                 mFont.DrawText("NEED MORE COINS", 160, 161, 0.35f, 0xFFAAAAAA);
             }
         }
     } else if (mGarageTab == 2) {
         // Tab 2: Upgrades Grid
-        Renderer2D::DrawFilledRect(15, 63, PSP_SCREEN_WIDTH - 30, 26, 0xFF352518);
-        snprintf(strBuf, sizeof(strBuf), "TUNING: %s", Config::Vehicles[mCurrentVehicle].name);
-        mFont.DrawText(strBuf, 25, 68, 0.38f, 0xFFFFFFFF);
+        uint32_t vHash = PlayerInfo::HashId(Config::Vehicles[mCurrentVehicle].id);
+        bool vehUnlocked = PlayerInfo::IsVehicleUnlocked(vHash);
+        Renderer2D::DrawFilledRect(15, 63, PSP_SCREEN_WIDTH - 30, 26, 0xFF182535);
+        if (vehUnlocked) {
+            snprintf(strBuf, sizeof(strBuf), "TUNING: %s", Config::Vehicles[mCurrentVehicle].name);
+        } else {
+            snprintf(strBuf, sizeof(strBuf), "TUNING: %s (LOCKED)", Config::Vehicles[mCurrentVehicle].name);
+        }
+        mFont.DrawText(strBuf, 25, 68, 0.38f, vehUnlocked ? 0xFFFFFFFF : 0xFF8888FF);
 
         float upgW = 104.0f;
         float upgH = 116.0f;
@@ -716,7 +773,6 @@ void Game::RenderGarage() {
         float startY = 93.0f;
         float spacing = 115.0f;
 
-        uint32_t vHash = PlayerInfo::HashId(Config::Vehicles[mCurrentVehicle].id);
         int maxLvl = Config::Vehicles[mCurrentVehicle].max_upgrade_level;
 
         const VehicleConfig* vConfig = Config::GetVehicle(mCurrentVehicle);
@@ -746,9 +802,10 @@ void Game::RenderGarage() {
             { fourthKey, fourthName, PlayerInfo::GetVehicleUpgrade(vHash, 3), &mTexUpgAWD }
         };
 
+        int baseCost = vConfig ? vConfig->base_upgrade_cost : 1000;
         for (int i = 0; i < 4; ++i) {
             float cx = startX + i * spacing;
-            unsigned int boxColor = (i == mSelectedUpgradeSlot) ? 0xFF553822 : 0xFF322316;
+            unsigned int boxColor = (i == mSelectedUpgradeSlot) ? 0xFF223855 : 0xFF162332;
             Renderer2D::DrawFilledRect(cx, startY, upgW, upgH, boxColor);
 
             if (i == mSelectedUpgradeSlot) {
@@ -774,12 +831,14 @@ void Game::RenderGarage() {
             mFont.DrawText(strBuf, cx + 8, startY + 68, 0.28f, 0xFFCCCCCC);
 
             // Cost
-            if (cards[i].level >= maxLvl) {
+            if (!vehUnlocked) {
+                mFont.DrawText("LOCKED", cx + 8, startY + 88, 0.30f, 0xFFAA8888);
+            } else if (cards[i].level >= maxLvl) {
                 mFont.DrawText("MAX", cx + 8, startY + 88, 0.32f, 0xFF55FF55);
             } else {
-                int cost = GetUpgradeCost(cards[i].level);
+                int cost = GetUpgradeCost(cards[i].level, baseCost);
                 snprintf(strBuf, sizeof(strBuf), "%d C", cost);
-                unsigned int cColor = (PlayerInfo::GetCoins() >= cost) ? 0xFF00E5FF : 0xFF5555AA;
+                unsigned int cColor = (PlayerInfo::GetCoins() >= cost) ? 0xFF00E5FF : 0xFFAA5555;
                 mFont.DrawText(strBuf, cx + 8, startY + 88, 0.30f, cColor);
             }
         }
@@ -790,8 +849,8 @@ void Game::RenderGarage() {
         Renderer2D::DrawFilledRect(15, 218, PSP_SCREEN_WIDTH - 30, 44, 0xFF257518);
         mFont.DrawText("PRESS CROSS OR START TO RACE!", 95, 230, 0.45f, 0xFFFFFFFF);
     } else {
-        Renderer2D::DrawFilledRect(15, 218, PSP_SCREEN_WIDTH - 30, 44, 0xFF652518);
-        mFont.DrawText("STAGE OR VEHICLE LOCKED! UNLOCK FIRST", 65, 230, 0.38f, 0xFFFFAAAA);
+        Renderer2D::DrawFilledRect(15, 218, PSP_SCREEN_WIDTH - 30, 44, 0xFF182565);
+        mFont.DrawText("STAGE OR VEHICLE LOCKED! UNLOCK FIRST", 65, 230, 0.38f, 0xFFAAAAFF);
     }
 }
 
@@ -933,26 +992,32 @@ void Game::UpdatePhysicsStep(float dt) {
     // Particle Emissions (Wheel Dirt & Exhaust Smoke)
     if (mCar && !mCar->IsDriverDead()) {
         if (mCar->IsThrottleActive()) {
-            if (mCar->IsRearWheelOnGround()) {
+            bool showWheels = (!mCar->GetConfig() || mCar->GetConfig()->hide_wheels == 0);
+            if (showWheels && mCar->IsRearWheelOnGround()) {
                 b2Vec2 rwPos = mCar->GetRearWheelBody()->GetPosition();
                 b2Vec2 rwVel = mCar->GetRearWheelBody()->GetLinearVelocity();
                 float rwRadius = (mCar->GetConfig() && mCar->GetConfig()->rear_wheel_radius > 0.0f) ?
                                   mCar->GetConfig()->rear_wheel_radius : 0.40f;
                 ParticleSystem::EmitWheelDirt(rwPos.x, rwPos.y - rwRadius, rwVel.x, rwVel.y, mCurrentStage);
             }
-            if (mCar->GetConfig() && mCar->GetConfig()->drive_type == 2 && mCar->IsFrontWheelOnGround()) {
+            if (showWheels && mCar->GetConfig() && mCar->GetConfig()->drive_type == 2 && mCar->IsFrontWheelOnGround()) {
                 b2Vec2 fwPos = mCar->GetFrontWheelBody()->GetPosition();
                 b2Vec2 fwVel = mCar->GetFrontWheelBody()->GetLinearVelocity();
                 float fwRadius = (mCar->GetConfig() && mCar->GetConfig()->front_wheel_radius > 0.0f) ?
                                   mCar->GetConfig()->front_wheel_radius : 0.40f;
                 ParticleSystem::EmitWheelDirt(fwPos.x, fwPos.y - fwRadius, fwVel.x, fwVel.y, mCurrentStage);
             }
-            // Exhaust smoke puff
+            // Exhaust smoke puff (rotated with chassis angle)
             b2Vec2 cPos = mCar->GetChassisBody()->GetPosition();
             b2Vec2 cVel = mCar->GetChassisBody()->GetLinearVelocity();
+            float cAng = mCar->GetChassisBody()->GetAngle();
             float rx = (mCar->GetConfig()) ? mCar->GetConfig()->rear_wheel_offset[0] : -1.0f;
             float ry = (mCar->GetConfig()) ? mCar->GetConfig()->rear_wheel_offset[1] + 0.2f : -0.3f;
-            ParticleSystem::EmitExhaust(cPos.x + rx, cPos.y + ry, cVel.x, cVel.y);
+            float cosA = cosf(cAng);
+            float sinA = sinf(cAng);
+            float exX = cPos.x + (rx * cosA - ry * sinA);
+            float exY = cPos.y + (rx * sinA + ry * cosA);
+            ParticleSystem::EmitExhaust(exX, exY, cVel.x, cVel.y);
         }
     }
     ParticleSystem::Update(dt);
@@ -1077,11 +1142,10 @@ void Game::RenderPlaying() {
     }
     Renderer2D::DrawGradientRect(0.0f, 0.0f, (float)PSP_SCREEN_WIDTH, (float)PSP_SCREEN_HEIGHT, skyTop, skyBot);
 
-    // Subtle parallax horizon band scrolling slower than foreground
-    float pX = -fmodf(mCameraX * 4.0f, (float)PSP_SCREEN_WIDTH);
-    uint32_t hillColor = (skyBot & 0x00FFFFFF) | 0x30000000;
-    Renderer2D::DrawFilledRect(pX, 170.0f, (float)PSP_SCREEN_WIDTH, 102.0f, hillColor);
-    Renderer2D::DrawFilledRect(pX + (float)PSP_SCREEN_WIDTH, 170.0f, (float)PSP_SCREEN_WIDTH, 102.0f, hillColor);
+    // Smooth atmospheric horizon band without rectangular wrap seams
+    uint32_t fogTop = (skyBot & 0x00FFFFFF);
+    uint32_t fogBot = (skyBot & 0x00FFFFFF) | 0x28000000;
+    Renderer2D::DrawGradientRect(0.0f, 150.0f, (float)PSP_SCREEN_WIDTH, 122.0f, fogTop, fogBot);
 
     // 1. World Rendering
     Renderer2D::SetupCamera(mCameraX, mCameraY, mCameraZoom);
@@ -1102,8 +1166,8 @@ void Game::RenderPlaying() {
         Renderer2D::DrawFilledRect(0.0f, 0.0f, (float)PSP_SCREEN_WIDTH, (float)PSP_SCREEN_HEIGHT, 0xB0080604);
 
         if (mCar) {
-            b2Vec2 pos = mCar->GetPosition();
-            float angle = mCar->GetAngle();
+            b2Vec2 pos = mCar->GetInterpolatedPosition(mRenderAlpha);
+            float angle = mCar->GetInterpolatedAngle(mRenderAlpha);
             float cosA = cosf(angle);
             float sinA = sinf(angle);
             float originX = pos.x + cosA * 1.2f - sinA * 0.1f;
@@ -1123,7 +1187,9 @@ void Game::RenderHUD() {
     Renderer2D::DrawFilledRect(10, 8, 160, 28, 0x90000000);
     Renderer2D::DrawSpriteScreen(&mTexFuelIcon, 14, 11, 18, 22);
 
-    float fuelPct = (mCar ? mCar->GetFuel() : 0.0f) / Config::Physics.max_fuel;
+    float maxFuel = mCar ? mCar->GetMaxFuel() : Config::Physics.max_fuel;
+    if (maxFuel <= 0.0f) maxFuel = Config::Physics.max_fuel;
+    float fuelPct = (mCar ? mCar->GetFuel() : 0.0f) / maxFuel;
     if (fuelPct < 0.0f) fuelPct = 0.0f;
     if (fuelPct > 1.0f) fuelPct = 1.0f;
 
@@ -1135,15 +1201,16 @@ void Game::RenderHUD() {
     Renderer2D::DrawFilledRect(190, 8, 100, 28, 0x90000000);
     char distBuf[32];
     snprintf(distBuf, sizeof(distBuf), "%dm", (int)mMaxDistance);
-    float distW = mFont.GetTextWidth(distBuf, 0.42f);
-    mFont.DrawText(distBuf, 190 + (100 - distW) * 0.5f, 12, 0.42f, 0xFFFFFFFF);
+    float distW = mFont.GetTextWidth(distBuf, 0.38f);
+    mFont.DrawText(distBuf, 190 + (100 - distW) * 0.5f, 11, 0.38f, 0xFFFFFFFF);
 
-    // 3. Coins (top right)
+    // 3. Coins (top right, right-aligned inside box)
     Renderer2D::DrawFilledRect(PSP_SCREEN_WIDTH - 120, 8, 110, 28, 0x90000000);
-    Renderer2D::DrawSpriteScreen(&mTexCoinIcon, PSP_SCREEN_WIDTH - 114, 11, 20, 20);
+    Renderer2D::DrawSpriteScreen(&mTexCoinIcon, PSP_SCREEN_WIDTH - 114, 12, 20, 20);
     char coinBuf[32];
     snprintf(coinBuf, sizeof(coinBuf), "%d", mSessionCoins);
-    mFont.DrawText(coinBuf, PSP_SCREEN_WIDTH - 88, 12, 0.42f, 0xFF00E5FF);
+    float hudCoinW = mFont.GetTextWidth(coinBuf, 0.38f);
+    mFont.DrawText(coinBuf, (float)(PSP_SCREEN_WIDTH - 16) - hudCoinW, 11, 0.38f, 0xFF00E5FF);
 
     // Stunt Banner (Backflip / Frontflip)
     if (mStuntTimer > 0.0f && mStuntName) {
@@ -1270,8 +1337,22 @@ void Game::RenderPause() {
     mFont.DrawText(hint, boxX + (boxW - hw) * 0.5f, boxY + boxH - 18, 0.30f, 0xFF888899);
 }
 
-void Game::UpdateGameOver() {
-    AudioEngine::UpdateEngineSound(0.0f, false);
+void Game::UpdateGameOver(float frameTime) {
+    AudioEngine::UpdateEngineSound(0.0f, false, Config::Physics.fixed_timestep);
+    AudioEngine::UpdateMusicStream();
+
+    // Advance post-crash physics & flying detached parts briefly so debris doesn't freeze in mid-air
+    if (frameTime > 0.0f && mGameOverTimer < 2.5f) {
+        if (frameTime > 0.10f) frameTime = 0.10f;
+        mGameOverTimer += frameTime;
+        float fixedDt = Config::Physics.fixed_timestep;
+        if (fixedDt > 0.0f) {
+            if (mCar) mCar->CapturePreviousTransforms();
+            if (mPhysics) mPhysics->Step(fixedDt);
+            if (mCar) mCar->Update(fixedDt);
+            ParticleSystem::Update(fixedDt);
+        }
+    }
 
     // Press Cross to restart race
     if (System::ButtonsPressed & PSP_CTRL_CROSS) {
@@ -1315,35 +1396,44 @@ void Game::RenderGameOver() {
     float tw = mFont.GetTextWidth(titleText, 0.55f);
     mFont.DrawText(titleText, 50 + (380 - tw) * 0.5f, 42, 0.55f, 0xFFFFFFFF);
 
-    // Stats (T-033 detailed breakdown)
+    // Stats (T-033 detailed breakdown, measured layout to prevent overflow/overlap BUG-017)
     char buf[64];
     snprintf(buf, sizeof(buf), "DISTANCE: %d METERS", (int)mMaxDistance);
-    mFont.DrawText(buf, 80, 85, 0.40f, 0xFFFFFFFF);
+    mFont.DrawText(buf, 70, 81, 0.33f, 0xFFFFFFFF);
 
     if (mIsNewRecord) {
-        Renderer2D::DrawFilledRect(265, 83, 115, 18, 0xFF00AAFF);
-        mFont.DrawText("NEW RECORD!", 272, 86, 0.34f, 0xFFFFFFFF);
+        const float recScale = 0.28f;
+        const char* recLabel = "NEW RECORD!";
+        float recW = mFont.GetTextWidth(recLabel, recScale);
+        float badgeW = recW + 14.0f;
+        float badgeH = 22.0f;
+        float badgeX = 415.0f - badgeW;
+        float badgeY = 80.0f;
+        Renderer2D::DrawFilledRect(badgeX, badgeY, badgeW, badgeH, 0xFF00AAFF);
+        mFont.DrawText(recLabel, badgeX + 7.0f, badgeY + 2.0f, recScale, 0xFFFFFFFF);
     }
 
     snprintf(buf, sizeof(buf), "COINS: +%d", mRaceCollectedCoins);
-    mFont.DrawText(buf, 80, 106, 0.36f, 0xFF00E5FF);
+    mFont.DrawText(buf, 70, 104, 0.31f, 0xFF00E5FF);
 
     snprintf(buf, sizeof(buf), "TRICKS: +%d", mRaceTrickBonusCoins);
-    mFont.DrawText(buf, 80, 124, 0.36f, 0xFF55FF55);
+    mFont.DrawText(buf, 70, 123, 0.31f, 0xFF55FF55);
 
     snprintf(buf, sizeof(buf), "DISTANCE BONUS: +%d", mRaceDistanceBonusCoins);
-    mFont.DrawText(buf, 80, 142, 0.36f, 0xFFFFAA00);
+    mFont.DrawText(buf, 70, 142, 0.31f, 0xFF00AAFF);
 
     snprintf(buf, sizeof(buf), "TOTAL COINS: %lld", (long long)PlayerInfo::GetCoins());
-    mFont.DrawText(buf, 80, 160, 0.36f, 0xFFE0E0E0);
+    mFont.DrawText(buf, 70, 161, 0.31f, 0xFFE0E0E0);
 
     // Buttons
     // [X] Retry
     Renderer2D::DrawFilledRect(70, 188, 150, 32, 0xFF257518);
-    mFont.DrawText("[X] RETRY", 100, 194, 0.38f, 0xFFFFFFFF);
+    float retryW = mFont.GetTextWidth("[X] RETRY", 0.36f);
+    mFont.DrawText("[X] RETRY", 70 + (150.0f - retryW) * 0.5f, 194, 0.36f, 0xFFFFFFFF);
 
     // [O] Garage
-    Renderer2D::DrawFilledRect(260, 188, 150, 32, 0xFF453020);
-    mFont.DrawText("[O] GARAGE", 285, 194, 0.38f, 0xFFFFFFFF);
+    Renderer2D::DrawFilledRect(260, 188, 150, 32, 0xFF203045);
+    float garageW = mFont.GetTextWidth("[O] GARAGE", 0.36f);
+    mFont.DrawText("[O] GARAGE", 260 + (150.0f - garageW) * 0.5f, 194, 0.36f, 0xFFFFFFFF);
 }
 

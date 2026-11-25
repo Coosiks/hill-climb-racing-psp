@@ -317,7 +317,7 @@ void Renderer2D::DrawTerrainFill(Texture* groundTex, const float* pointsX, const
 
     FlushBatch();
 
-    groundTex->Bind(GU_REPEAT);
+    groundTex->Bind(GU_LINEAR);
     sceGuTexWrap(GU_REPEAT, GU_REPEAT);
 
     int vertCount = count * 2;
@@ -359,7 +359,7 @@ void Renderer2D::DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, c
 
     FlushBatch();
 
-    surfaceTex->Bind(GU_REPEAT);
+    surfaceTex->Bind(GU_LINEAR);
     sceGuTexWrap(GU_REPEAT, GU_CLAMP);
 
     int vertCount = count * 2;
@@ -608,7 +608,7 @@ void Renderer2D::DrawTerrainFill(Texture* groundTex, const float* pointsX, const
 
     FlushBatch();
 
-    groundTex->Bind(GL_REPEAT);
+    groundTex->Bind(GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
@@ -637,7 +637,7 @@ void Renderer2D::DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, c
 
     FlushBatch();
 
-    surfaceTex->Bind(GL_REPEAT);
+    surfaceTex->Bind(GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 

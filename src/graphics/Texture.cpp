@@ -96,6 +96,17 @@ Texture::~Texture() {
     Free();
 }
 
+static void TileHorizontalRepeat(uint8_t* linearBuf, int origW, int potW, int potH, int bpp) {
+    int srcBytes = origW * bpp;
+    int rowBytes = potW * bpp;
+    for (int y = 0; y < potH; ++y) {
+        uint8_t* row = linearBuf + y * rowBytes;
+        for (int x = origW; x < potW; x += origW) {
+            memcpy(row + x * bpp, row, srcBytes);
+        }
+    }
+}
+
 bool Texture::LoadTex(const char* filepath) {
     if (!filepath) return false;
     Free();
@@ -132,6 +143,8 @@ bool Texture::LoadTex(const char* filepath) {
     }
 
     size_t payloadSize = (size_t)header.pot_w * header.pot_h * bpp;
+    bool shouldTileRepeat = (header.orig_w > 0 && header.orig_w < header.pot_w &&
+                             (header.pot_w % header.orig_w) == 0 && header.orig_h == header.pot_h);
 
 #if defined(__PSP__)
     if (mData) {
@@ -152,6 +165,25 @@ bool Texture::LoadTex(const char* filepath) {
         free(mData);
         mData = NULL;
         return false;
+    }
+
+    if (shouldTileRepeat) {
+        uint8_t* linearBuf = (uint8_t*)malloc(payloadSize);
+        if (linearBuf) {
+            if (header.swizzled) {
+                Deswizzle((const uint8_t*)mData, linearBuf, header.pot_w, header.pot_h, bpp);
+            } else {
+                memcpy(linearBuf, mData, payloadSize);
+            }
+            TileHorizontalRepeat(linearBuf, header.orig_w, header.pot_w, header.pot_h, bpp);
+            if (header.swizzled) {
+                Swizzle(linearBuf, (uint8_t*)mData, header.pot_w, header.pot_h, bpp);
+            } else {
+                memcpy(mData, linearBuf, payloadSize);
+            }
+            free(linearBuf);
+            header.orig_w = header.pot_w;
+        }
     }
 
     sceKernelDcacheWritebackInvalidateAll();
@@ -188,6 +220,11 @@ bool Texture::LoadTex(const char* filepath) {
             Deswizzle((const uint8_t*)mRawBuffer, linearBuf, header.pot_w, header.pot_h, bpp);
         } else {
             memcpy(linearBuf, mRawBuffer, payloadSize);
+        }
+
+        if (shouldTileRepeat) {
+            TileHorizontalRepeat(linearBuf, header.orig_w, header.pot_w, header.pot_h, bpp);
+            header.orig_w = header.pot_w;
         }
 
         glGenTextures(1, &mTexID);
@@ -251,13 +288,20 @@ bool Texture::LoadPNG_PC(const char* filepath) {
         return false;
     }
 
-    mTextureWidth = NextPowerOfTwo(mWidth);
-    mTextureHeight = NextPowerOfTwo(mHeight);
+    int srcW = mWidth;
+    int srcH = mHeight;
+    int dstW = (srcW > 512) ? 512 : srcW;
+    int dstH = (srcH > 512) ? 512 : srcH;
+
+    mWidth = dstW;
+    mHeight = dstH;
+    mTextureWidth = NextPowerOfTwo(dstW);
+    mTextureHeight = NextPowerOfTwo(dstH);
     if (mTextureWidth > 512) mTextureWidth = 512;
     if (mTextureHeight > 512) mTextureHeight = 512;
 
-    mMaxU = (float)mWidth / (float)mTextureWidth;
-    mMaxV = (float)mHeight / (float)mTextureHeight;
+    mMaxU = (float)dstW / (float)mTextureWidth;
+    mMaxV = (float)dstH / (float)mTextureHeight;
     mFormat = GU_PSM_8888;
     mSwizzled = 0;
 
@@ -269,10 +313,37 @@ bool Texture::LoadPNG_PC(const char* filepath) {
         return false;
     }
 
-    int copyW = (mWidth < mTextureWidth) ? mWidth : mTextureWidth;
-    int copyH = (mHeight < mTextureHeight) ? mHeight : mTextureHeight;
-    for (int y = 0; y < copyH; ++y) {
-        memcpy(potBuffer + (y * mTextureWidth * 4), raw + (y * mWidth * 4), copyW * 4);
+    if (dstW == srcW && dstH == srcH) {
+        for (int y = 0; y < dstH; ++y) {
+            memcpy(potBuffer + (y * mTextureWidth * 4), raw + (y * srcW * 4), dstW * 4);
+        }
+    } else {
+        // Bilinear/nearest box downscale so >512px textures fit within PSP 512px hardware limit without cropping
+        for (int y = 0; y < dstH; ++y) {
+            int sy0 = (y * srcH) / dstH;
+            int sy1 = ((y + 1) * srcH) / dstH;
+            if (sy1 <= sy0) sy1 = sy0 + 1;
+            if (sy1 > srcH) sy1 = srcH;
+            for (int x = 0; x < dstW; ++x) {
+                int sx0 = (x * srcW) / dstW;
+                int sx1 = ((x + 1) * srcW) / dstW;
+                if (sx1 <= sx0) sx1 = sx0 + 1;
+                if (sx1 > srcW) sx1 = srcW;
+                unsigned int r = 0, g = 0, b = 0, a = 0, count = 0;
+                for (int sy = sy0; sy < sy1; ++sy) {
+                    for (int sx = sx0; sx < sx1; ++sx) {
+                        const unsigned char* sp = raw + (sy * srcW + sx) * 4;
+                        r += sp[0]; g += sp[1]; b += sp[2]; a += sp[3];
+                        count++;
+                    }
+                }
+                unsigned char* dp = potBuffer + (y * mTextureWidth + x) * 4;
+                dp[0] = (unsigned char)(r / count);
+                dp[1] = (unsigned char)(g / count);
+                dp[2] = (unsigned char)(b / count);
+                dp[3] = (unsigned char)(a / count);
+            }
+        }
     }
     stbi_image_free(raw);
 

@@ -42,6 +42,24 @@ static int sMusicSampleRate = 22050;
 static int sMusicChannels = 1;
 static unsigned int sMusicPosFP = 0;
 static volatile int sMusicUnderrunCount = 0;
+static volatile bool sAudioInMusicMix = false;
+static volatile bool sAudioSwappingEngine = false;
+static volatile bool sAudioInEngineMix = false;
+#if !defined(__PSP__)
+static stb_vorbis* sOggMusicStream = NULL;
+#endif
+
+static inline unsigned int ReadU32LE(const unsigned char* p) {
+    unsigned int v = 0;
+    memcpy(&v, p, sizeof(v));
+    return v;
+}
+
+static inline unsigned short ReadU16LE(const unsigned char* p) {
+    unsigned short v = 0;
+    memcpy(&v, p, sizeof(v));
+    return v;
+}
 
 bool AudioEngine::LoadWavFromMemory(const void* data, size_t size, SoundBuffer* outBuf) {
     if (!data || size < 44 || !outBuf) return false;
@@ -60,22 +78,27 @@ bool AudioEngine::LoadWavFromMemory(const void* data, size_t size, SoundBuffer* 
     while (offset + 8 <= size) {
         char chunkId[5] = {0};
         memcpy(chunkId, p + offset, 4);
-        unsigned int chunkSize = *(const unsigned int*)(p + offset + 4);
+        unsigned int chunkSize = ReadU32LE(p + offset + 4);
         offset += 8;
+        if (offset > size) break;
 
-        if (strcmp(chunkId, "fmt ") == 0 && chunkSize >= 16) {
-            unsigned short format = *(const unsigned short*)(p + offset);
+        size_t avail = size - offset;
+        size_t boundedSize = (chunkSize <= avail) ? (size_t)chunkSize : avail;
+
+        if (strcmp(chunkId, "fmt ") == 0 && boundedSize >= 16) {
+            unsigned short format = ReadU16LE(p + offset);
             if (format != 1) return false; // Uncompressed PCM only
-            channels = *(const unsigned short*)(p + offset + 2);
-            sampleRate = *(const unsigned int*)(p + offset + 4);
-            bitsPerSample = *(const unsigned short*)(p + offset + 14);
+            channels = ReadU16LE(p + offset + 2);
+            sampleRate = (int)ReadU32LE(p + offset + 4);
+            bitsPerSample = ReadU16LE(p + offset + 14);
         } else if (strcmp(chunkId, "data") == 0) {
             pcmData = p + offset;
-            dataLen = chunkSize;
-            if (offset + dataLen > size) dataLen = size - offset;
+            dataLen = boundedSize;
             break;
         }
-        offset += chunkSize;
+        size_t paddedSize = ((size_t)chunkSize + 1u) & ~1u;
+        if (paddedSize > avail) break;
+        offset += paddedSize;
     }
 
     if (!pcmData || channels <= 0 || sampleRate <= 0 || bitsPerSample != 16 || dataLen == 0) {
@@ -189,7 +212,9 @@ int AudioEngine::AudioThread(SceSize args, void* argp) {
             }
 
             // 1. Synthesize / Resample Engine Audio Loop
-            if (mEngineActive && mEngineBuffer.samples && mEngineBuffer.sampleCount > 0) {
+            if (mEngineActive && !sAudioSwappingEngine && mEngineBuffer.samples && mEngineBuffer.sampleCount > 0) {
+                sAudioInEngineMix = true;
+                __sync_synchronize();
                 float pitch = mEnginePitch;
                 if (pitch < 0.50f) pitch = 0.50f;
                 if (pitch > 2.00f) pitch = 2.00f;
@@ -216,6 +241,8 @@ int AudioEngine::AudioThread(SceSize args, void* argp) {
                         enginePosFP -= maxPosFP;
                     }
                 }
+                sAudioInEngineMix = false;
+                __sync_synchronize();
             }
 
             // 2. Mix Active SFX
@@ -252,6 +279,8 @@ int AudioEngine::AudioThread(SceSize args, void* argp) {
 
             // 3. Mix Streaming Music Channel (T-132, H17c lock-free SPSC)
             if (sMusicPlaying && mMusicVolume > 0.001f) {
+                sAudioInMusicMix = true;
+                __sync_synchronize();
                 int head = sMusicRingHead;
                 int tail = sMusicRingTail;
                 int avail = (head - tail + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
@@ -296,6 +325,8 @@ int AudioEngine::AudioThread(SceSize args, void* argp) {
                         }
                     }
                 }
+                sAudioInMusicMix = false;
+                __sync_synchronize();
             }
         }
 
@@ -323,7 +354,8 @@ bool AudioEngine::Init() {
     LoadAudioFile("assets/audio/crack",   &mSfxBuffers[SFX_CRACK]);
     LoadAudioFile("assets/audio/refuel",  &mSfxBuffers[SFX_REFUEL]);
     LoadAudioFile("assets/audio/click",   &mSfxBuffers[SFX_CLICK]);
-    if (!LoadAudioFile("assets/audio/upgrade", &mSfxBuffers[SFX_UPGRADE])) {
+    if (!LoadAudioFile("assets/audio/upgrade", &mSfxBuffers[SFX_UPGRADE]) &&
+        !LoadAudioFile("assets/audio/wrench", &mSfxBuffers[SFX_UPGRADE])) {
         // Fallback to click sound for upgrade
         if (mSfxBuffers[SFX_CLICK].samples && mSfxBuffers[SFX_CLICK].sampleCount > 0) {
             SoundBuffer& click = mSfxBuffers[SFX_CLICK];
@@ -508,7 +540,8 @@ bool AudioEngine::Init() {
     LoadAudioFile("assets/audio/crack",   &mSfxBuffers[SFX_CRACK]);
     LoadAudioFile("assets/audio/refuel",  &mSfxBuffers[SFX_REFUEL]);
     LoadAudioFile("assets/audio/click",   &mSfxBuffers[SFX_CLICK]);
-    if (!LoadAudioFile("assets/audio/upgrade", &mSfxBuffers[SFX_UPGRADE])) {
+    if (!LoadAudioFile("assets/audio/upgrade", &mSfxBuffers[SFX_UPGRADE]) &&
+        !LoadAudioFile("assets/audio/wrench", &mSfxBuffers[SFX_UPGRADE])) {
         if (mSfxBuffers[SFX_CLICK].samples && mSfxBuffers[SFX_CLICK].sampleCount > 0) {
             SoundBuffer& click = mSfxBuffers[SFX_CLICK];
             size_t bytes = click.sampleCount * click.channels * sizeof(short);
@@ -562,6 +595,64 @@ void AudioEngine::PlaySFX(SoundEffect sfx) {
     if (sfx >= 0 && sfx < SFX_COUNT) {
         mCurrentSfxToPlay = sfx;
     }
+}
+
+void AudioEngine::LoadVehicleEngine(const char* vehicleId) {
+    struct EngineMap { const char* id; const char* asset; };
+    static const EngineMap kMap[] = {
+        { "ambulance",     "assets/audio/engine-ambulance5" },
+        { "bigfinger",     "assets/audio/engine-bigmonster" },
+        { "dieseltruck",   "assets/audio/engine-diesel" },
+        { "truck",         "assets/audio/engine-diesel" },
+        { "firetruck",     "assets/audio/engine-diesel" },
+        { "electric",      "assets/audio/engine-electric" },
+        { "hippievan",     "assets/audio/engine-hippievan" },
+        { "hotrod",        "assets/audio/engine-hotrod" },
+        { "hovercraft",    "assets/audio/engine-hovercraft" },
+        { "monster_truck", "assets/audio/engine-monster" },
+        { "moonlander",    "assets/audio/engine-moonlander2" },
+        { "onewheeler",    "assets/audio/engine-onewheeler" },
+        { "policecar",     "assets/audio/engine-police" },
+        { "rallycar",      "assets/audio/engine-rallycar" },
+        { "train",         "assets/audio/engine-train" },
+        { "dragster",      "assets/audio/engine-roar" },
+        { "race_car",      "assets/audio/engine-muscle" }
+    };
+
+    const char* targetBase = "assets/audio/engine";
+    if (vehicleId) {
+        for (size_t i = 0; i < sizeof(kMap) / sizeof(kMap[0]); ++i) {
+            if (strcmp(vehicleId, kMap[i].id) == 0) {
+                targetBase = kMap[i].asset;
+                break;
+            }
+        }
+    }
+
+    SoundBuffer nextBuf = { 0 };
+    if (!LoadAudioFile(targetBase, &nextBuf) && strcmp(targetBase, "assets/audio/engine") != 0) {
+        LoadAudioFile("assets/audio/engine", &nextBuf);
+    }
+    if (!nextBuf.samples || nextBuf.sampleCount <= 0) return;
+
+#if defined(__PSP__)
+    sAudioSwappingEngine = true;
+    __sync_synchronize();
+    for (int wait = 0; wait < 40 && sAudioInEngineMix; ++wait) {
+        sceKernelDelayThread(500);
+    }
+    short* oldSamples = mEngineBuffer.samples;
+    mEngineBuffer = nextBuf;
+    __sync_synchronize();
+    sAudioSwappingEngine = false;
+    if (oldSamples) free(oldSamples);
+#else
+    if (mAudioDevice > 0) SDL_LockAudioDevice(mAudioDevice);
+    short* oldSamples = mEngineBuffer.samples;
+    mEngineBuffer = nextBuf;
+    if (mAudioDevice > 0) SDL_UnlockAudioDevice(mAudioDevice);
+    if (oldSamples) free(oldSamples);
+#endif
 }
 
 void AudioEngine::UpdateEngineSound(float rev, bool active, float dt) {
@@ -630,6 +721,33 @@ bool AudioEngine::IsEngineActive() {
 // Streaming Music API (T-132, H17c lock-free SPSC)
 // -----------------------------------------------------------------------------
 void AudioEngine::UpdateMusicStream() {
+#if !defined(__PSP__)
+    if (sMusicPlaying && sOggMusicStream) {
+        int head = sMusicRingHead;
+        int tail = sMusicRingTail;
+        int freeSamples = (tail - head - 1 + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
+        if (freeSamples < 1024) return;
+        while (freeSamples >= 512 && sMusicPlaying) {
+            short tmp[1024];
+            int toGet = freeSamples > 1024 ? 1024 : freeSamples;
+            int got = stb_vorbis_get_samples_short_interleaved(sOggMusicStream, 1, tmp, toGet);
+            if (got <= 0) {
+                stb_vorbis_seek_start(sOggMusicStream);
+                got = stb_vorbis_get_samples_short_interleaved(sOggMusicStream, 1, tmp, toGet);
+                if (got <= 0) break;
+            }
+            for (int k = 0; k < got; ++k) {
+                sMusicRingBuf[head] = tmp[k];
+                head = (head + 1) % MUSIC_RING_BUF_SAMPLES;
+            }
+            __sync_synchronize();
+            sMusicRingHead = head;
+            tail = sMusicRingTail;
+            freeSamples = (tail - head - 1 + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
+        }
+        return;
+    }
+#endif
     if (!sMusicPlaying || !sMusicFile) return;
 
     int head = sMusicRingHead;
@@ -737,6 +855,36 @@ bool AudioEngine::PlayMusic(const char* filepath) {
 #endif
 
     if (!f) {
+#if !defined(__PSP__)
+        int oggErr = 0;
+        stb_vorbis* ogg = stb_vorbis_open_filename(filepath, &oggErr, NULL);
+        if (!ogg) {
+            char oggPath[256];
+            snprintf(oggPath, sizeof(oggPath), "%s", filepath);
+            char* ext = strrchr(oggPath, '.');
+            if (ext && strcmp(ext, ".wav") == 0) {
+                strcpy(ext, ".ogg");
+                ogg = stb_vorbis_open_filename(oggPath, &oggErr, NULL);
+            }
+        }
+        if (ogg) {
+            stb_vorbis_info info = stb_vorbis_get_info(ogg);
+            if (mAudioDevice > 0) SDL_LockAudioDevice(mAudioDevice);
+            sOggMusicStream = ogg;
+            snprintf(sCurrentMusicPath, sizeof(sCurrentMusicPath), "%s", filepath);
+            sMusicSampleRate = (info.sample_rate > 0) ? (int)info.sample_rate : 22050;
+            sMusicChannels = 1;
+            sMusicRingHead = 0;
+            sMusicRingTail = 0;
+            sMusicPosFP = 0;
+            sMusicUnderrunCount = 0;
+            __sync_synchronize();
+            sMusicPlaying = true;
+            if (mAudioDevice > 0) SDL_UnlockAudioDevice(mAudioDevice);
+            UpdateMusicStream();
+            return true;
+        }
+#endif
         return false;
     }
 
@@ -760,20 +908,21 @@ bool AudioEngine::PlayMusic(const char* filepath) {
                 fclose(f);
                 return false;
             }
-            unsigned short format = *(const unsigned short*)(fmtBuf + 0);
+            unsigned short format = ReadU16LE(fmtBuf + 0);
             if (format != 1) { // PCM only
                 fclose(f);
                 return false;
             }
-            channels = *(const unsigned short*)(fmtBuf + 2);
-            sampleRate = *(const unsigned int*)(fmtBuf + 4);
-            bitsPerSample = *(const unsigned short*)(fmtBuf + 14);
+            channels = ReadU16LE(fmtBuf + 2);
+            sampleRate = (int)ReadU32LE(fmtBuf + 4);
+            bitsPerSample = ReadU16LE(fmtBuf + 14);
         } else if (memcmp(chunkId, "data", 4) == 0) {
             dataStart = chunkDataPos;
             dataBytes = chunkSize;
             break;
         }
-        fseek(f, chunkDataPos + chunkSize, SEEK_SET);
+        long paddedSize = ((long)chunkSize + 1L) & ~1L;
+        fseek(f, chunkDataPos + paddedSize, SEEK_SET);
     }
 
     if (channels != 1 || sampleRate <= 0 || bitsPerSample != 16 || dataBytes <= 0) {
@@ -788,6 +937,9 @@ bool AudioEngine::PlayMusic(const char* filepath) {
     }
     fseek(f, dataStart, SEEK_SET);
 
+#if !defined(__PSP__)
+    if (mAudioDevice > 0) SDL_LockAudioDevice(mAudioDevice);
+#endif
     sMusicFile = f;
     strncpy(sCurrentMusicPath, filepath, sizeof(sCurrentMusicPath) - 1);
     sCurrentMusicPath[sizeof(sCurrentMusicPath) - 1] = '\0';
@@ -800,7 +952,11 @@ bool AudioEngine::PlayMusic(const char* filepath) {
     sMusicRingTail = 0;
     sMusicPosFP = 0;
     sMusicUnderrunCount = 0;
+    __sync_synchronize();
     sMusicPlaying = true;
+#if !defined(__PSP__)
+    if (mAudioDevice > 0) SDL_UnlockAudioDevice(mAudioDevice);
+#endif
 
     // Pre-fill ring buffer to 100% capacity before starting playback
     UpdateMusicStream();
@@ -808,7 +964,20 @@ bool AudioEngine::PlayMusic(const char* filepath) {
 }
 
 void AudioEngine::StopMusic() {
+#if !defined(__PSP__)
+    if (mAudioDevice > 0) SDL_LockAudioDevice(mAudioDevice);
+    if (sOggMusicStream) {
+        stb_vorbis_close(sOggMusicStream);
+        sOggMusicStream = NULL;
+    }
+#endif
     sMusicPlaying = false;
+    __sync_synchronize();
+#if defined(__PSP__)
+    for (int wait = 0; wait < 40 && sAudioInMusicMix; ++wait) {
+        sceKernelDelayThread(500);
+    }
+#endif
     if (sMusicFile) {
         fclose(sMusicFile);
         sMusicFile = NULL;
@@ -817,6 +986,9 @@ void AudioEngine::StopMusic() {
     sMusicRingHead = 0;
     sMusicRingTail = 0;
     sMusicPosFP = 0;
+#if !defined(__PSP__)
+    if (mAudioDevice > 0) SDL_UnlockAudioDevice(mAudioDevice);
+#endif
 }
 
 bool AudioEngine::IsMusicPlaying() {

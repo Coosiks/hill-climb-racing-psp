@@ -51,7 +51,7 @@ WHEELIE_THRESHOLD,1.5,design/TODO-TUNE,2026-11-14,Minimum seconds on rear wheel 
 WHEELIE_BONUS_COINS,500,design/TODO-TUNE,2026-11-14,Base coins awarded for successful wheelie
 MAX_FUEL,100.0,extracted,2026-11-12,Game logic constants
 FUEL_DRAIN_IDLE,0.60,measured,2026-11-12,Idle consumption per second
-FUEL_DRAIN_DRIVE,2.20,measured,2026-11-12,Throttle active consumption per second
+FUEL_DRAIN_DRIVE,2.50,measured,2026-11-24,Throttle active consumption per second (config/physics.cfg)
 TERRAIN_SEGMENT_STEP,0.50,extracted,2026-11-12,Terrain segment width
 CAMERA_LEAD_X,3.50,measured,2026-11-12,Lookahead distance in front of car
 CAMERA_SMOOTH_FACTOR,0.12,measured,2026-11-12,Exponential camera follow smoothing
@@ -95,15 +95,12 @@ ENGINE_PITCH_MIN,0.50,design/TODO-TUNE,2026-11-14,Minimum playback rate clamp fo
 ENGINE_PITCH_MAX,2.00,design/TODO-TUNE,2026-11-14,Maximum playback rate clamp for engine audio loop
 ENGINE_PITCH_IDLE,0.60,design/TODO-TUNE,2026-11-14,Target engine pitch at zero throttle / idle rpm
 MAX_BATCH_SPRITES,256,design/TODO-TUNE,2026-11-14,Renderer2D static sprite quad batch buffer capacity (1536 vertices)
-STAGE_UNLOCK_COST_HIGHWAY,125000,extracted (1.30.0 @ 0x14c57b),2026-11-14,Highway unlock price in 1.30.0
-STAGE_UNLOCK_COST_CAVE,150000,extracted (1.30.0 @ 0x14c5f7),2026-11-14,Cave unlock price in 1.30.0
 STAGE_UNLOCK_COST_MARS,250000,extracted (1.30.0 @ 0x14c76b),2026-11-14,Mars unlock price in 1.30.0
 STAGE_UNLOCK_COST_FOREST,850000,extracted (1.30.0 @ 0x14c9be),2026-11-14,Forest unlock price in 1.30.0
 CAVE_CEILING_OFFSET,6.5,design/TODO-TUNE,2026-11-14,Cave stage nominal ceiling vertical offset
 CAVE_MIN_CLEARANCE,4.5,design/TODO-TUNE,2026-11-14,Cave stage guaranteed minimum vertical clearance between floor and ceiling
 HIGHWAY_FUEL_INTERVAL,120.0,design/TODO-TUNE,2026-11-14,Distance interval in meters between fuel canisters on Highway
 FOREST_HAS_BRIDGES,1,design/TODO-TUNE,2026-11-14,Flag enabling suspension bridges on Forest stage
-VEHICLE_UNLOCK_COST_TRACTOR,100000,extracted (1.30.0 @ 0x0f7a1d),2026-11-14,Tractor unlock price
 VEHICLE_UNLOCK_COST_HIPPIEVAN,120000,extracted (1.30.0 @ 0x0f7c51),2026-11-14,Hippie Van unlock price
 VEHICLE_UNLOCK_COST_QUADBIKE,175000,extracted (1.30.0 @ 0x0f80b9),2026-11-14,Quad Bike unlock price
 VEHICLE_UNLOCK_COST_TOURISTBUS,200000,extracted (1.30.0 @ 0x0f82ed),2026-11-14,Tourist Bus unlock price
@@ -153,9 +150,6 @@ FIRETRUCK_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Fire Truck 4th upgrade 
 TANK_4TH_UPGRADE_TYPE,0,design/TODO-TUNE,2026-11-14,Tank 4th upgrade slot (4WD)
 DRAGSTER_FRONT_WHEEL_RADIUS,0.28,design/TODO-TUNE,2026-11-14,Dragster front wheel radius
 DRAGSTER_REAR_WHEEL_RADIUS,0.58,design/TODO-TUNE,2026-11-14,Dragster rear wheel radius (> 1.4x front)
-
-
-STAGE_UNLOCK_COST_SEASONS,50000,extracted (1.30.0 @ 0x14c407),2026-11-14,Seasons unlock price
 STAGE_UNLOCK_COST_BOOTCAMP,200000,extracted (1.30.0 @ 0x14c6ef),2026-11-14,Bootcamp unlock price
 STAGE_UNLOCK_COST_XMAS,300000,extracted (1.30.0 @ 0x14c84a),2026-11-14,Xmas unlock price
 STAGE_UNLOCK_COST_ALIENPLANET,750000,extracted (1.30.0 @ 0x14c8c6),2026-11-14,Alien Planet unlock price

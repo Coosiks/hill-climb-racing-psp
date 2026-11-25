@@ -2,6 +2,7 @@
 #include "Terrain.h"
 #include "core/Config.h"
 #include <math.h>
+#include <string.h>
 
 static inline float clampf(float v, float lo, float hi) {
     if (v < lo) return lo;
@@ -23,7 +24,24 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
       mThrottleActive(false), mBrakeActive(false), mThrusterActive(false),
       mThrottleRamp(0.0f), mAirTime(0.0f), mAirRotation(0.0f), mLastAngle(0.0f), mFlipsCount(0),
       mPrevInAir(false), mPendingAirTimeBonus(0), mPendingAirTimeSeconds(0.0f),
-      mWheelieTime(0.0f), mPendingWheelieBonus(0), mPendingWheelieTime(0.0f) {
+      mWheelieTime(0.0f), mPendingWheelieBonus(0), mPendingWheelieTime(0.0f),
+      mPartCount(0) {
+
+    for (int i = 0; i < MAX_CAR_PARTS; ++i) {
+        mParts[i].localX = 0.0f;
+        mParts[i].localY = 0.0f;
+        mParts[i].width = 0.0f;
+        mParts[i].height = 0.0f;
+        mParts[i].behindChassis = false;
+        mParts[i].breakable = false;
+        mParts[i].detached = false;
+        mParts[i].prevPos.SetZero();
+        mParts[i].worldPos.SetZero();
+        mParts[i].worldVel.SetZero();
+        mParts[i].prevAngle = 0.0f;
+        mParts[i].angle = 0.0f;
+        mParts[i].angularVel = 0.0f;
+    }
 
     // Load textures
 #if defined(__PSP__)
@@ -40,6 +58,25 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     mTexFrontTire.LoadPNG(frontTireTex);
     mTexDriverBody.LoadPNG("assets/driver-body.png");
     mTexDriverHead.LoadPNG("assets/driver-head.png");
+
+    // Multi-sprite vehicle layers & breakable parts (BUG-013)
+    if (mConfig && strcmp(mConfig->id, "ambulance") == 0) {
+        AddAttachment("assets/car-ambulance-roof.png",       -0.36f,  0.46f, 1.95f, 0.90f, false, true);
+        AddAttachment("assets/car-ambulance-cockpit.png",     0.98f,  0.34f, 0.90f, 0.45f, false, true);
+        AddAttachment("assets/car-ambulance-frontdoor.png",   0.92f,  0.02f, 0.62f, 0.72f, false, true);
+        AddAttachment("assets/car-ambulance-middledoor.png", -1.56f,  0.10f, 0.54f, 0.85f, false, true);
+        AddAttachment("assets/car-ambulance-lamp.png",        0.82f,  0.62f, 0.26f, 0.22f, false, true);
+    } else if (mConfig && strcmp(mConfig->id, "policecar") == 0) {
+        AddAttachment("assets/car-policecar-roof.png",       -0.08f,  0.32f, 1.45f, 0.36f, false, true);
+        AddAttachment("assets/car-policecar-lamp.png",       -0.12f,  0.54f, 0.34f, 0.22f, false, true);
+    } else if (mConfig && strcmp(mConfig->id, "electric") == 0) {
+        AddAttachment("assets/car-electric-roof.png",        -0.15f,  0.35f, 1.65f, 0.58f, false, true);
+    } else if (mConfig && strcmp(mConfig->id, "hotrod") == 0) {
+        AddAttachment("assets/car-hotrod-roof.png",          -0.25f,  0.28f, 1.45f, 0.62f, false, true);
+    } else if (mConfig && strcmp(mConfig->id, "superoffroad") == 0) {
+        AddAttachment("assets/car-superoffroad-bg.png",      -0.10f,  0.05f, 2.80f, 1.05f, true,  false);
+        AddAttachment("assets/car-superoffroad-wing.png",    -1.25f,  0.45f, 0.90f, 0.75f, false, true);
+    }
 #if defined(__PSP__)
     u32 t1 = sceKernelGetSystemTimeLow();
     printf("[PERF_ASSETS] PlayerCar textures loaded in %u us (%.2f ms)\n", (unsigned int)(t1 - t0), (float)(t1 - t0) / 1000.0f);
@@ -71,11 +108,14 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     fd.filter.maskBits = CAT_TERRAIN | CAT_ITEM;
     mChassis->CreateFixture(&fd);
 
-    // Set center of mass slightly lower (-0.20m) and inertia I = 2.4 to match original car feel
+    // Derive CoM & inertia from polygon geometry (lowered -0.15m for low CoM feel, min I_cm=1.2) (BUG-001/BUG-002)
     b2MassData md;
     mChassis->GetMassData(&md);
-    md.center.Set(0.0f, -0.20f);
-    md.I = 2.4f;
+    b2Vec2 origCenter = md.center;
+    float I_cm = md.I - md.mass * b2Dot(origCenter, origCenter);
+    if (I_cm < 1.2f) I_cm = 1.2f;
+    md.center.Set(origCenter.x, origCenter.y - 0.15f);
+    md.I = I_cm + md.mass * b2Dot(md.center, md.center);
     mChassis->SetMassData(&md);
 
     // 4th Upgrade: STABILITY (type 4) - increases base chassis angular damping
@@ -90,7 +130,7 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     float rearFriction = wheelFriction;
     float frontFriction = wheelFriction;
     if (mConfig->special_physics_mode == 1) {
-        frontFriction = mConfig->wheel_base_friction * mConfig->ski_friction_mult;
+        frontFriction = wheelFriction * mConfig->ski_friction_mult;
     } else if (mConfig->special_physics_mode == 2) {
         rearFriction = 0.05f;
         frontFriction = 0.05f;
@@ -138,14 +178,17 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     float springDamp = mConfig->base_spring_damp;
     b2Vec2 axis(0.0f, 1.0f); // Upwards
 
+    bool hoverMode = (mConfig->special_physics_mode == 2);
+    float initMotorCap = (mConfig->base_motor_torque > 0.0f) ? (mConfig->base_motor_torque * 2.0f) : 20.0f;
+
     // Rear Wheel Joint
     b2WheelJointDef jd;
     jd.Initialize(mChassis, mRearWheel, mRearWheel->GetPosition(), axis);
     jd.frequencyHz = springFreq;
     jd.dampingRatio = springDamp;
-    jd.maxMotorTorque = 500.0f; // maximum joint capacity
+    jd.maxMotorTorque = initMotorCap;
     jd.motorSpeed = 0.0f;
-    jd.enableMotor = (mConfig->drive_type == 0 || mConfig->drive_type == 2);
+    jd.enableMotor = !hoverMode && (mConfig->drive_type == 0 || mConfig->drive_type == 2);
     jd.enableLimit = true;
     jd.lowerTranslation = -0.35f; // TODO-TUNE: calibrate to vehicle sprite/reference video
     jd.upperTranslation =  0.35f;
@@ -155,10 +198,10 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     jd.Initialize(mChassis, mFrontWheel, mFrontWheel->GetPosition(), axis);
     jd.frequencyHz = springFreq;
     jd.dampingRatio = springDamp;
-    jd.maxMotorTorque = 500.0f;
+    jd.maxMotorTorque = initMotorCap;
     jd.motorSpeed = 0.0f;
     bool frontMotor = (mConfig->drive_type == 1) || (mConfig->drive_type == 2 && (mConfig->fourth_upgrade_type != 0 || mAWDLevel > 0));
-    jd.enableMotor = frontMotor;
+    jd.enableMotor = !hoverMode && frontMotor;
     jd.enableLimit = true;
     jd.lowerTranslation = -0.35f;
     jd.upperTranslation =  0.35f;
@@ -196,6 +239,49 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     CapturePreviousTransforms();
 }
 
+void PlayerCar::AddAttachment(const char* texPath, float lx, float ly, float w, float h, bool behindChassis, bool breakable) {
+    if (mPartCount >= MAX_CAR_PARTS || !texPath) return;
+    CarAttachment& p = mParts[mPartCount];
+    if (!p.tex.LoadPNG(texPath)) {
+        return;
+    }
+    p.localX = lx;
+    p.localY = ly;
+    p.width = w;
+    p.height = h;
+    p.behindChassis = behindChassis;
+    p.breakable = breakable;
+    p.detached = false;
+    p.prevPos.SetZero();
+    p.worldPos.SetZero();
+    p.worldVel.SetZero();
+    p.prevAngle = 0.0f;
+    p.angle = 0.0f;
+    p.angularVel = 0.0f;
+    mPartCount++;
+}
+
+void PlayerCar::DetachBreakableParts() {
+    if (!mChassis) return;
+    b2Vec2 cPos = mChassis->GetPosition();
+    float cAng = mChassis->GetAngle();
+    b2Vec2 cVel = mChassis->GetLinearVelocity();
+    b2Rot cRot(cAng);
+    for (int i = 0; i < mPartCount; ++i) {
+        CarAttachment& p = mParts[i];
+        if (!p.breakable || p.detached) continue;
+        p.detached = true;
+        b2Vec2 wPos = cPos + b2Mul(cRot, b2Vec2(p.localX, p.localY));
+        p.worldPos = wPos;
+        p.prevPos = wPos;
+        p.angle = cAng;
+        p.prevAngle = cAng;
+        float spread = ((i % 2 == 0) ? 1.0f : -1.0f) * (1.5f + 0.6f * (float)i);
+        p.worldVel.Set(cVel.x + spread * 0.6f, cVel.y + 3.5f + 0.8f * (float)i);
+        p.angularVel = spread * 3.0f;
+    }
+}
+
 void PlayerCar::CapturePreviousTransforms() {
     if (mChassis) {
         mPrevChassis.position = mChassis->GetPosition();
@@ -212,6 +298,12 @@ void PlayerCar::CapturePreviousTransforms() {
     if (mDriverHead) {
         mPrevDriverHead.position = mDriverHead->GetPosition();
         mPrevDriverHead.angle = mDriverHead->GetAngle();
+    }
+    for (int i = 0; i < mPartCount; ++i) {
+        if (mParts[i].detached) {
+            mParts[i].prevPos = mParts[i].worldPos;
+            mParts[i].prevAngle = mParts[i].angle;
+        }
     }
 }
 
@@ -259,6 +351,7 @@ float PlayerCar::GetSpeedKmH() const {
 void PlayerCar::Kill() {
     if (!mIsDead) {
         mIsDead = true;
+        DetachBreakableParts();
         // Weaken neck motor for limp ragdoll on death
         if (mNeckJoint) {
             mNeckJoint->EnableMotor(true);
@@ -344,6 +437,16 @@ void PlayerCar::AddFuel(float amount) {
 }
 
 void PlayerCar::Update(float dt) {
+    // Update detached breakable sprites ballistically even after driver death
+    float detachGravY = mWorld ? mWorld->GetGravity().y : -10.0f;
+    for (int i = 0; i < mPartCount; ++i) {
+        if (mParts[i].detached) {
+            mParts[i].worldVel.y += detachGravY * dt;
+            mParts[i].worldPos += dt * mParts[i].worldVel;
+            mParts[i].angle += mParts[i].angularVel * dt;
+        }
+    }
+
     if (mIsDead) {
         mEngineRev = 0.0f;
         mRearJoint->EnableMotor(false);
@@ -441,8 +544,28 @@ void PlayerCar::Update(float dt) {
     if (awdFactor > 0.50f) awdFactor = 0.50f;
     float airTorque = GetAirPitchTorque();
 
+    bool hoverMode = (mConfig->special_physics_mode == 2);
+    bool hoverGrounded = false;
+    float hoverSlopeAngle = 0.0f;
+    if (hoverMode && mChassis) {
+        float curX = mChassis->GetPosition().x;
+        float curY = mChassis->GetPosition().y;
+        float groundY = mTerrain ? mTerrain->GetHeightAtX(curX) : 0.0f;
+        if (curY - groundY <= mConfig->hover_height * 1.35f) {
+            hoverGrounded = true;
+            if (mTerrain) {
+                float y1 = mTerrain->GetHeightAtX(curX - 0.5f);
+                float y2 = mTerrain->GetHeightAtX(curX + 0.5f);
+                hoverSlopeAngle = atan2f(y2 - y1, 1.0f);
+            }
+        }
+    }
+
     if (mThrottleActive && !mOutOfFuel) {
-        if (mConfig->drive_type == 0) {
+        if (hoverMode) {
+            mRearJoint->EnableMotor(false);
+            if (mFrontJoint) mFrontJoint->EnableMotor(false);
+        } else if (mConfig->drive_type == 0) {
             // RWD
             float rearOmega = fabsf(mRearWheel->GetAngularVelocity());
             float rearRatio = clampf((maxSpeed - rearOmega) / maxSpeed, 0.0f, 1.0f);
@@ -487,54 +610,59 @@ void PlayerCar::Update(float dt) {
         }
 
         // Air control: gas tilts nose up (backflip, CCW, positive torque)
-        if (mAirTime > 0.08f) {
+        if (mAirTime > 0.08f && !hoverGrounded) {
             mChassis->ApplyTorque(airTorque, true);
         }
     } else if (mBrakeActive) {
-        float forwardSpeed = mChassis->GetLinearVelocity().x;
-
-        if (forwardSpeed > 1.0f) {
-            // Forward motion: active wheel braking
-            if (mConfig->drive_type == 0 || mConfig->drive_type == 2) {
-                mRearJoint->SetMotorSpeed(0.0f);
-                mRearJoint->SetMaxMotorTorque(engineTorque * 2.0f);
-                mRearJoint->EnableMotor(true);
-            } else {
-                mRearJoint->EnableMotor(false);
-            }
-
-            bool frontBrake = (mConfig->drive_type == 1) || (mConfig->drive_type == 2 && (mConfig->fourth_upgrade_type != 0 || mAWDLevel > 0));
-            if (frontBrake && mFrontJoint) {
-                mFrontJoint->SetMotorSpeed(0.0f);
-                mFrontJoint->SetMaxMotorTorque(engineTorque * 1.5f);
-                mFrontJoint->EnableMotor(true);
-            } else if (mFrontJoint) {
-                mFrontJoint->EnableMotor(false);
-            }
+        if (hoverMode) {
+            mRearJoint->EnableMotor(false);
+            if (mFrontJoint) mFrontJoint->EnableMotor(false);
         } else {
-            // Stopped or reversing: drive in reverse
-            float reverseSpeed = maxSpeed * 0.5f;
+            float forwardSpeed = mChassis->GetLinearVelocity().x;
 
-            if (mConfig->drive_type == 0 || mConfig->drive_type == 2) {
-                mRearJoint->SetMotorSpeed(reverseSpeed);
-                mRearJoint->SetMaxMotorTorque(engineTorque * 0.8f);
-                mRearJoint->EnableMotor(true);
+            if (forwardSpeed > 1.0f) {
+                // Forward motion: active wheel braking
+                if (mConfig->drive_type == 0 || mConfig->drive_type == 2) {
+                    mRearJoint->SetMotorSpeed(0.0f);
+                    mRearJoint->SetMaxMotorTorque(engineTorque * 2.0f);
+                    mRearJoint->EnableMotor(true);
+                } else {
+                    mRearJoint->EnableMotor(false);
+                }
+
+                bool frontBrake = (mConfig->drive_type == 1) || (mConfig->drive_type == 2 && (mConfig->fourth_upgrade_type != 0 || mAWDLevel > 0));
+                if (frontBrake && mFrontJoint) {
+                    mFrontJoint->SetMotorSpeed(0.0f);
+                    mFrontJoint->SetMaxMotorTorque(engineTorque * 1.5f);
+                    mFrontJoint->EnableMotor(true);
+                } else if (mFrontJoint) {
+                    mFrontJoint->EnableMotor(false);
+                }
             } else {
-                mRearJoint->EnableMotor(false);
-            }
+                // Stopped or reversing: drive in reverse
+                float reverseSpeed = maxSpeed * 0.5f;
 
-            bool frontRev = (mConfig->drive_type == 1) || (mConfig->drive_type == 2 && (mConfig->fourth_upgrade_type != 0 || mAWDLevel > 0));
-            if (frontRev && mFrontJoint) {
-                mFrontJoint->SetMotorSpeed(reverseSpeed);
-                mFrontJoint->SetMaxMotorTorque(engineTorque * 0.5f);
-                mFrontJoint->EnableMotor(true);
-            } else if (mFrontJoint) {
-                mFrontJoint->EnableMotor(false);
+                if (mConfig->drive_type == 0 || mConfig->drive_type == 2) {
+                    mRearJoint->SetMotorSpeed(reverseSpeed);
+                    mRearJoint->SetMaxMotorTorque(engineTorque * 0.8f);
+                    mRearJoint->EnableMotor(true);
+                } else {
+                    mRearJoint->EnableMotor(false);
+                }
+
+                bool frontRev = (mConfig->drive_type == 1) || (mConfig->drive_type == 2 && (mConfig->fourth_upgrade_type != 0 || mAWDLevel > 0));
+                if (frontRev && mFrontJoint) {
+                    mFrontJoint->SetMotorSpeed(reverseSpeed);
+                    mFrontJoint->SetMaxMotorTorque(engineTorque * 0.5f);
+                    mFrontJoint->EnableMotor(true);
+                } else if (mFrontJoint) {
+                    mFrontJoint->EnableMotor(false);
+                }
             }
         }
 
         // Air control: brake tilts nose down (frontflip, CW, negative torque)
-        if (mAirTime > 0.08f) {
+        if (mAirTime > 0.08f && !hoverGrounded) {
             mChassis->ApplyTorque(-airTorque, true);
         }
     } else {
@@ -549,7 +677,7 @@ void PlayerCar::Update(float dt) {
     if (mFuel > 0.0f) {
         float drain = mThrottleActive ? Config::Physics.fuel_drain_drive : (mBrakeActive ? (Config::Physics.fuel_drain_drive * 0.6f) : Config::Physics.fuel_drain_idle);
         if (mConfig->special_physics_mode == 3 && mThrusterActive) {
-            drain += mConfig->thruster_fuel_drain;
+            drain += mConfig->thruster_fuel_drain / FIXED_TIMESTEP;
         }
         mFuel -= drain * dt;
         if (mFuel <= 0.0f) {
@@ -563,7 +691,8 @@ void PlayerCar::Update(float dt) {
     // 5. Engine rev modulation for sound
     float targetRev = 0.0f;
     if (mThrottleActive && !mOutOfFuel) {
-        float speed = fabsf(mRearWheel->GetAngularVelocity()) / maxSpeed;
+        float speed = hoverMode ? (mChassis->GetLinearVelocity().Length() / 25.0f) : (fabsf(mRearWheel->GetAngularVelocity()) / maxSpeed);
+        if (speed > 1.0f) speed = 1.0f;
         targetRev = 0.35f + speed * 0.65f;
     } else if (mBrakeActive) {
         targetRev = 0.25f;
@@ -597,6 +726,17 @@ void PlayerCar::Update(float dt) {
         mChassis->ApplyTorque(-mChassis->GetAngularVelocity() * 0.5f * (float)mAWDLevel, true);
     }
 
+    // Single-wheel gyro self-balancing (e.g. OneWheeler): prevents instant flip on launch while permitting air flips
+    bool singleWheel = mConfig && fabsf(mConfig->front_wheel_offset[0] - mConfig->rear_wheel_offset[0]) < 0.05f;
+    if (singleWheel && mChassis && !mIsDead && mAirTime <= 0.08f) {
+        float cAng = mChassis->GetAngle();
+        while (cAng > 3.14159265f)  cAng -= 6.2831853f;
+        while (cAng < -3.14159265f) cAng += 6.2831853f;
+        float kP = 24.0f + 1.5f * (float)mAWDLevel;
+        float kD = 7.0f + 0.5f * (float)mAWDLevel;
+        mChassis->ApplyTorque(-cAng * kP - mChassis->GetAngularVelocity() * kD, true);
+    }
+
     // Special Physics Modes Actuation (T-131b)
     if (mConfig->special_physics_mode == 1 && frontOnGround && mTerrain && mChassis && !mIsDead) {
         // Mode 1: SKI_GLIDE - Align nose with ground slope when front ski makes contact
@@ -610,7 +750,7 @@ void PlayerCar::Update(float dt) {
         while (angleDiff < -3.14159265f) angleDiff += 6.2831853f;
         mChassis->ApplyTorque(angleDiff * 30.0f - mChassis->GetAngularVelocity() * 5.0f, true);
     } else if (mConfig->special_physics_mode == 2 && mChassis && !mIsDead) {
-        // Mode 2: HOVER_CUSHION - Repulsive air cushion and forward propeller thrust
+        // Mode 2: HOVER_CUSHION - Repulsive air cushion, pitch damping, and upgraded propeller thrust (BUG-019)
         float curX = mChassis->GetPosition().x;
         float curY = mChassis->GetPosition().y;
         float groundY = mTerrain ? mTerrain->GetHeightAtX(curX) : 0.0f;
@@ -622,20 +762,34 @@ void PlayerCar::Update(float dt) {
             if (cushionForce > maxCushion) cushionForce = maxCushion;
             if (cushionForce < 0.0f) cushionForce = 0.0f;
             mChassis->ApplyForceToCenter(b2Vec2(0.0f, cushionForce), true);
+
+            float angleDiff = hoverSlopeAngle - mChassis->GetAngle();
+            while (angleDiff > 3.14159265f)  angleDiff -= 6.2831853f;
+            while (angleDiff < -3.14159265f) angleDiff += 6.2831853f;
+            mChassis->ApplyTorque(angleDiff * 14.0f - mChassis->GetAngularVelocity() * 3.5f, true);
         }
         if (mThrottleActive && !mOutOfFuel) {
             float chassisAngle = mChassis->GetAngle();
             b2Vec2 forwardDir(cosf(chassisAngle), sinf(chassisAngle));
-            float thrustMag = mConfig->hover_thrust;
+            float engineScale = powf(mConfig->upg_mult_engine, (float)mEngineLevel * 0.40f);
+            float boostScale = (mConfig->fourth_upgrade_type == 5) ? (1.0f + 0.03f * (float)mAWDLevel) : 1.0f;
+            float thrustMag = mConfig->hover_thrust * engineScale * boostScale;
+            float maxThrust = mChassis->GetMass() * 45.0f;
+            if (thrustMag > maxThrust) thrustMag = maxThrust;
             mChassis->ApplyForceToCenter(b2Vec2(thrustMag * forwardDir.x, thrustMag * forwardDir.y), true);
+        } else if (mBrakeActive && !mOutOfFuel) {
+            float chassisAngle = mChassis->GetAngle();
+            b2Vec2 forwardDir(cosf(chassisAngle), sinf(chassisAngle));
+            float thrustMag = mConfig->hover_thrust * 0.45f;
+            mChassis->ApplyForceToCenter(b2Vec2(-thrustMag * forwardDir.x, -thrustMag * forwardDir.y), true);
         }
     } else if (mConfig->special_physics_mode == 3 && mThrusterActive && !mOutOfFuel && !mIsDead) {
-        // Mode 3: THRUSTER_JET - Mass-proportional vertical thrust across all bodies
+        // Mode 3: THRUSTER_JET - Mass-proportional vertical thrust across all bodies (BUG-020: raise cap to 6.0g)
         float g = fabsf(mWorld->GetGravity().y);
         if (g < 0.1f) g = 9.8f;
         float boostFactor = 1.0f + mConfig->thruster_boost_per_level * (float)mAWDLevel;
         float totalMult = mConfig->thruster_g_mult * boostFactor;
-        if (totalMult > 3.0f) totalMult = 3.0f;
+        if (totalMult > 6.0f) totalMult = 6.0f;
         if (totalMult < 0.0f) totalMult = 0.0f;
 
         if (mChassis)    mChassis->ApplyForceToCenter(b2Vec2(0.0f, mChassis->GetMass() * g * totalMult), true);
@@ -704,10 +858,73 @@ static inline float LerpAngle(float prevAngle, float curAngle, float alpha) {
     return prevAngle + diff * alpha;
 }
 
+float PlayerCar::GetInterpolatedAngle(float alpha) const {
+    if (!mChassis) return 0.0f;
+    return LerpAngle(mPrevChassis.angle, mChassis->GetAngle(), alpha);
+}
+
 void PlayerCar::Render(float alpha) {
     if (!mChassis) return;
 
-    // 1. Draw Rear Wheel
+    b2Vec2 curChassisPos = mChassis->GetPosition();
+    float curChassisAngle = mChassis->GetAngle();
+    b2Vec2 chassisPos = (1.0f - alpha) * mPrevChassis.position + alpha * curChassisPos;
+    float chassisAngle = LerpAngle(mPrevChassis.angle, curChassisAngle, alpha);
+    b2Rot chassisRot(chassisAngle);
+
+    // 1. Background vehicle parts (behind driver & chassis, e.g. superoffroad V8/shocks) (BUG-013)
+    for (int i = 0; i < mPartCount; ++i) {
+        CarAttachment& p = mParts[i];
+        if (!p.detached && p.behindChassis && p.tex.GetWidth() > 0) {
+            b2Vec2 partWorld = chassisPos + b2Mul(chassisRot, b2Vec2(p.localX, p.localY));
+            Renderer2D::DrawSprite(&p.tex, partWorld.x, partWorld.y, p.width, p.height, chassisAngle);
+        }
+    }
+
+    // 2. Driver Torso & Head anchored to driver_head_offset (BUG-003)
+    float headR = (mConfig && mConfig->driver_head_radius > 0.0f) ? mConfig->driver_head_radius : 0.24f;
+    float headSize = clampf(headR * 2.3f, 0.45f, 0.72f);
+    float torsoSize = headSize * 1.18f;
+    float headOffX = mConfig ? mConfig->driver_head_offset[0] : -0.10f;
+    float headOffY = mConfig ? mConfig->driver_head_offset[1] : 0.50f;
+
+    b2Vec2 torsoLocal(headOffX, headOffY - 0.30f);
+    b2Vec2 torsoWorld = chassisPos + b2Mul(chassisRot, torsoLocal);
+    Renderer2D::DrawSprite(&mTexDriverBody, torsoWorld.x, torsoWorld.y, torsoSize, torsoSize, chassisAngle);
+
+    if (mDriverHead) {
+        b2Vec2 curHeadPos = mDriverHead->GetPosition();
+        float curHeadAngle = mDriverHead->GetAngle();
+        b2Vec2 headPos = (1.0f - alpha) * mPrevDriverHead.position + alpha * curHeadPos;
+        float headAngle = LerpAngle(mPrevDriverHead.angle, curHeadAngle, alpha);
+        Renderer2D::DrawSprite(&mTexDriverHead, headPos.x, headPos.y, headSize, headSize, headAngle);
+    }
+
+    // 3. Chassis Sprite (behind wheels so tires never get occluded by skirts/arches) (BUG-012)
+    float sprW = (mConfig->sprite_width > 0.0f) ? mConfig->sprite_width : 3.40f;
+    float sprH = (mConfig->sprite_height > 0.0f) ? mConfig->sprite_height : 1.45f;
+    b2Vec2 spriteOffsetLocal(0.0f, 0.02f);
+    b2Vec2 spriteWorld = chassisPos + b2Mul(chassisRot, spriteOffsetLocal);
+    Renderer2D::DrawSprite(&mTexChassis, spriteWorld.x, spriteWorld.y, sprW, sprH, chassisAngle);
+
+    // 4. Foreground & detached vehicle parts (BUG-013)
+    for (int i = 0; i < mPartCount; ++i) {
+        CarAttachment& p = mParts[i];
+        if (p.tex.GetWidth() <= 0) continue;
+        if (p.detached) {
+            b2Vec2 pPos = (1.0f - alpha) * p.prevPos + alpha * p.worldPos;
+            float pAng = LerpAngle(p.prevAngle, p.angle, alpha);
+            Renderer2D::DrawSprite(&p.tex, pPos.x, pPos.y, p.width, p.height, pAng);
+        } else if (!p.behindChassis) {
+            b2Vec2 partWorld = chassisPos + b2Mul(chassisRot, b2Vec2(p.localX, p.localY));
+            Renderer2D::DrawSprite(&p.tex, partWorld.x, partWorld.y, p.width, p.height, chassisAngle);
+        }
+    }
+
+    // 5. Rear & Front Wheels drawn over wheel arches (BUG-012)
+    bool singleWheel = mConfig && fabsf(mConfig->front_wheel_offset[0] - mConfig->rear_wheel_offset[0]) < 0.05f;
+    bool skiMode = mConfig && mConfig->special_physics_mode == 1 && mConfig->hide_wheels == 0;
+
     if (mRearWheel && (!mConfig || mConfig->hide_wheels == 0)) {
         b2Vec2 curPos = mRearWheel->GetPosition();
         float curAngle = mRearWheel->GetAngle();
@@ -715,44 +932,24 @@ void PlayerCar::Render(float alpha) {
         float angle = LerpAngle(mPrevRearWheel.angle, curAngle, alpha);
         float rearRadius = (mConfig->rear_wheel_radius > 0.0f) ? mConfig->rear_wheel_radius : mConfig->wheel_radius;
         float diameter = rearRadius * 2.0f;
-        Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y, diameter, diameter, angle);
+        if (skiMode) {
+            Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y - rearRadius * 0.25f, diameter * 1.45f, diameter * 0.725f, chassisAngle);
+        } else {
+            Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y, diameter, diameter, angle);
+        }
     }
 
-    // 2. Draw Front Wheel
-    if (mFrontWheel && (!mConfig || mConfig->hide_wheels == 0)) {
+    if (mFrontWheel && !singleWheel && (!mConfig || mConfig->hide_wheels == 0)) {
         b2Vec2 curPos = mFrontWheel->GetPosition();
         float curAngle = mFrontWheel->GetAngle();
         b2Vec2 pos = (1.0f - alpha) * mPrevFrontWheel.position + alpha * curPos;
         float angle = LerpAngle(mPrevFrontWheel.angle, curAngle, alpha);
         float frontRadius = (mConfig->front_wheel_radius > 0.0f) ? mConfig->front_wheel_radius : mConfig->wheel_radius;
         float diameter = frontRadius * 2.0f;
-        Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y, diameter, diameter, angle);
+        if (skiMode) {
+            Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y - frontRadius * 0.25f, diameter * 1.45f, diameter * 0.725f, chassisAngle);
+        } else {
+            Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y, diameter, diameter, angle);
+        }
     }
-
-    // 3. Interpolated Chassis & Driver Body
-    b2Vec2 curChassisPos = mChassis->GetPosition();
-    float curChassisAngle = mChassis->GetAngle();
-    b2Vec2 chassisPos = (1.0f - alpha) * mPrevChassis.position + alpha * curChassisPos;
-    float chassisAngle = LerpAngle(mPrevChassis.angle, curChassisAngle, alpha);
-    b2Rot chassisRot(chassisAngle);
-
-    b2Vec2 torsoLocal(-0.15f, 0.20f);
-    b2Vec2 torsoWorld = chassisPos + b2Mul(chassisRot, torsoLocal);
-    Renderer2D::DrawSprite(&mTexDriverBody, torsoWorld.x, torsoWorld.y, 0.65f, 0.65f, chassisAngle);
-
-    // 4. Draw Driver Head (rotates with its own body or freely after crash)
-    if (mDriverHead) {
-        b2Vec2 curHeadPos = mDriverHead->GetPosition();
-        float curHeadAngle = mDriverHead->GetAngle();
-        b2Vec2 headPos = (1.0f - alpha) * mPrevDriverHead.position + alpha * curHeadPos;
-        float headAngle = LerpAngle(mPrevDriverHead.angle, curHeadAngle, alpha);
-        Renderer2D::DrawSprite(&mTexDriverHead, headPos.x, headPos.y, 0.55f, 0.55f, headAngle);
-    }
-
-    // 5. Draw Chassis Sprite
-    float sprW = (mConfig->sprite_width > 0.0f) ? mConfig->sprite_width : 3.40f;
-    float sprH = (mConfig->sprite_height > 0.0f) ? mConfig->sprite_height : 1.45f;
-    b2Vec2 spriteOffsetLocal(0.0f, 0.02f);
-    b2Vec2 spriteWorld = chassisPos + b2Mul(chassisRot, spriteOffsetLocal);
-    Renderer2D::DrawSprite(&mTexChassis, spriteWorld.x, spriteWorld.y, sprW, sprH, chassisAngle);
 }

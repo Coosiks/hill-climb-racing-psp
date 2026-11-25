@@ -102,6 +102,17 @@ StageConfig Config::Stages[MAX_CONFIG_STAGES] = {
 };
 int Config::StageCount = 4;
 
+template <size_t N>
+static void CopyCfgStr(char (&dst)[N], const char* src) {
+    if (!src) {
+        dst[0] = '\0';
+        return;
+    }
+    size_t len = strnlen(src, N - 1);
+    memcpy(dst, src, len);
+    dst[len] = '\0';
+}
+
 static void Trim(char* s) {
     char* p = s;
     while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
@@ -197,13 +208,13 @@ bool Config::LoadVehicles(const char* filepath) {
                     currentVehicle = 0;
                     VehicleCount = 1;
                     Vehicles[0] = VehicleJeep;
-                    strncpy(Vehicles[0].id, secName, sizeof(Vehicles[0].id) - 1);
+                    CopyCfgStr(Vehicles[0].id, secName);
                 } else {
                     if (VehicleCount < MAX_CONFIG_VEHICLES) {
                         currentVehicle = VehicleCount++;
                         Vehicles[currentVehicle] = VehicleJeep; // default fallback values
-                        strncpy(Vehicles[currentVehicle].id, secName, sizeof(Vehicles[currentVehicle].id) - 1);
-                        strncpy(Vehicles[currentVehicle].name, secName, sizeof(Vehicles[currentVehicle].name) - 1);
+                        CopyCfgStr(Vehicles[currentVehicle].id, secName);
+                        CopyCfgStr(Vehicles[currentVehicle].name, secName);
                     }
                 }
             }
@@ -216,8 +227,8 @@ bool Config::LoadVehicles(const char* filepath) {
             if (sscanf(line, "%63[^=]=%127[^\r\n]", key, val) == 2) {
                 Trim(key);
                 Trim(val);
-                if (strcmp(key, "id") == 0) strncpy(v.id, val, sizeof(v.id) - 1);
-                else if (strcmp(key, "name") == 0) strncpy(v.name, val, sizeof(v.name) - 1);
+                if (strcmp(key, "id") == 0) CopyCfgStr(v.id, val);
+                else if (strcmp(key, "name") == 0) CopyCfgStr(v.name, val);
                 else if (strcmp(key, "unlock_cost") == 0) v.unlock_cost = atoi(val);
                 else if (strcmp(key, "base_upgrade_cost") == 0) v.base_upgrade_cost = atoi(val);
                 else if (strcmp(key, "max_upgrade_level") == 0) v.max_upgrade_level = atoi(val);
@@ -243,15 +254,15 @@ bool Config::LoadVehicles(const char* filepath) {
                 else if (strcmp(key, "rear_wheel_radius") == 0) v.rear_wheel_radius = (float)atof(val);
                 else if (strcmp(key, "sprite_width") == 0) v.sprite_width = (float)atof(val);
                 else if (strcmp(key, "sprite_height") == 0) v.sprite_height = (float)atof(val);
-                else if (strcmp(key, "body_texture") == 0) strncpy(v.body_texture, val, sizeof(v.body_texture) - 1);
+                else if (strcmp(key, "body_texture") == 0) CopyCfgStr(v.body_texture, val);
                 else if (strcmp(key, "wheel_texture") == 0) {
-                    strncpy(v.wheel_texture, val, sizeof(v.wheel_texture) - 1);
-                    strncpy(v.front_wheel_texture, val, sizeof(v.front_wheel_texture) - 1);
-                    strncpy(v.rear_wheel_texture, val, sizeof(v.rear_wheel_texture) - 1);
+                    CopyCfgStr(v.wheel_texture, val);
+                    CopyCfgStr(v.front_wheel_texture, val);
+                    CopyCfgStr(v.rear_wheel_texture, val);
                 }
-                else if (strcmp(key, "front_wheel_texture") == 0) strncpy(v.front_wheel_texture, val, sizeof(v.front_wheel_texture) - 1);
-                else if (strcmp(key, "rear_wheel_texture") == 0) strncpy(v.rear_wheel_texture, val, sizeof(v.rear_wheel_texture) - 1);
-                else if (strcmp(key, "preview_texture") == 0) strncpy(v.preview_texture, val, sizeof(v.preview_texture) - 1);
+                else if (strcmp(key, "front_wheel_texture") == 0) CopyCfgStr(v.front_wheel_texture, val);
+                else if (strcmp(key, "rear_wheel_texture") == 0) CopyCfgStr(v.rear_wheel_texture, val);
+                else if (strcmp(key, "preview_texture") == 0) CopyCfgStr(v.preview_texture, val);
                 else if (strcmp(key, "drive_type") == 0) v.drive_type = atoi(val);
                 else if (strcmp(key, "fourth_upgrade_type") == 0) v.fourth_upgrade_type = atoi(val);
                 else if (strcmp(key, "downforce_coeff") == 0) v.downforce_coeff = (float)atof(val);
@@ -335,8 +346,8 @@ bool Config::LoadStages(const char* filepath) {
                 if (StageCount < MAX_CONFIG_STAGES) {
                     currentStage = StageCount++;
                     memset(&Stages[currentStage], 0, sizeof(StageConfig));
-                    strncpy(Stages[currentStage].id, secName, sizeof(Stages[currentStage].id) - 1);
-                    strncpy(Stages[currentStage].name, secName, sizeof(Stages[currentStage].name) - 1);
+                    CopyCfgStr(Stages[currentStage].id, secName);
+                    CopyCfgStr(Stages[currentStage].name, secName);
                     Stages[currentStage].unlock_cost = (currentStage == 0 ? 0 : 10000 * currentStage);
                     Stages[currentStage].gravity = -10.0f;
                     Stages[currentStage].friction = 0.50f;
@@ -360,8 +371,8 @@ bool Config::LoadStages(const char* filepath) {
             if (StageCount == 0) {
                 currentStage = StageCount++;
                 memset(&Stages[currentStage], 0, sizeof(StageConfig));
-                strncpy(Stages[currentStage].id, "countryside", sizeof(Stages[currentStage].id) - 1);
-                strncpy(Stages[currentStage].name, "Countryside", sizeof(Stages[currentStage].name) - 1);
+                CopyCfgStr(Stages[currentStage].id, "countryside");
+                CopyCfgStr(Stages[currentStage].name, "Countryside");
                 Stages[currentStage].has_ceiling = 0;
                 Stages[currentStage].ceiling_offset = 6.5f;
                 Stages[currentStage].fuel_interval = 90.0f;
@@ -382,15 +393,15 @@ bool Config::LoadStages(const char* filepath) {
             if (sscanf(line, "%63[^=]=%127[^\r\n]", key, val) == 2) {
                 Trim(key);
                 Trim(val);
-                if (strcmp(key, "id") == 0) strncpy(s.id, val, sizeof(s.id) - 1);
-                else if (strcmp(key, "name") == 0) strncpy(s.name, val, sizeof(s.name) - 1);
+                if (strcmp(key, "id") == 0) CopyCfgStr(s.id, val);
+                else if (strcmp(key, "name") == 0) CopyCfgStr(s.name, val);
                 else if (strcmp(key, "unlock_cost") == 0) s.unlock_cost = atoi(val);
                 else if (strcmp(key, "gravity") == 0) s.gravity = (float)atof(val);
                 else if (strcmp(key, "friction") == 0) s.friction = (float)atof(val);
                 else if (strcmp(key, "coin_multiplier") == 0) s.coin_multiplier = (float)atof(val);
-                else if (strcmp(key, "ground_texture") == 0) strncpy(s.ground_texture, val, sizeof(s.ground_texture) - 1);
-                else if (strcmp(key, "surface_texture") == 0) strncpy(s.surface_texture, val, sizeof(s.surface_texture) - 1);
-                else if (strcmp(key, "music") == 0) strncpy(s.music, val, sizeof(s.music) - 1);
+                else if (strcmp(key, "ground_texture") == 0) CopyCfgStr(s.ground_texture, val);
+                else if (strcmp(key, "surface_texture") == 0) CopyCfgStr(s.surface_texture, val);
+                else if (strcmp(key, "music") == 0) CopyCfgStr(s.music, val);
                 else if (strcmp(key, "has_ceiling") == 0) s.has_ceiling = atoi(val);
                 else if (strcmp(key, "ceiling_offset") == 0) s.ceiling_offset = (float)atof(val);
                 else if (strcmp(key, "fuel_interval") == 0) s.fuel_interval = (float)atof(val);

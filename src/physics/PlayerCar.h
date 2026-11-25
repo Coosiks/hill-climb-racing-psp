@@ -34,6 +34,7 @@ public:
     b2Vec2 GetPosition() const;
     b2Vec2 GetInterpolatedPosition(float alpha) const;
     float GetAngle() const { return mChassis ? mChassis->GetAngle() : 0.0f; }
+    float GetInterpolatedAngle(float alpha) const;
     float GetSpeedKmH() const;
     float GetEngineRev() const { return mEngineRev; }
     float GetFuel() const { return mFuel; }
@@ -123,12 +124,36 @@ private:
     int mPendingWheelieBonus;
     float mPendingWheelieTime;
 
+#define MAX_CAR_PARTS 6
+
+    struct CarAttachment {
+        Texture tex;
+        float localX;
+        float localY;
+        float width;
+        float height;
+        bool behindChassis;
+        bool breakable;
+        bool detached;
+        b2Vec2 prevPos;
+        b2Vec2 worldPos;
+        b2Vec2 worldVel;
+        float prevAngle;
+        float angle;
+        float angularVel;
+    };
+
+    void AddAttachment(const char* texPath, float lx, float ly, float w, float h, bool behindChassis, bool breakable);
+    void DetachBreakableParts();
+
     // Sprites
     Texture mTexChassis;
     Texture mTexTire;
     Texture mTexFrontTire;
     Texture mTexDriverBody;
     Texture mTexDriverHead;
+    CarAttachment mParts[MAX_CAR_PARTS];
+    int mPartCount;
 };
 
 #endif // HCR_PLAYER_CAR_H

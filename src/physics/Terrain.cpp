@@ -782,10 +782,20 @@ bool Terrain::CreateBridge(int chunkIndex, float startX, float endX, float start
     b.chunkIndex = chunkIndex;
     b.startX = startX;
     b.endX = endX;
+    b.startY = startY;
+    b.endY = endY;
     b.plankCount = 10;
 
+    float dx = endX - startX;
+    float dy = endY - startY;
+    float spanLen = sqrtf(dx * dx + dy * dy);
+    float slopeAngle = atan2f(dy, dx);
+    float plankW = spanLen / (float)b.plankCount;
+    if (plankW < BRIDGE_PLANK_WIDTH) plankW = BRIDGE_PLANK_WIDTH;
+    b.plankWidth = plankW;
+
     b2PolygonShape plankBox;
-    plankBox.SetAsBox(BRIDGE_PLANK_WIDTH * 0.5f, BRIDGE_PLANK_HEIGHT * 0.5f);
+    plankBox.SetAsBox(plankW * 0.5f, BRIDGE_PLANK_HEIGHT * 0.5f);
 
     b2FixtureDef pfd;
     pfd.shape = &plankBox;
@@ -793,15 +803,17 @@ bool Terrain::CreateBridge(int chunkIndex, float startX, float endX, float start
     pfd.friction = 0.70f;
     pfd.restitution = 0.0f;
     pfd.filter.categoryBits = CAT_TERRAIN;
-    pfd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL;
+    pfd.filter.maskBits = CAT_CHASSIS | CAT_WHEEL | CAT_DRIVER;
 
     for (int i = 0; i < b.plankCount; ++i) {
-        float px = startX + ((float)i + 0.5f) * BRIDGE_PLANK_WIDTH;
-        float py = startY + (((float)i + 0.5f) / (float)b.plankCount) * (endY - startY);
+        float t = ((float)i + 0.5f) / (float)b.plankCount;
+        float px = startX + t * dx;
+        float py = startY + t * dy;
 
         b2BodyDef pbd;
         pbd.type = b2_dynamicBody;
         pbd.position.Set(px, py);
+        pbd.angle = slopeAngle;
         pbd.linearDamping = 0.5f;
         pbd.angularDamping = 0.5f;
         b.planks[i] = mWorld->CreateBody(&pbd);
@@ -820,8 +832,8 @@ bool Terrain::CreateBridge(int chunkIndex, float startX, float endX, float start
 
     // Intermediate joints
     for (int i = 1; i < b.plankCount; ++i) {
-        b2Vec2 anchor(startX + (float)i * BRIDGE_PLANK_WIDTH,
-                      startY + ((float)i / (float)b.plankCount) * (endY - startY));
+        float t = (float)i / (float)b.plankCount;
+        b2Vec2 anchor(startX + t * dx, startY + t * dy);
         jd.Initialize(b.planks[i - 1], b.planks[i], anchor);
         b.joints[i] = (b2RevoluteJoint*)mWorld->CreateJoint(&jd);
     }
@@ -1174,13 +1186,40 @@ void Terrain::SpawnItemsAhead(float startX, float endX) {
     bool spawnFuel = ((int)(spawnX) % intervalInt < 35);
 
     if (spawnFuel && mItemCount < MAX_COLLECTIBLES) {
-        float y = GetHeightAtX(spawnX) + 1.2f;
-        SpawnItem(spawnX, y, 1000); // 1000 = Fuel
+        float y = GetHeightAtX(spawnX);
+        if (mStageConfig && mStageConfig->has_bridges == 1) {
+            int cIdx = (int)floorf(spawnX / CHUNK_WIDTH_METERS);
+            if (cIdx > 0 && (cIdx % 4 == 1)) {
+                float x0 = (float)cIdx * CHUNK_WIDTH_METERS + 9.0f;
+                float x1 = (float)cIdx * CHUNK_WIDTH_METERS + 21.0f;
+                if (spawnX >= x0 && spawnX <= x1) {
+                    float y0 = GetHeightAtX(x0);
+                    float y1 = GetHeightAtX(x1);
+                    float bridgeY = y0 + ((spawnX - x0) / (x1 - x0)) * (y1 - y0);
+                    if (bridgeY > y) y = bridgeY;
+                }
+            }
+        }
+        SpawnItem(spawnX, y + 1.2f, 1000); // 1000 = Fuel
     } else {
         int coinVal = (spawnX > 300.0f) ? 100 : (spawnX > 100.0f ? 25 : 5);
         for (int k = 0; k < 3 && mItemCount < MAX_COLLECTIBLES; ++k) {
             float cx = spawnX + (float)k * 1.5f;
-            float cy = GetHeightAtX(cx) + 1.0f + sinf((float)k * 1.0f) * 0.4f;
+            float baseH = GetHeightAtX(cx);
+            if (mStageConfig && mStageConfig->has_bridges == 1) {
+                int cIdx = (int)floorf(cx / CHUNK_WIDTH_METERS);
+                if (cIdx > 0 && (cIdx % 4 == 1)) {
+                    float x0 = (float)cIdx * CHUNK_WIDTH_METERS + 9.0f;
+                    float x1 = (float)cIdx * CHUNK_WIDTH_METERS + 21.0f;
+                    if (cx >= x0 && cx <= x1) {
+                        float y0 = GetHeightAtX(x0);
+                        float y1 = GetHeightAtX(x1);
+                        float bridgeY = y0 + ((cx - x0) / (x1 - x0)) * (y1 - y0);
+                        if (bridgeY > baseH) baseH = bridgeY;
+                    }
+                }
+            }
+            float cy = baseH + 1.0f + sinf((float)k * 1.0f) * 0.4f;
             SpawnItem(cx, cy, coinVal);
         }
     }
@@ -1256,6 +1295,8 @@ void Terrain::Render(float cameraX, float cameraY) {
         Renderer2D::DrawTerrainSurface(&mTexSurface, mRenderX, mRenderY, renderCount, 0.6f);
 
         if (HasCeiling()) {
+            float topY = cameraY + 14.0f;
+            Renderer2D::DrawTerrainFill(&mTexGround, mCeilRenderX, mCeilRenderY, renderCount, topY);
             Renderer2D::DrawTerrainSurface(&mTexSurface, mCeilRenderX, mCeilRenderY, renderCount, 0.6f);
         }
     }
@@ -1277,12 +1318,13 @@ void Terrain::Render(float cameraX, float cameraY) {
     // Draw Suspension Bridges (batched)
     for (int b = 0; b < MAX_ACTIVE_BRIDGES; ++b) {
         if (mBridges[b].active) {
+            float plankW = (mBridges[b].plankWidth > 0.0f) ? mBridges[b].plankWidth : BRIDGE_PLANK_WIDTH;
             for (int p = 0; p < mBridges[b].plankCount; ++p) {
                 b2Body* plank = mBridges[b].planks[p];
                 if (plank) {
                     b2Vec2 pos = plank->GetPosition();
                     float angle = plank->GetAngle();
-                    Renderer2D::DrawSprite(&mTexBridge, pos.x, pos.y, BRIDGE_PLANK_WIDTH, BRIDGE_PLANK_HEIGHT, angle);
+                    Renderer2D::DrawSprite(&mTexBridge, pos.x, pos.y, plankW, BRIDGE_PLANK_HEIGHT, angle);
                 }
             }
         }

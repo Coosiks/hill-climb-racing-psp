@@ -55,10 +55,11 @@ enum StageType {
     STAGE_COUNT         = 28
 };
 
-// Upgrade pricing: Cost = 1000 * (level + 1)^2
-inline int GetUpgradeCost(int currentLevel) {
+// Upgrade pricing: Cost = baseCost * (level + 1)^2 (default 1000)
+inline int GetUpgradeCost(int currentLevel, int baseCost = 1000) {
     int next = currentLevel + 1;
-    return 1000 * next * next;
+    int effectiveBase = (baseCost > 0) ? baseCost : 1000;
+    return effectiveBase * next * next;
 }
 
 // 32-bit FNV-1a Hash

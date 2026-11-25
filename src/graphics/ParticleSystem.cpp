@@ -17,7 +17,7 @@ static inline float RandFloat(float minVal, float maxVal) {
 void ParticleSystem::Init() {
     Reset();
     if (!sInitialized) {
-        sParticleTexture.LoadPNG("assets/Tire.png");
+        sParticleTexture.LoadPNG("assets/smoke.png");
         sInitialized = true;
     }
 }

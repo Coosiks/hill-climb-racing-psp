@@ -35,6 +35,7 @@ public:
 
     static void PlaySFX(SoundEffect sfx);
     static void UpdateEngineSound(float rev, bool active, float dt = 0.0166667f);
+    static void LoadVehicleEngine(const char* vehicleId);
 
     static void PauseAll();
     static void ResumeAll();

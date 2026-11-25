@@ -36,6 +36,9 @@ struct SuspensionBridge {
     int chunkIndex;
     float startX;
     float endX;
+    float startY;
+    float endY;
+    float plankWidth;
     int plankCount;
     b2Body* planks[MAX_BRIDGE_PLANKS];
     b2RevoluteJoint* joints[MAX_BRIDGE_PLANKS + 1];
