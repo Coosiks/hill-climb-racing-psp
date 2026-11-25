@@ -125,6 +125,7 @@ private:
     Collectible mItems[MAX_COLLECTIBLES];
     int mItemCount;
     float mLastItemSpawnX;
+    float mNextFuelX;
 
     // Deferred destroy ring buffer
     b2Body* mDestroyQueue[DEFERRED_QUEUE_CAPACITY];
@@ -135,6 +136,8 @@ private:
     // Textures
     Texture mTexGround;
     Texture mTexSurface;
+    Texture mTexLiquid;
+    Texture mTexRooftopWall;
     Texture mTexCoin5;
     Texture mTexCoin25;
     Texture mTexCoin100;

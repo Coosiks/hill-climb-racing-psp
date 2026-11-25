@@ -56,10 +56,30 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     mTexChassis.LoadPNG(bodyTex);
     mTexTire.LoadPNG(rearTireTex);
     mTexFrontTire.LoadPNG(frontTireTex);
-    mTexDriverBody.LoadPNG("assets/driver-body.png");
-    mTexDriverHead.LoadPNG("assets/driver-head.png");
 
-    // Multi-sprite vehicle layers & breakable parts (BUG-013)
+    bool isSleigh = (mConfig && strcmp(mConfig->id, "sleigh") == 0);
+    bool isBike = (mConfig && (strcmp(mConfig->id, "motocross") == 0 ||
+                               strcmp(mConfig->id, "minibike") == 0 ||
+                               strcmp(mConfig->id, "quadbike") == 0));
+    if (isSleigh) {
+        mTexDriverBody.LoadPNG("assets/driver-body-santa.png");
+        mTexDriverHead.LoadPNG("assets/driver-head-santa.png");
+    } else if (isBike) {
+        mTexDriverBody.LoadPNG("assets/bike-driver-body.png");
+        mTexDriverLegs.LoadPNG("assets/bike-driver-leg-full.png");
+        mTexDriverHead.LoadPNG("assets/driver-head.png");
+    } else {
+        mTexDriverBody.LoadPNG("assets/driver-body.png");
+        mTexDriverHead.LoadPNG("assets/driver-head.png");
+    }
+
+    if (mConfig && strcmp(mConfig->id, "tank") == 0) {
+        mTexTankTrack.LoadPNG("assets/chaintrack.png");
+    } else if (mConfig && strcmp(mConfig->id, "hovercraft") == 0) {
+        mTexHoverGlow.LoadPNG("assets/hovercraft_skirtpart.png");
+    }
+
+    // Multi-sprite vehicle layers & breakable parts (BUG-013 / BUG-048 / BUG-050 / BUG-051 / BUG-056)
     if (mConfig && strcmp(mConfig->id, "ambulance") == 0) {
         AddAttachment("assets/car-ambulance-roof.png",       -0.36f,  0.46f, 1.95f, 0.90f, false, true);
         AddAttachment("assets/car-ambulance-cockpit.png",     0.98f,  0.34f, 0.90f, 0.45f, false, true);
@@ -67,15 +87,34 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
         AddAttachment("assets/car-ambulance-middledoor.png", -1.56f,  0.10f, 0.54f, 0.85f, false, true);
         AddAttachment("assets/car-ambulance-lamp.png",        0.82f,  0.62f, 0.26f, 0.22f, false, true);
     } else if (mConfig && strcmp(mConfig->id, "policecar") == 0) {
-        AddAttachment("assets/car-policecar-roof.png",       -0.08f,  0.32f, 1.45f, 0.36f, false, true);
-        AddAttachment("assets/car-policecar-lamp.png",       -0.12f,  0.54f, 0.34f, 0.22f, false, true);
+        AddAttachment("assets/car-policecar-reardoor.png",   -0.28f,  0.25f, 0.78f, 0.78f, false, true);
+        AddAttachment("assets/car-policecar-frontdoor.png",   0.26f,  0.25f, 0.78f, 0.78f, false, true);
+        AddAttachment("assets/car-policecar-hood.png",        0.92f,  0.28f, 0.85f, 0.11f, false, true);
+        AddAttachment("assets/car-policecar-roof.png",       -0.08f,  0.56f, 1.56f, 0.40f, false, true);
+        AddAttachment("assets/car-policecar-lamp.png",       -0.12f,  0.78f, 0.34f, 0.22f, false, true);
     } else if (mConfig && strcmp(mConfig->id, "electric") == 0) {
-        AddAttachment("assets/car-electric-roof.png",        -0.15f,  0.35f, 1.65f, 0.58f, false, true);
+        AddAttachment("assets/car-electric-roof.png",        -0.06f,  0.74f, 1.75f, 0.85f, false, true);
     } else if (mConfig && strcmp(mConfig->id, "hotrod") == 0) {
-        AddAttachment("assets/car-hotrod-roof.png",          -0.25f,  0.28f, 1.45f, 0.62f, false, true);
+        AddAttachment("assets/car-hotrod-motor.png",          0.68f,  0.22f, 0.80f, 0.80f, true,  false);
+        AddAttachment("assets/car-hotrod-roof.png",          -0.25f,  0.40f, 1.45f, 0.62f, false, true);
     } else if (mConfig && strcmp(mConfig->id, "superoffroad") == 0) {
         AddAttachment("assets/car-superoffroad-bg.png",      -0.10f,  0.05f, 2.80f, 1.05f, true,  false);
         AddAttachment("assets/car-superoffroad-wing.png",    -1.25f,  0.45f, 0.90f, 0.75f, false, true);
+    } else if (mConfig && strcmp(mConfig->id, "firetruck") == 0) {
+        AddAttachment("assets/car-firetruck-cage.png",       -1.50f,  0.72f, 0.85f, 0.85f, false, true);
+        AddAttachment("assets/car-firetruck-ladder.png",     -0.20f,  0.66f, 2.10f, 0.90f, false, true);
+        AddAttachment("assets/car-firetruck-lamp.png",       -1.45f,  1.10f, 0.24f, 0.24f, false, true);
+    } else if (mConfig && strcmp(mConfig->id, "tank") == 0) {
+        AddAttachment("assets/car-tank-bg.png",               0.00f,  0.00f, 4.20f, 2.10f, true,  false);
+        AddAttachment("assets/car-tank-cannon.png",           1.38f,  0.66f, 2.80f, 1.40f, true,  false);
+    } else if (mConfig && strcmp(mConfig->id, "hovercraft") == 0) {
+        AddAttachment("assets/hovercraft_engine.png",        -1.15f,  0.32f, 0.78f, 0.78f, false, false);
+    } else if (mConfig && strcmp(mConfig->id, "dragster") == 0) {
+        AddAttachment("assets/car-dragster-wing.png",        -1.35f,  0.42f, 0.90f, 0.90f, false, true);
+    } else if (mConfig && strcmp(mConfig->id, "screwfinger") == 0) {
+        AddAttachment("assets/car-screwfinger-exhaust.png",  -1.15f,  0.32f, 0.65f, 0.65f, true,  false);
+    } else if (mConfig && strcmp(mConfig->id, "tractor") == 0) {
+        AddAttachment("assets/car-tractor-exhaust.png",       0.55f,  0.48f, 0.35f, 0.65f, true,  false);
     }
 #if defined(__PSP__)
     u32 t1 = sceKernelGetSystemTimeLow();
@@ -462,10 +501,10 @@ void PlayerCar::Update(float dt) {
     // 0. Driver neck PD spring motor return
     if (mNeckJoint) {
         float neckAngle = mNeckJoint->GetJointAngle();
-        float kSpring = 10.0f;
+        float kSpring = 18.0f;
         mNeckJoint->EnableMotor(true);
         mNeckJoint->SetMotorSpeed(-kSpring * neckAngle);
-        mNeckJoint->SetMaxMotorTorque(15.0f);
+        mNeckJoint->SetMaxMotorTorque(18.0f);
     }
 
     // 1. Throttle pedal response ramp
@@ -477,8 +516,25 @@ void PlayerCar::Update(float dt) {
         if (mThrottleRamp < 0.0f) mThrottleRamp = 0.0f;
     }
 
-    // 2. Air time and contacts check
-    bool inAir = IsInAir();
+    // 2. Air time and contacts check (hoverGrounded excludes flat hovercraft glide from free AIR TIME coins - BUG-046)
+    bool hoverMode = (mConfig->special_physics_mode == 2);
+    bool hoverGrounded = false;
+    float hoverSlopeAngle = 0.0f;
+    if (hoverMode && mChassis) {
+        float curX = mChassis->GetPosition().x;
+        float curY = mChassis->GetPosition().y;
+        float groundY = mTerrain ? mTerrain->GetHeightAtX(curX) : 0.0f;
+        if (curY - groundY <= mConfig->hover_height * 1.35f) {
+            hoverGrounded = true;
+            if (mTerrain) {
+                float y1 = mTerrain->GetHeightAtX(curX - 0.5f);
+                float y2 = mTerrain->GetHeightAtX(curX + 0.5f);
+                hoverSlopeAngle = atan2f(y2 - y1, 1.0f);
+            }
+        }
+    }
+
+    bool inAir = IsInAir() && !hoverGrounded;
     if (inAir) {
         mAirTime += dt;
     } else {
@@ -518,7 +574,7 @@ void PlayerCar::Update(float dt) {
     // 2b. Wheelie tracking (rear wheel on ground, front in air, pitch angle in [0.08, 1.40] rad)
     bool rearOnGround = IsRearWheelOnGround();
     bool frontOnGround = IsFrontWheelOnGround();
-    bool isWheelie = (!mIsDead && rearOnGround && !frontOnGround && angle > 0.08f && angle < 1.40f);
+    bool isWheelie = (!mIsDead && !hoverGrounded && rearOnGround && !frontOnGround && angle > 0.08f && angle < 1.40f);
 
     if (isWheelie) {
         mWheelieTime += dt;
@@ -543,23 +599,6 @@ void PlayerCar::Update(float dt) {
     float awdFactor = (mConfig->fourth_upgrade_type == 0) ? ((float)mAWDLevel / 18.0f) : 0.50f;
     if (awdFactor > 0.50f) awdFactor = 0.50f;
     float airTorque = GetAirPitchTorque();
-
-    bool hoverMode = (mConfig->special_physics_mode == 2);
-    bool hoverGrounded = false;
-    float hoverSlopeAngle = 0.0f;
-    if (hoverMode && mChassis) {
-        float curX = mChassis->GetPosition().x;
-        float curY = mChassis->GetPosition().y;
-        float groundY = mTerrain ? mTerrain->GetHeightAtX(curX) : 0.0f;
-        if (curY - groundY <= mConfig->hover_height * 1.35f) {
-            hoverGrounded = true;
-            if (mTerrain) {
-                float y1 = mTerrain->GetHeightAtX(curX - 0.5f);
-                float y2 = mTerrain->GetHeightAtX(curX + 0.5f);
-                hoverSlopeAngle = atan2f(y2 - y1, 1.0f);
-            }
-        }
-    }
 
     if (mThrottleActive && !mOutOfFuel) {
         if (hoverMode) {
@@ -872,7 +911,16 @@ void PlayerCar::Render(float alpha) {
     float chassisAngle = LerpAngle(mPrevChassis.angle, curChassisAngle, alpha);
     b2Rot chassisRot(chassisAngle);
 
-    // 1. Background vehicle parts (behind driver & chassis, e.g. superoffroad V8/shocks) (BUG-013)
+    bool isTank = (mConfig && strcmp(mConfig->id, "tank") == 0);
+    bool isHover = (mConfig && strcmp(mConfig->id, "hovercraft") == 0);
+    bool isBike = (mConfig && (strcmp(mConfig->id, "motocross") == 0 ||
+                               strcmp(mConfig->id, "minibike") == 0 ||
+                               strcmp(mConfig->id, "quadbike") == 0));
+    bool drawDriverOver = isBike || isHover ||
+                          (mConfig && (strcmp(mConfig->id, "sleigh") == 0 ||
+                                       strcmp(mConfig->id, "onewheeler") == 0));
+
+    // 1. Background vehicle parts (behind driver & chassis, e.g. superoffroad V8/shocks, tank bg/cannon)
     for (int i = 0; i < mPartCount; ++i) {
         CarAttachment& p = mParts[i];
         if (!p.detached && p.behindChassis && p.tex.GetWidth() > 0) {
@@ -881,31 +929,51 @@ void PlayerCar::Render(float alpha) {
         }
     }
 
-    // 2. Driver Torso & Head anchored to driver_head_offset (BUG-003)
     float headR = (mConfig && mConfig->driver_head_radius > 0.0f) ? mConfig->driver_head_radius : 0.24f;
     float headSize = clampf(headR * 2.3f, 0.45f, 0.72f);
     float torsoSize = headSize * 1.18f;
     float headOffX = mConfig ? mConfig->driver_head_offset[0] : -0.10f;
     float headOffY = mConfig ? mConfig->driver_head_offset[1] : 0.50f;
 
-    b2Vec2 torsoLocal(headOffX, headOffY - 0.30f);
-    b2Vec2 torsoWorld = chassisPos + b2Mul(chassisRot, torsoLocal);
-    Renderer2D::DrawSprite(&mTexDriverBody, torsoWorld.x, torsoWorld.y, torsoSize, torsoSize, chassisAngle);
+    auto drawDriver = [&]() {
+        if (isBike && mTexDriverLegs.GetWidth() > 0) {
+            // Motorcycle / Quad rider sits upright astride the bike frame
+            b2Vec2 legWorld = chassisPos + b2Mul(chassisRot, b2Vec2(headOffX + 0.04f, headOffY - 0.62f * headSize));
+            Renderer2D::DrawSprite(&mTexDriverLegs, legWorld.x, legWorld.y, headSize * 1.10f, headSize * 1.10f, chassisAngle);
+            b2Vec2 torsoWorld = chassisPos + b2Mul(chassisRot, b2Vec2(headOffX + 0.02f * headSize, headOffY - 0.68f * headSize));
+            Renderer2D::DrawSprite(&mTexDriverBody, torsoWorld.x, torsoWorld.y, headSize * 0.68f, headSize * 1.36f, chassisAngle);
+        } else {
+            // Standard 128x128 torso: collar opening sits at (-0.285*W, +0.46*H) vs head neck (+0.02*S, -0.34*S)
+            b2Vec2 torsoLocal(headOffX + 0.285f * torsoSize + 0.02f * headSize,
+                              headOffY - 0.30f * headSize - 0.44f * torsoSize);
+            b2Vec2 torsoWorld = chassisPos + b2Mul(chassisRot, torsoLocal);
+            Renderer2D::DrawSprite(&mTexDriverBody, torsoWorld.x, torsoWorld.y, torsoSize, torsoSize, chassisAngle);
+        }
+        if (mDriverHead) {
+            b2Vec2 curHeadPos = mDriverHead->GetPosition();
+            float curHeadAngle = mDriverHead->GetAngle();
+            b2Vec2 headPos = (1.0f - alpha) * mPrevDriverHead.position + alpha * curHeadPos;
+            float headAngle = LerpAngle(mPrevDriverHead.angle, curHeadAngle, alpha);
+            Renderer2D::DrawSprite(&mTexDriverHead, headPos.x, headPos.y, headSize, headSize, headAngle);
+        }
+    };
 
-    if (mDriverHead) {
-        b2Vec2 curHeadPos = mDriverHead->GetPosition();
-        float curHeadAngle = mDriverHead->GetAngle();
-        b2Vec2 headPos = (1.0f - alpha) * mPrevDriverHead.position + alpha * curHeadPos;
-        float headAngle = LerpAngle(mPrevDriverHead.angle, curHeadAngle, alpha);
-        Renderer2D::DrawSprite(&mTexDriverHead, headPos.x, headPos.y, headSize, headSize, headAngle);
+    // 2. Closed-cab driver drawn behind foreground windows/doors/chassis
+    if (!drawDriverOver) {
+        drawDriver();
     }
 
     // 3. Chassis Sprite (behind wheels so tires never get occluded by skirts/arches) (BUG-012)
     float sprW = (mConfig->sprite_width > 0.0f) ? mConfig->sprite_width : 3.40f;
     float sprH = (mConfig->sprite_height > 0.0f) ? mConfig->sprite_height : 1.45f;
-    b2Vec2 spriteOffsetLocal(0.0f, 0.02f);
+    b2Vec2 spriteOffsetLocal(0.0f, isHover ? 0.26f : 0.02f);
     b2Vec2 spriteWorld = chassisPos + b2Mul(chassisRot, spriteOffsetLocal);
     Renderer2D::DrawSprite(&mTexChassis, spriteWorld.x, spriteWorld.y, sprW, sprH, chassisAngle);
+
+    // 3b. Open-saddle / open-cockpit driver drawn cleanly over seat/hull
+    if (drawDriverOver) {
+        drawDriver();
+    }
 
     // 4. Foreground & detached vehicle parts (BUG-013)
     for (int i = 0; i < mPartCount; ++i) {
@@ -916,40 +984,87 @@ void PlayerCar::Render(float alpha) {
             float pAng = LerpAngle(p.prevAngle, p.angle, alpha);
             Renderer2D::DrawSprite(&p.tex, pPos.x, pPos.y, p.width, p.height, pAng);
         } else if (!p.behindChassis) {
-            b2Vec2 partWorld = chassisPos + b2Mul(chassisRot, b2Vec2(p.localX, p.localY));
+            float partYOff = isHover ? 0.24f : 0.0f;
+            b2Vec2 partWorld = chassisPos + b2Mul(chassisRot, b2Vec2(p.localX, p.localY + partYOff));
             Renderer2D::DrawSprite(&p.tex, partWorld.x, partWorld.y, p.width, p.height, chassisAngle);
         }
     }
 
-    // 5. Rear & Front Wheels drawn over wheel arches (BUG-012)
+    // 4b. Hovercraft inflated air-cushion skirt glow under hull
+    if (isHover && mTexHoverGlow.GetWidth() > 0) {
+        b2Vec2 skirtWorld = chassisPos + b2Mul(chassisRot, b2Vec2(0.0f, -0.18f));
+        Renderer2D::DrawSprite(&mTexHoverGlow, skirtWorld.x, skirtWorld.y, 3.30f, 0.34f, chassisAngle, 0xD0FFE8B8);
+    }
+
+    // 5. Rear & Front Wheels (or Tank caterpillar treads + 4 road wheels)
     bool singleWheel = mConfig && fabsf(mConfig->front_wheel_offset[0] - mConfig->rear_wheel_offset[0]) < 0.05f;
     bool skiMode = mConfig && mConfig->special_physics_mode == 1 && mConfig->hide_wheels == 0;
 
-    if (mRearWheel && (!mConfig || mConfig->hide_wheels == 0)) {
-        b2Vec2 curPos = mRearWheel->GetPosition();
-        float curAngle = mRearWheel->GetAngle();
-        b2Vec2 pos = (1.0f - alpha) * mPrevRearWheel.position + alpha * curPos;
-        float angle = LerpAngle(mPrevRearWheel.angle, curAngle, alpha);
-        float rearRadius = (mConfig->rear_wheel_radius > 0.0f) ? mConfig->rear_wheel_radius : mConfig->wheel_radius;
-        float diameter = rearRadius * 2.0f;
-        if (skiMode) {
-            Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y - rearRadius * 0.25f, diameter * 1.45f, diameter * 0.725f, chassisAngle);
-        } else {
-            Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y, diameter, diameter, angle);
-        }
-    }
+    if (isTank && mRearWheel && mFrontWheel) {
+        b2Vec2 rearPos = (1.0f - alpha) * mPrevRearWheel.position + alpha * mRearWheel->GetPosition();
+        b2Vec2 frontPos = (1.0f - alpha) * mPrevFrontWheel.position + alpha * mFrontWheel->GetPosition();
+        float rearAngle = LerpAngle(mPrevRearWheel.angle, mRearWheel->GetAngle(), alpha);
+        float frontAngle = LerpAngle(mPrevFrontWheel.angle, mFrontWheel->GetAngle(), alpha);
+        float r = (mConfig->wheel_radius > 0.0f) ? mConfig->wheel_radius : 0.34f;
+        b2Vec2 span = frontPos - rearPos;
+        float spanLen = span.Length();
+        if (spanLen < 0.2f) spanLen = 2.6f;
+        float trkAngle = atan2f(span.y, span.x);
+        b2Vec2 mid = 0.5f * (rearPos + frontPos);
+        b2Vec2 nrm(-sinf(trkAngle), cosf(trkAngle));
 
-    if (mFrontWheel && !singleWheel && (!mConfig || mConfig->hide_wheels == 0)) {
-        b2Vec2 curPos = mFrontWheel->GetPosition();
-        float curAngle = mFrontWheel->GetAngle();
-        b2Vec2 pos = (1.0f - alpha) * mPrevFrontWheel.position + alpha * curPos;
-        float angle = LerpAngle(mPrevFrontWheel.angle, curAngle, alpha);
-        float frontRadius = (mConfig->front_wheel_radius > 0.0f) ? mConfig->front_wheel_radius : mConfig->wheel_radius;
-        float diameter = frontRadius * 2.0f;
-        if (skiMode) {
-            Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y - frontRadius * 0.25f, diameter * 1.45f, diameter * 0.725f, chassisAngle);
-        } else {
-            Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y, diameter, diameter, angle);
+        if (mTexTankTrack.GetWidth() > 0) {
+            // Rounded track end caps + continuous dark inner belt + tiled top/bottom caterpillar links
+            Renderer2D::DrawSprite(&mTexTankTrack, rearPos.x, rearPos.y, r * 2.15f, r * 2.15f, trkAngle, 0xFF282828);
+            Renderer2D::DrawSprite(&mTexTankTrack, frontPos.x, frontPos.y, r * 2.15f, r * 2.15f, trkAngle, 0xFF282828);
+            Renderer2D::DrawSprite(&mTexTankTrack, mid.x, mid.y, spanLen, r * 1.95f, trkAngle, 0xCC222222);
+
+            const int segs = 5;
+            float segW = spanLen / (float)segs;
+            b2Vec2 dir(cosf(trkAngle), sinf(trkAngle));
+            for (int s = 0; s < segs; ++s) {
+                float off = ((float)s + 0.5f - (float)segs * 0.5f) * segW;
+                b2Vec2 topP = mid + off * dir + (r * 0.94f) * nrm;
+                b2Vec2 botP = mid + off * dir - (r * 0.94f) * nrm;
+                Renderer2D::DrawSprite(&mTexTankTrack, topP.x, topP.y, segW * 1.05f, 0.14f, trkAngle, 0xFFFFFFFF);
+                Renderer2D::DrawSprite(&mTexTankTrack, botP.x, botP.y, segW * 1.05f, 0.14f, trkAngle, 0xFFFFFFFF);
+            }
+        }
+
+        // 4 spinning road wheels seated inside the track run
+        for (int w = 0; w < 4; ++w) {
+            float t = (float)w / 3.0f;
+            b2Vec2 wp = (1.0f - t) * rearPos + t * frontPos;
+            float wAng = (w < 2) ? rearAngle : frontAngle;
+            Renderer2D::DrawSprite(&mTexTire, wp.x, wp.y, r * 1.85f, r * 1.85f, wAng);
+        }
+    } else {
+        if (mRearWheel && (!mConfig || mConfig->hide_wheels == 0)) {
+            b2Vec2 curPos = mRearWheel->GetPosition();
+            float curAngle = mRearWheel->GetAngle();
+            b2Vec2 pos = (1.0f - alpha) * mPrevRearWheel.position + alpha * curPos;
+            float angle = LerpAngle(mPrevRearWheel.angle, curAngle, alpha);
+            float rearRadius = (mConfig->rear_wheel_radius > 0.0f) ? mConfig->rear_wheel_radius : mConfig->wheel_radius;
+            float diameter = rearRadius * 2.0f;
+            if (skiMode) {
+                Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y - rearRadius * 0.25f, diameter * 1.45f, diameter * 0.725f, chassisAngle);
+            } else {
+                Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y, diameter, diameter, angle);
+            }
+        }
+
+        if (mFrontWheel && !singleWheel && (!mConfig || mConfig->hide_wheels == 0)) {
+            b2Vec2 curPos = mFrontWheel->GetPosition();
+            float curAngle = mFrontWheel->GetAngle();
+            b2Vec2 pos = (1.0f - alpha) * mPrevFrontWheel.position + alpha * curPos;
+            float angle = LerpAngle(mPrevFrontWheel.angle, curAngle, alpha);
+            float frontRadius = (mConfig->front_wheel_radius > 0.0f) ? mConfig->front_wheel_radius : mConfig->wheel_radius;
+            float diameter = frontRadius * 2.0f;
+            if (skiMode) {
+                Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y - frontRadius * 0.25f, diameter * 1.45f, diameter * 0.725f, chassisAngle);
+            } else {
+                Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y, diameter, diameter, angle);
+            }
         }
     }
 }

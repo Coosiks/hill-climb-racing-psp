@@ -821,7 +821,7 @@ void Game::RenderGarage() {
             Renderer2D::DrawSpriteScreen(cards[i].tex, cx + 6, startY + 6, 36, 36);
 
             // Key Hint
-            mFont.DrawText(cards[i].key, cx + 46, startY + 12, 0.26f, 0xFF00CCFF);
+            mFont.DrawText(cards[i].key, cx + 44, startY + 14, 0.22f, 0xFF00CCFF);
 
             // Name
             mFont.DrawText(cards[i].name, cx + 8, startY + 48, 0.30f, 0xFFFFFFFF);
@@ -989,7 +989,9 @@ void Game::UpdatePhysicsStep(float dt) {
         mOutOfFuelFallbackTimer = 0.0f;
     }
 
-    // Particle Emissions (Wheel Dirt & Exhaust Smoke)
+    // Particle Emissions (Wheel Dirt, Exhaust Smoke, Moonlander Thruster, Hovercraft Air Cushion)
+    static float sThrusterSfxTimer = 0.0f;
+    if (sThrusterSfxTimer > 0.0f) sThrusterSfxTimer -= dt;
     if (mCar && !mCar->IsDriverDead()) {
         if (mCar->IsThrottleActive()) {
             bool showWheels = (!mCar->GetConfig() || mCar->GetConfig()->hide_wheels == 0);
@@ -1007,6 +1009,16 @@ void Game::UpdatePhysicsStep(float dt) {
                                   mCar->GetConfig()->front_wheel_radius : 0.40f;
                 ParticleSystem::EmitWheelDirt(fwPos.x, fwPos.y - fwRadius, fwVel.x, fwVel.y, mCurrentStage);
             }
+            // Hovercraft air cushion airflow dust under skirt (BUG-046 visual cushion feedback)
+            if (mCar->GetConfig() && mCar->GetConfig()->special_physics_mode == 2 && mTerrain) {
+                b2Vec2 cPos = mCar->GetChassisBody()->GetPosition();
+                b2Vec2 cVel = mCar->GetChassisBody()->GetLinearVelocity();
+                float groundY = mTerrain->GetHeightAtX(cPos.x);
+                if (cPos.y - groundY <= mCar->GetConfig()->hover_height * 1.35f) {
+                    ParticleSystem::SpawnParticle(cPos.x - 0.6f, groundY + 0.12f, cVel.x - 3.5f, 1.4f, 0.28f, 0.30f, 0.72f, 0x70FFF0D8, PARTICLE_EXHAUST);
+                    ParticleSystem::SpawnParticle(cPos.x + 0.5f, groundY + 0.12f, cVel.x + 2.5f, 1.2f, 0.25f, 0.28f, 0.65f, 0x60FFF0D8, PARTICLE_EXHAUST);
+                }
+            }
             // Exhaust smoke puff (rotated with chassis angle)
             b2Vec2 cPos = mCar->GetChassisBody()->GetPosition();
             b2Vec2 cVel = mCar->GetChassisBody()->GetLinearVelocity();
@@ -1018,6 +1030,32 @@ void Game::UpdatePhysicsStep(float dt) {
             float exX = cPos.x + (rx * cosA - ry * sinA);
             float exY = cPos.y + (rx * sinA + ry * cosA);
             ParticleSystem::EmitExhaust(exX, exY, cVel.x, cVel.y);
+        }
+
+        // Moonlander Thruster Jet flame particles & thruster audio (BUG-053)
+        if (mCar->IsThrusterActive() && !mCar->IsOutOfFuel() &&
+            mCar->GetConfig() && mCar->GetConfig()->special_physics_mode == 3) {
+            b2Vec2 cPos = mCar->GetChassisBody()->GetPosition();
+            b2Vec2 cVel = mCar->GetChassisBody()->GetLinearVelocity();
+            float cAng = mCar->GetChassisBody()->GetAngle();
+            float cosA = cosf(cAng);
+            float sinA = sinf(cAng);
+            // Twin side thruster pods below chassis
+            const float podX[2] = { -0.75f, 0.75f };
+            for (int t = 0; t < 2; ++t) {
+                float lx = podX[t];
+                float ly = -0.45f;
+                float px = cPos.x + (lx * cosA - ly * sinA);
+                float py = cPos.y + (lx * sinA + ly * cosA);
+                float jVx = cVel.x + sinA * 8.0f;
+                float jVy = cVel.y - cosA * 8.0f;
+                ParticleSystem::SpawnParticle(px, py, jVx, jVy, 0.24f, 0.55f, 0.15f, 0xFF30A8FF, PARTICLE_EXHAUST);
+                ParticleSystem::SpawnParticle(px, py - 0.12f, jVx * 0.8f, jVy * 0.8f, 0.18f, 0.35f, 0.10f, 0xFF80F0FF, PARTICLE_EXHAUST);
+            }
+            if (sThrusterSfxTimer <= 0.0f) {
+                AudioEngine::PlaySFX(SFX_THRUSTER);
+                sThrusterSfxTimer = 0.18f;
+            }
         }
     }
     ParticleSystem::Update(dt);

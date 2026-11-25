@@ -369,6 +369,7 @@ bool AudioEngine::Init() {
             }
         }
     }
+    LoadAudioFile("assets/audio/thruster", &mSfxBuffers[SFX_THRUSTER]);
 
     mAudioRunning = true;
     mAudioThreadId = sceKernelCreateThread("hcr_audio", AudioThread, 0x22, 0x10000, THREAD_ATTR_USER | THREAD_ATTR_VFPU, NULL);
@@ -554,6 +555,7 @@ bool AudioEngine::Init() {
             }
         }
     }
+    LoadAudioFile("assets/audio/thruster", &mSfxBuffers[SFX_THRUSTER]);
 
     SDL_AudioSpec want, have;
     memset(&want, 0, sizeof(want));

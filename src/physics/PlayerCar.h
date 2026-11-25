@@ -124,7 +124,7 @@ private:
     int mPendingWheelieBonus;
     float mPendingWheelieTime;
 
-#define MAX_CAR_PARTS 6
+#define MAX_CAR_PARTS 8
 
     struct CarAttachment {
         Texture tex;
@@ -151,7 +151,10 @@ private:
     Texture mTexTire;
     Texture mTexFrontTire;
     Texture mTexDriverBody;
+    Texture mTexDriverLegs;
     Texture mTexDriverHead;
+    Texture mTexTankTrack;
+    Texture mTexHoverGlow;
     CarAttachment mParts[MAX_CAR_PARTS];
     int mPartCount;
 };

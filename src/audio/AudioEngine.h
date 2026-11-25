@@ -18,6 +18,7 @@ enum SoundEffect {
     SFX_REFUEL,
     SFX_CLICK,
     SFX_UPGRADE,
+    SFX_THRUSTER,
     SFX_COUNT
 };
 

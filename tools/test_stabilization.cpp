@@ -379,8 +379,114 @@ int main() {
     }
     printf("  -> Sub-test D PASS\n\n");
 
+    // -------------------------------------------------------------
+    // Sub-test E: Wave 2 Physics, Economy & Item Spawner Fixes
+    // -------------------------------------------------------------
+    printf("[Sub-test E] Checking HotRod stability (BUG-045), Hovercraft AirTime (BUG-046), RaceCar Mountain (BUG-054), Spawner intervals (BUG-055)...\n");
+    {
+        // 1. Hot Rod stock lvl 0 survives 8s Countryside without flipping (BUG-045)
+        {
+            Game g;
+            PlayerInfo::Reset();
+            const VehicleConfig* hr = Config::FindVehicleById("hotrod");
+            TEST_CHECK(hr != NULL, "Hot Rod config must exist");
+            g.SetCurrentStage(STAGE_COUNTRYSIDE);
+            g.SetCurrentVehicle((int)(hr - Config::Vehicles));
+            PlayerInfo::UnlockStage(PlayerInfo::HashId("countryside"));
+            PlayerInfo::UnlockVehicle(PlayerInfo::HashId("hotrod"));
+            g.StartRace();
+            System::ButtonsHeld = PSP_CTRL_RTRIGGER;
+            for (int s = 0; s < 480; ++s) g.UpdatePhysicsStep(FIXED_TIMESTEP);
+            System::ButtonsHeld = 0;
+            printf("  hotrod 8s Countryside: dist=%.2fm dead=%d\n", g.GetMaxDistance(), g.GetCar()->IsDead() ? 1 : 0);
+            TEST_CHECK(!g.GetCar()->IsDead() && g.GetMaxDistance() > 30.0f,
+                       "Stock Hot Rod must drive > 30m without instant backflip death");
+            g.EndRace();
+        }
+
+        // 2. Hovercraft flat glide accumulates zero AIR TIME / trick coins (BUG-046)
+        {
+            const VehicleConfig* hc = Config::FindVehicleById("hovercraft");
+            TEST_CHECK(hc != NULL, "Hovercraft config must exist");
+            b2World flatW(b2Vec2(0.0f, -10.0f));
+            PlayerCar hoverFlat(&flatW, b2Vec2(0.0f, 0.8f), 0, 0, 0, 0, hc);
+            float maxAirT = 0.0f;
+            int flatAirBonus = 0;
+            for (int s = 0; s < 180; ++s) {
+                hoverFlat.Accelerate();
+                hoverFlat.Update(FIXED_TIMESTEP);
+                flatW.Step(FIXED_TIMESTEP, 8, 3);
+                if (hoverFlat.GetAirTime() > maxAirT) maxAirT = hoverFlat.GetAirTime();
+                flatAirBonus += hoverFlat.PopAirTimeBonus();
+            }
+            printf("  hovercraft 3s flat cushion: maxAirTime=%.3fs bonus=%d\n", maxAirT, flatAirBonus);
+            TEST_CHECK(maxAirT < 0.05f && flatAirBonus == 0,
+                       "Hovercraft gliding on flat ground cushion must earn zero AIR TIME coins");
+
+            Game g;
+            PlayerInfo::Reset();
+            g.SetCurrentStage(STAGE_COUNTRYSIDE);
+            g.SetCurrentVehicle((int)(hc - Config::Vehicles));
+            PlayerInfo::UnlockStage(PlayerInfo::HashId("countryside"));
+            PlayerInfo::UnlockVehicle(PlayerInfo::HashId("hovercraft"));
+            g.StartRace();
+            System::ButtonsHeld = PSP_CTRL_RTRIGGER;
+            for (int s = 0; s < 480; ++s) g.UpdatePhysicsStep(FIXED_TIMESTEP);
+            System::ButtonsHeld = 0;
+            printf("  hovercraft 8s Countryside: dist=%.2fm dead=%d tricks=%d\n",
+                   g.GetMaxDistance(), g.GetCar()->IsDead() ? 1 : 0, g.GetRaceTrickBonusCoins());
+            TEST_CHECK(!g.GetCar()->IsDead() && g.GetMaxDistance() > 80.0f,
+                       "Hovercraft must travel > 80m cleanly");
+            g.EndRace();
+        }
+
+        // 3. Race Car stock lvl 0 climbs Mountain past initial drop cleanly (BUG-054)
+        {
+            Game g;
+            PlayerInfo::Reset();
+            const VehicleConfig* rc = Config::FindVehicleById("race_car");
+            TEST_CHECK(rc != NULL, "Race Car config must exist");
+            g.SetCurrentStage(STAGE_MOUNTAIN);
+            g.SetCurrentVehicle((int)(rc - Config::Vehicles));
+            PlayerInfo::UnlockStage(PlayerInfo::HashId("mountain"));
+            PlayerInfo::UnlockVehicle(PlayerInfo::HashId("race_car"));
+            g.StartRace();
+            System::ButtonsHeld = PSP_CTRL_RTRIGGER;
+            for (int s = 0; s < 240; ++s) g.UpdatePhysicsStep(FIXED_TIMESTEP);
+            System::ButtonsHeld = 0;
+            printf("  race_car 4s Mountain: dist=%.2fm dead=%d\n", g.GetMaxDistance(), g.GetCar()->IsDead() ? 1 : 0);
+            TEST_CHECK(!g.GetCar()->IsDead() && g.GetMaxDistance() > 15.0f,
+                       "Stock Race Car on Mountain must survive > 15m without immediate start flip");
+            g.EndRace();
+        }
+
+        // 4. SpawnItemsAhead spawns every 30m chunk uniformly without skipping chunk 5 (BUG-055)
+        {
+            b2World spWorld(b2Vec2(0.0f, -10.0f));
+            Terrain hwTerrain(&spWorld, STAGE_HIGHWAY);
+            for (float px = 30.0f; px <= 240.0f; px += 30.0f) {
+                hwTerrain.Update(px);
+            }
+            const Collectible* items = hwTerrain.GetItems();
+            int nItems = hwTerrain.GetItemCount();
+            bool sawChunk5 = false;
+            int fuelCount = 0;
+            for (int i = 0; i < nItems; ++i) {
+                if (items[i].x >= 150.0f && items[i].x <= 180.0f) sawChunk5 = true;
+                if (items[i].type == 1000) fuelCount++;
+            }
+            printf("  Highway spawner up to 240m: items=%d fuel=%d sawChunk5=%d\n",
+                   nItems, fuelCount, sawChunk5 ? 1 : 0);
+            TEST_CHECK(sawChunk5, "Chunk 5 [150..180m] must not be skipped by SpawnItemsAhead");
+            TEST_CHECK(fuelCount >= 2, "Highway (120m interval) must spawn >= 2 fuels up to 270m");
+        }
+
+        CleanupSaveFiles("save");
+    }
+    printf("  -> Sub-test E PASS\n\n");
+
     printf("=================================================================\n");
-    printf("   ALL 4 STABILIZATION SUB-TESTS PASSED (TEST 26 VERIFIED)       \n");
+    printf("   ALL 5 STABILIZATION SUB-TESTS PASSED (TEST 26 VERIFIED)       \n");
     printf("=================================================================\n");
     return 0;
 }

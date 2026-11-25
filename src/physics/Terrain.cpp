@@ -20,7 +20,7 @@ static inline float clampf(float v, float lo, float hi) {
 
 Terrain::Terrain(b2World* world, StageType stageType)
     : mWorld(world), mStageType(stageType),
-      mRearWallBody(NULL), mItemCount(0), mLastItemSpawnX(15.0f),
+      mRearWallBody(NULL), mItemCount(0), mLastItemSpawnX(15.0f), mNextFuelX(90.0f),
       mQueueHead(0), mQueueTail(0), mQueueCount(0) {
 
     for (int i = 0; i < DEFERRED_QUEUE_CAPACITY; ++i) {
@@ -38,6 +38,8 @@ Terrain::Terrain(b2World* world, StageType stageType)
         mStageConfig = &Config::Stages[STAGE_COUNTRYSIDE];
     }
 
+    mNextFuelX = (mStageConfig && mStageConfig->fuel_interval > 0.0f) ? mStageConfig->fuel_interval : 90.0f;
+
     if (mStageConfig->ground_texture[0]) {
         mTexGround.LoadPNG(mStageConfig->ground_texture);
     } else {
@@ -48,6 +50,20 @@ Terrain::Terrain(b2World* world, StageType stageType)
         mTexSurface.LoadPNG(mStageConfig->surface_texture);
     } else {
         mTexSurface.LoadPNG("assets/terrain-surface.png");
+    }
+
+    if (mStageType == STAGE_ROOFTOPS) {
+        mTexRooftopWall.LoadPNG("assets/building-01-body.png");
+    }
+
+    if (mStageConfig && mStageConfig->has_mud_pools != 0) {
+        if (mStageType == STAGE_VOLCANO) {
+            mTexLiquid.LoadPNG("assets/lava.png");
+        } else if (mStageType == STAGE_NUCLEAR) {
+            mTexLiquid.LoadPNG("assets/nuclear-slime.png");
+        } else {
+            mTexLiquid.LoadPNG("assets/mud.png");
+        }
     }
 
     // Collectibles
@@ -1175,52 +1191,58 @@ int Terrain::GetActiveChunkCount() const {
 }
 
 void Terrain::SpawnItemsAhead(float startX, float endX) {
-    if (endX - mLastItemSpawnX < 30.0f) return;
-
-    float spawnX = mLastItemSpawnX + 35.0f;
-    mLastItemSpawnX = spawnX;
-
     float fuelInterval = (mStageConfig && mStageConfig->fuel_interval > 0.0f) ? mStageConfig->fuel_interval : 90.0f;
-    int intervalInt = (int)fuelInterval;
-    if (intervalInt <= 0) intervalInt = 90;
-    bool spawnFuel = ((int)(spawnX) % intervalInt < 35);
+    if (fuelInterval <= 0.0f) fuelInterval = 90.0f;
 
-    if (spawnFuel && mItemCount < MAX_COLLECTIBLES) {
-        float y = GetHeightAtX(spawnX);
-        if (mStageConfig && mStageConfig->has_bridges == 1) {
-            int cIdx = (int)floorf(spawnX / CHUNK_WIDTH_METERS);
-            if (cIdx > 0 && (cIdx % 4 == 1)) {
-                float x0 = (float)cIdx * CHUNK_WIDTH_METERS + 9.0f;
-                float x1 = (float)cIdx * CHUNK_WIDTH_METERS + 21.0f;
-                if (spawnX >= x0 && spawnX <= x1) {
-                    float y0 = GetHeightAtX(x0);
-                    float y1 = GetHeightAtX(x1);
-                    float bridgeY = y0 + ((spawnX - x0) / (x1 - x0)) * (y1 - y0);
-                    if (bridgeY > y) y = bridgeY;
-                }
+    while (mLastItemSpawnX + 30.0f <= endX) {
+        float spawnX = mLastItemSpawnX + 30.0f;
+        mLastItemSpawnX = spawnX;
+        if (mItemCount >= MAX_COLLECTIBLES) continue;
+
+        bool spawnFuel = (spawnX >= mNextFuelX);
+        if (spawnFuel) {
+            while (mNextFuelX <= spawnX) {
+                mNextFuelX += fuelInterval;
             }
         }
-        SpawnItem(spawnX, y + 1.2f, 1000); // 1000 = Fuel
-    } else {
-        int coinVal = (spawnX > 300.0f) ? 100 : (spawnX > 100.0f ? 25 : 5);
-        for (int k = 0; k < 3 && mItemCount < MAX_COLLECTIBLES; ++k) {
-            float cx = spawnX + (float)k * 1.5f;
-            float baseH = GetHeightAtX(cx);
+
+        if (spawnFuel) {
+            float y = GetHeightAtX(spawnX);
             if (mStageConfig && mStageConfig->has_bridges == 1) {
-                int cIdx = (int)floorf(cx / CHUNK_WIDTH_METERS);
+                int cIdx = (int)floorf(spawnX / CHUNK_WIDTH_METERS);
                 if (cIdx > 0 && (cIdx % 4 == 1)) {
                     float x0 = (float)cIdx * CHUNK_WIDTH_METERS + 9.0f;
                     float x1 = (float)cIdx * CHUNK_WIDTH_METERS + 21.0f;
-                    if (cx >= x0 && cx <= x1) {
+                    if (spawnX >= x0 && spawnX <= x1) {
                         float y0 = GetHeightAtX(x0);
                         float y1 = GetHeightAtX(x1);
-                        float bridgeY = y0 + ((cx - x0) / (x1 - x0)) * (y1 - y0);
-                        if (bridgeY > baseH) baseH = bridgeY;
+                        float bridgeY = y0 + ((spawnX - x0) / (x1 - x0)) * (y1 - y0);
+                        if (bridgeY > y) y = bridgeY;
                     }
                 }
             }
-            float cy = baseH + 1.0f + sinf((float)k * 1.0f) * 0.4f;
-            SpawnItem(cx, cy, coinVal);
+            SpawnItem(spawnX, y + 1.2f, 1000); // 1000 = Fuel
+        } else {
+            int coinVal = (spawnX > 300.0f) ? 100 : (spawnX > 100.0f ? 25 : 5);
+            for (int k = 0; k < 3 && mItemCount < MAX_COLLECTIBLES; ++k) {
+                float cx = spawnX + (float)k * 1.5f;
+                float baseH = GetHeightAtX(cx);
+                if (mStageConfig && mStageConfig->has_bridges == 1) {
+                    int cIdx = (int)floorf(cx / CHUNK_WIDTH_METERS);
+                    if (cIdx > 0 && (cIdx % 4 == 1)) {
+                        float x0 = (float)cIdx * CHUNK_WIDTH_METERS + 9.0f;
+                        float x1 = (float)cIdx * CHUNK_WIDTH_METERS + 21.0f;
+                        if (cx >= x0 && cx <= x1) {
+                            float y0 = GetHeightAtX(x0);
+                            float y1 = GetHeightAtX(x1);
+                            float bridgeY = y0 + ((cx - x0) / (x1 - x0)) * (y1 - y0);
+                            if (bridgeY > baseH) baseH = bridgeY;
+                        }
+                    }
+                }
+                float cy = baseH + 1.0f + sinf((float)k * 1.0f) * 0.4f;
+                SpawnItem(cx, cy, coinVal);
+            }
         }
     }
 }
@@ -1290,8 +1312,35 @@ void Terrain::Render(float cameraX, float cameraY) {
     }
 
     if (renderCount >= 2) {
+        // Visual mud / lava / nuclear-slime pools drawn BEFORE terrain fill so diagonal banks mask edges cleanly (BUG-052)
+        if (mStageConfig && mStageConfig->has_mud_pools != 0 && mTexLiquid.GetWidth() > 0) {
+            float off0 = (mStageType == STAGE_VOLCANO) ? 20.0f : 18.0f;
+            float off1 = (mStageType == STAGE_VOLCANO) ? 34.0f : 32.0f;
+            int cycStart = (int)floorf(minVisX / 60.0f);
+            int cycEnd = (int)floorf(maxVisX / 60.0f);
+            float maxU = mTexLiquid.GetMaxU();
+            float maxV = mTexLiquid.GetMaxV();
+            for (int c = cycStart; c <= cycEnd; ++c) {
+                float p0 = (float)c * 60.0f + off0;
+                float p1 = (float)c * 60.0f + off1;
+                if (p0 < 15.0f || p1 < minVisX || p0 > maxVisX) continue;
+
+                float bankY = fminf(GetHeightAtX(p0), GetHeightAtX(p1)) - 0.14f;
+                float minPoolY = bankY - 2.4f;
+                // Tile liquid cleanly in 3.5m columns so GU_CLAMP never stretches edges
+                const float tileW = 3.5f;
+                for (float tx = p0; tx < p1; tx += tileW) {
+                    float nx = fminf(tx + tileW, p1);
+                    float u1 = ((nx - tx) / tileW) * maxU;
+                    Renderer2D::DrawQuad(&mTexLiquid, tx, bankY, nx, minPoolY, 0.0f, 0.0f, u1, maxV, 0xFFFFFFFF);
+                }
+            }
+            Renderer2D::FlushBatch();
+        }
+
+        Texture* fillTex = (mStageType == STAGE_ROOFTOPS && mTexRooftopWall.GetWidth() > 0) ? &mTexRooftopWall : &mTexGround;
         float bottomY = cameraY - 14.0f;
-        Renderer2D::DrawTerrainFill(&mTexGround, mRenderX, mRenderY, renderCount, bottomY);
+        Renderer2D::DrawTerrainFill(fillTex, mRenderX, mRenderY, renderCount, bottomY);
         Renderer2D::DrawTerrainSurface(&mTexSurface, mRenderX, mRenderY, renderCount, 0.6f);
 
         if (HasCeiling()) {
