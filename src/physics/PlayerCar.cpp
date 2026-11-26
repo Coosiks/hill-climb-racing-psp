@@ -64,6 +64,10 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     if (isSleigh) {
         mTexDriverBody.LoadPNG("assets/driver-body-santa.png");
         mTexDriverHead.LoadPNG("assets/driver-head-santa.png");
+        mTexReindeerTorso.LoadPNG("assets/reindeer-torso.png");
+        mTexReindeerHead.LoadPNG("assets/reindeer-head.png");
+        mTexReindeerLegUp.LoadPNG("assets/reindeer-leg-up.png");
+        mTexReindeerLegLow.LoadPNG("assets/reindeer-leg-low.png");
     } else if (isBike) {
         mTexDriverBody.LoadPNG("assets/bike-driver-body.png");
         mTexDriverLegs.LoadPNG("assets/bike-driver-leg-full.png");
@@ -79,7 +83,7 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
         mTexHoverGlow.LoadPNG("assets/hovercraft_skirtpart.png");
     }
 
-    // Multi-sprite vehicle layers & breakable parts (BUG-013 / BUG-048 / BUG-050 / BUG-051 / BUG-056)
+    // Multi-sprite vehicle layers & breakable parts aligned to HCR 1.30.0
     if (mConfig && strcmp(mConfig->id, "ambulance") == 0) {
         AddAttachment("assets/car-ambulance-roof.png",       -0.36f,  0.46f, 1.95f, 0.90f, false, true);
         AddAttachment("assets/car-ambulance-cockpit.png",     0.98f,  0.34f, 0.90f, 0.45f, false, true);
@@ -87,26 +91,30 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
         AddAttachment("assets/car-ambulance-middledoor.png", -1.56f,  0.10f, 0.54f, 0.85f, false, true);
         AddAttachment("assets/car-ambulance-lamp.png",        0.82f,  0.62f, 0.26f, 0.22f, false, true);
     } else if (mConfig && strcmp(mConfig->id, "policecar") == 0) {
-        AddAttachment("assets/car-policecar-reardoor.png",   -0.28f,  0.25f, 0.78f, 0.78f, false, true);
-        AddAttachment("assets/car-policecar-frontdoor.png",   0.26f,  0.25f, 0.78f, 0.78f, false, true);
-        AddAttachment("assets/car-policecar-hood.png",        0.92f,  0.28f, 0.85f, 0.11f, false, true);
-        AddAttachment("assets/car-policecar-roof.png",       -0.08f,  0.56f, 1.56f, 0.40f, false, true);
-        AddAttachment("assets/car-policecar-lamp.png",       -0.12f,  0.78f, 0.34f, 0.22f, false, true);
+        AddAttachment("assets/car-policecar-reardoor.png",   -0.72f,  0.08f, 1.78f, 1.72f, false, true);
+        AddAttachment("assets/car-policecar-frontdoor.png",   0.56f,  0.06f, 1.97f, 1.97f, false, true);
+        AddAttachment("assets/car-policecar-hood.png",        2.25f,  0.66f, 2.42f, 0.30f, false, true);
+        AddAttachment("assets/car-policecar-roof.png",       -0.14f,  0.64f, 3.98f, 0.98f, false, true);
+        AddAttachment("assets/car-policecar-lamp.png",       -0.15f,  1.14f, 0.49f, 0.49f, false, true);
     } else if (mConfig && strcmp(mConfig->id, "electric") == 0) {
-        AddAttachment("assets/car-electric-roof.png",        -0.06f,  0.74f, 1.75f, 0.85f, false, true);
+        AddAttachment("assets/car-electric-roof.png",        -0.16f,  0.54f, 2.84f, 1.42f, false, true);
+        mTexExtraDetail.LoadPNG("assets/car-electric-engine.png");
     } else if (mConfig && strcmp(mConfig->id, "hotrod") == 0) {
-        AddAttachment("assets/car-hotrod-motor.png",          0.68f,  0.22f, 0.80f, 0.80f, true,  false);
-        AddAttachment("assets/car-hotrod-roof.png",          -0.25f,  0.40f, 1.45f, 0.62f, false, true);
+        AddAttachment("assets/car-hotrod-motor.png",          1.48f,  0.05f, 1.07f, 1.07f, true,  false);
+        AddAttachment("assets/car-hotrod-roof.png",          -0.22f,  0.58f, 2.84f, 1.42f, false, true);
     } else if (mConfig && strcmp(mConfig->id, "superoffroad") == 0) {
         AddAttachment("assets/car-superoffroad-bg.png",      -0.10f,  0.05f, 2.80f, 1.05f, true,  false);
         AddAttachment("assets/car-superoffroad-wing.png",    -1.25f,  0.45f, 0.90f, 0.75f, false, true);
     } else if (mConfig && strcmp(mConfig->id, "firetruck") == 0) {
-        AddAttachment("assets/car-firetruck-cage.png",       -1.50f,  0.72f, 0.85f, 0.85f, false, true);
-        AddAttachment("assets/car-firetruck-ladder.png",     -0.20f,  0.66f, 2.10f, 0.90f, false, true);
-        AddAttachment("assets/car-firetruck-lamp.png",       -1.45f,  1.10f, 0.24f, 0.24f, false, true);
+        AddAttachment("assets/car-firetruck-fender.png",     -2.50f, -0.65f, 1.45f, 1.45f, false, false);
+        AddAttachment("assets/car-firetruck-fender.png",      1.35f, -0.65f, 1.45f, 1.45f, false, false);
+        AddAttachment("assets/car-firetruck-ladder.png",     -0.30f,  1.08f, 4.65f, 1.97f, false, true);
+        AddAttachment("assets/car-firetruck-cage.png",       -2.75f,  1.12f, 1.51f, 1.51f, false, true);
+        AddAttachment("assets/car-firetruck-lamp.png",        1.92f,  1.32f, 0.71f, 0.71f, false, true);
+        mTexExtraDetail.LoadPNG("assets/car-firetruck-firehelmet.png");
     } else if (mConfig && strcmp(mConfig->id, "tank") == 0) {
-        AddAttachment("assets/car-tank-bg.png",               0.00f,  0.00f, 4.20f, 2.10f, true,  false);
-        AddAttachment("assets/car-tank-cannon.png",           1.38f,  0.66f, 2.80f, 1.40f, true,  false);
+        AddAttachment("assets/car-tank-bg.png",               0.00f,  0.00f, 5.69f, 2.56f, true,  false);
+        AddAttachment("assets/car-tank-cannon.png",           1.38f,  0.72f, 2.33f, 1.16f, true,  false);
     } else if (mConfig && strcmp(mConfig->id, "hovercraft") == 0) {
         AddAttachment("assets/hovercraft_engine.png",        -1.15f,  0.32f, 0.78f, 0.78f, false, false);
     } else if (mConfig && strcmp(mConfig->id, "dragster") == 0) {
@@ -912,13 +920,16 @@ void PlayerCar::Render(float alpha) {
     b2Rot chassisRot(chassisAngle);
 
     bool isTank = (mConfig && strcmp(mConfig->id, "tank") == 0);
+    bool isBus = (mConfig && strcmp(mConfig->id, "touristbus") == 0);
+    bool isSleigh = (mConfig && strcmp(mConfig->id, "sleigh") == 0);
+    bool isElectric = (mConfig && strcmp(mConfig->id, "electric") == 0);
+    bool isFiretruck = (mConfig && strcmp(mConfig->id, "firetruck") == 0);
     bool isHover = (mConfig && strcmp(mConfig->id, "hovercraft") == 0);
     bool isBike = (mConfig && (strcmp(mConfig->id, "motocross") == 0 ||
                                strcmp(mConfig->id, "minibike") == 0 ||
                                strcmp(mConfig->id, "quadbike") == 0));
     bool drawDriverOver = isBike || isHover ||
-                          (mConfig && (strcmp(mConfig->id, "sleigh") == 0 ||
-                                       strcmp(mConfig->id, "onewheeler") == 0));
+                          (mConfig && strcmp(mConfig->id, "onewheeler") == 0);
 
     // 1. Background vehicle parts (behind driver & chassis, e.g. superoffroad V8/shocks, tank bg/cannon)
     for (int i = 0; i < mPartCount; ++i) {
@@ -930,35 +941,59 @@ void PlayerCar::Render(float alpha) {
     }
 
     float headR = (mConfig && mConfig->driver_head_radius > 0.0f) ? mConfig->driver_head_radius : 0.24f;
-    float headSize = clampf(headR * 2.3f, 0.45f, 0.72f);
-    float torsoSize = headSize * 1.18f;
+    float headSize = clampf(headR * 3.85f, 0.72f, 0.96f);
+    float torsoSize = headSize * 1.04f;
     float headOffX = mConfig ? mConfig->driver_head_offset[0] : -0.10f;
     float headOffY = mConfig ? mConfig->driver_head_offset[1] : 0.50f;
 
     auto drawDriver = [&]() {
-        if (isBike && mTexDriverLegs.GetWidth() > 0) {
-            // Motorcycle / Quad rider sits upright astride the bike frame
-            b2Vec2 legWorld = chassisPos + b2Mul(chassisRot, b2Vec2(headOffX + 0.04f, headOffY - 0.62f * headSize));
-            Renderer2D::DrawSprite(&mTexDriverLegs, legWorld.x, legWorld.y, headSize * 1.10f, headSize * 1.10f, chassisAngle);
-            b2Vec2 torsoWorld = chassisPos + b2Mul(chassisRot, b2Vec2(headOffX + 0.02f * headSize, headOffY - 0.68f * headSize));
-            Renderer2D::DrawSprite(&mTexDriverBody, torsoWorld.x, torsoWorld.y, headSize * 0.68f, headSize * 1.36f, chassisAngle);
-        } else {
-            // Standard 128x128 torso: collar opening sits at (-0.285*W, +0.46*H) vs head neck (+0.02*S, -0.34*S)
-            b2Vec2 torsoLocal(headOffX + 0.285f * torsoSize + 0.02f * headSize,
-                              headOffY - 0.30f * headSize - 0.44f * torsoSize);
-            b2Vec2 torsoWorld = chassisPos + b2Mul(chassisRot, torsoLocal);
-            Renderer2D::DrawSprite(&mTexDriverBody, torsoWorld.x, torsoWorld.y, torsoSize, torsoSize, chassisAngle);
-        }
+        b2Vec2 headPos = chassisPos + b2Mul(chassisRot, b2Vec2(headOffX, headOffY));
+        float headAngle = chassisAngle;
         if (mDriverHead) {
             b2Vec2 curHeadPos = mDriverHead->GetPosition();
             float curHeadAngle = mDriverHead->GetAngle();
-            b2Vec2 headPos = (1.0f - alpha) * mPrevDriverHead.position + alpha * curHeadPos;
-            float headAngle = LerpAngle(mPrevDriverHead.angle, curHeadAngle, alpha);
+            headPos = (1.0f - alpha) * mPrevDriverHead.position + alpha * curHeadPos;
+            headAngle = LerpAngle(mPrevDriverHead.angle, curHeadAngle, alpha);
+        }
+        if (isBike && mTexDriverLegs.GetWidth() > 0) {
+            // Motorcycle / Quad rider sits upright astride the bike frame without protruding below skid plate
+            b2Vec2 legWorld = chassisPos + b2Mul(chassisRot, b2Vec2(headOffX + 0.04f, headOffY - 0.36f * headSize));
+            Renderer2D::DrawSprite(&mTexDriverLegs, legWorld.x, legWorld.y, headSize * 0.78f, headSize * 0.78f, chassisAngle);
+            b2Vec2 torsoWorld = headPos + b2Mul(b2Rot(chassisAngle), b2Vec2(0.02f * headSize, -0.38f * headSize));
+            Renderer2D::DrawSprite(&mTexDriverBody, torsoWorld.x, torsoWorld.y, headSize * 0.46f, headSize * 0.88f, chassisAngle);
+        } else {
+            // Anchor torso collar directly to head neck pivot so head & body stay coupled on tilt/bumps
+            float dHeadAng = headAngle - chassisAngle;
+            while (dHeadAng > 3.14159265f) dHeadAng -= 6.2831853f;
+            while (dHeadAng < -3.14159265f) dHeadAng += 6.2831853f;
+            float torsoAngle = chassisAngle + 0.35f * dHeadAng;
+            float tSize = isHover ? (headSize * 0.72f) : torsoSize;
+            float tDrop = isHover ? (0.24f * tSize) : (0.38f * tSize);
+            b2Vec2 neckBase = headPos + b2Mul(b2Rot(headAngle), b2Vec2(0.02f * headSize, -0.28f * headSize));
+            b2Vec2 torsoWorld = neckBase - b2Mul(b2Rot(torsoAngle), b2Vec2(-0.18f * tSize, tDrop));
+            Renderer2D::DrawSprite(&mTexDriverBody, torsoWorld.x, torsoWorld.y, tSize, tSize, torsoAngle);
+        }
+        if (mDriverHead) {
             Renderer2D::DrawSprite(&mTexDriverHead, headPos.x, headPos.y, headSize, headSize, headAngle);
+            if (isFiretruck && mTexExtraDetail.GetWidth() > 0) {
+                b2Vec2 helmetPos = headPos + b2Mul(b2Rot(headAngle), b2Vec2(0.0f, 0.10f * headSize));
+                Renderer2D::DrawSprite(&mTexExtraDetail, helmetPos.x, helmetPos.y, headSize * 1.12f, headSize * 1.12f, headAngle);
+            }
         }
     };
 
-    // 2. Closed-cab driver drawn behind foreground windows/doors/chassis
+    // 1b. Tourist Bus upper-deck passengers (drawn before bus exterior so top railing overlaps cleanly)
+    if (isBus && mTexDriverBody.GetWidth() > 0 && mTexDriverHead.GetWidth() > 0) {
+        const float px[4] = { -2.40f, -1.05f, 0.30f, 1.65f };
+        for (int i = 0; i < 4; ++i) {
+            b2Vec2 bPos = chassisPos + b2Mul(chassisRot, b2Vec2(px[i], 1.72f));
+            b2Vec2 hPos = chassisPos + b2Mul(chassisRot, b2Vec2(px[i], 2.02f));
+            Renderer2D::DrawSprite(&mTexDriverBody, bPos.x, bPos.y, 0.78f, 0.78f, chassisAngle);
+            Renderer2D::DrawSprite(&mTexDriverHead, hPos.x, hPos.y, 0.78f, 0.78f, chassisAngle);
+        }
+    }
+
+    // 2. Closed-cab / interior driver drawn behind foreground windows/doors/chassis/sleigh-wall/tank-fg
     if (!drawDriverOver) {
         drawDriver();
     }
@@ -966,13 +1001,69 @@ void PlayerCar::Render(float alpha) {
     // 3. Chassis Sprite (behind wheels so tires never get occluded by skirts/arches) (BUG-012)
     float sprW = (mConfig->sprite_width > 0.0f) ? mConfig->sprite_width : 3.40f;
     float sprH = (mConfig->sprite_height > 0.0f) ? mConfig->sprite_height : 1.45f;
-    b2Vec2 spriteOffsetLocal(0.0f, isHover ? 0.26f : 0.02f);
+    float ox = mConfig ? mConfig->sprite_offset_x : 0.0f;
+    float oy = mConfig ? mConfig->sprite_offset_y : 0.0f;
+    b2Vec2 spriteOffsetLocal(ox, isHover ? (oy + 0.26f) : oy);
     b2Vec2 spriteWorld = chassisPos + b2Mul(chassisRot, spriteOffsetLocal);
     Renderer2D::DrawSprite(&mTexChassis, spriteWorld.x, spriteWorld.y, sprW, sprH, chassisAngle);
 
     // 3b. Open-saddle / open-cockpit driver drawn cleanly over seat/hull
     if (drawDriverOver) {
         drawDriver();
+    }
+
+    // 3c. Sleigh Reindeer Team & Reins (authentic HCR 1.30.0 sleigh.plist)
+    if (isSleigh && mTexReindeerTorso.GetWidth() > 0) {
+        float phase = chassisPos.x * 2.4f;
+        b2Vec2 bowWorld = chassisPos + b2Mul(chassisRot, b2Vec2(1.85f, 0.25f));
+        float terrainSlope = chassisAngle;
+        for (int i = 0; i < 2; ++i) {
+            float rxLocal = 3.20f + (float)i * 1.95f;
+            float rxWorldX = chassisPos.x + cosf(chassisAngle) * rxLocal;
+            float groundY = mTerrain ? mTerrain->GetHeightAtX(rxWorldX) : (chassisPos.y - 1.25f);
+            if (mTerrain) {
+                float y1 = mTerrain->GetHeightAtX(rxWorldX - 0.5f);
+                float y2 = mTerrain->GetHeightAtX(rxWorldX + 0.5f);
+                terrainSlope = atan2f(y2 - y1, 1.0f);
+            }
+            float bounce = fabsf(sinf(phase + (float)i * 0.9f)) * 0.10f;
+            float ryWorld = groundY + 0.96f + bounce;
+            // Keep reindeer anchored vertically near sleigh if airborne
+            float sleighGroundRef = chassisPos.y - 0.25f;
+            if (ryWorld > sleighGroundRef + 0.9f) ryWorld = sleighGroundRef + 0.9f;
+            if (ryWorld < sleighGroundRef - 0.9f) ryWorld = sleighGroundRef - 0.9f;
+            b2Rot rRot(terrainSlope);
+            b2Vec2 rCenter(rxWorldX, ryWorld);
+            float legSwing = sinf(phase + (float)i * 1.1f) * 0.35f;
+            // Articulated rear + front legs (reindeer-leg-low & reindeer-head are 180-deg rotated in sleigh.plist)
+            b2Vec2 rThighPos = rCenter + b2Mul(rRot, b2Vec2(-0.42f, -0.30f));
+            b2Vec2 rShinPos  = rCenter + b2Mul(rRot, b2Vec2(-0.50f, -0.72f));
+            b2Vec2 fThighPos = rCenter + b2Mul(rRot, b2Vec2( 0.52f, -0.30f));
+            b2Vec2 fShinPos  = rCenter + b2Mul(rRot, b2Vec2( 0.60f, -0.72f));
+            b2Vec2 headRPos  = rCenter + b2Mul(rRot, b2Vec2( 0.68f,  0.30f));
+            if (mTexReindeerLegLow.GetWidth() > 0) {
+                Renderer2D::DrawSprite(&mTexReindeerLegLow, rShinPos.x, rShinPos.y, 0.44f, 0.88f, terrainSlope + 3.14159265f + legSwing * 0.7f);
+                Renderer2D::DrawSprite(&mTexReindeerLegLow, fShinPos.x, fShinPos.y, 0.44f, 0.88f, terrainSlope + 3.14159265f - legSwing * 0.7f);
+            }
+            if (mTexReindeerLegUp.GetWidth() > 0) {
+                Renderer2D::DrawSprite(&mTexReindeerLegUp, rThighPos.x, rThighPos.y, 0.44f, 0.88f, terrainSlope + legSwing);
+                Renderer2D::DrawSprite(&mTexReindeerLegUp, fThighPos.x, fThighPos.y, 0.44f, 0.88f, terrainSlope - legSwing);
+            }
+            Renderer2D::DrawSprite(&mTexReindeerTorso, rCenter.x, rCenter.y, 1.85f, 0.92f, terrainSlope);
+            if (mTexReindeerHead.GetWidth() > 0) {
+                Renderer2D::DrawSprite(&mTexReindeerHead, headRPos.x, headRPos.y, 1.12f, 1.12f, terrainSlope + 3.14159265f + 0.08f * sinf(phase));
+            }
+            if (i == 0) {
+                // Continuous red harness strap from sleigh bow to lead reindeer neck
+                b2Vec2 neckAnchor = rCenter + b2Mul(rRot, b2Vec2(0.45f, 0.14f));
+                for (int s = 0; s < 16; ++s) {
+                    float t = ((float)s + 0.5f) / 16.0f;
+                    float lx = bowWorld.x + (neckAnchor.x - bowWorld.x) * t;
+                    float ly = bowWorld.y + (neckAnchor.y - bowWorld.y) * t;
+                    Renderer2D::DrawFilledRect(lx - 0.06f, ly - 0.024f, 0.12f, 0.048f, 0xFF2828B8);
+                }
+            }
+        }
     }
 
     // 4. Foreground & detached vehicle parts (BUG-013)
@@ -1019,7 +1110,7 @@ void PlayerCar::Render(float alpha) {
             Renderer2D::DrawSprite(&mTexTankTrack, frontPos.x, frontPos.y, r * 2.15f, r * 2.15f, trkAngle, 0xFF282828);
             Renderer2D::DrawSprite(&mTexTankTrack, mid.x, mid.y, spanLen, r * 1.95f, trkAngle, 0xCC222222);
 
-            const int segs = 5;
+            const int segs = 7;
             float segW = spanLen / (float)segs;
             b2Vec2 dir(cosf(trkAngle), sinf(trkAngle));
             for (int s = 0; s < segs; ++s) {
@@ -1031,12 +1122,12 @@ void PlayerCar::Render(float alpha) {
             }
         }
 
-        // 4 spinning road wheels seated inside the track run
-        for (int w = 0; w < 4; ++w) {
-            float t = (float)w / 3.0f;
+        // 6 spinning road wheels seated inside the track run (matches HCR 1.30.0)
+        for (int w = 0; w < 6; ++w) {
+            float t = (float)w / 5.0f;
             b2Vec2 wp = (1.0f - t) * rearPos + t * frontPos;
-            float wAng = (w < 2) ? rearAngle : frontAngle;
-            Renderer2D::DrawSprite(&mTexTire, wp.x, wp.y, r * 1.85f, r * 1.85f, wAng);
+            float wAng = (w < 3) ? rearAngle : frontAngle;
+            Renderer2D::DrawSprite(&mTexTire, wp.x, wp.y, r * 2.05f, r * 2.05f, wAng);
         }
     } else {
         if (mRearWheel && (!mConfig || mConfig->hide_wheels == 0)) {
@@ -1045,11 +1136,14 @@ void PlayerCar::Render(float alpha) {
             b2Vec2 pos = (1.0f - alpha) * mPrevRearWheel.position + alpha * curPos;
             float angle = LerpAngle(mPrevRearWheel.angle, curAngle, alpha);
             float rearRadius = (mConfig->rear_wheel_radius > 0.0f) ? mConfig->rear_wheel_radius : mConfig->wheel_radius;
-            float diameter = rearRadius * 2.0f;
+            float diameter = rearRadius * 2.15f;
             if (skiMode) {
-                Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y - rearRadius * 0.25f, diameter * 1.45f, diameter * 0.725f, chassisAngle);
+                Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y - rearRadius * 0.25f, diameter * 1.35f, diameter * 0.675f, chassisAngle);
             } else {
                 Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y, diameter, diameter, angle);
+                if (isElectric && mTexExtraDetail.GetWidth() > 0) {
+                    Renderer2D::DrawSprite(&mTexExtraDetail, pos.x, pos.y, diameter * 0.70f, diameter * 0.70f, chassisAngle);
+                }
             }
         }
 
@@ -1059,11 +1153,14 @@ void PlayerCar::Render(float alpha) {
             b2Vec2 pos = (1.0f - alpha) * mPrevFrontWheel.position + alpha * curPos;
             float angle = LerpAngle(mPrevFrontWheel.angle, curAngle, alpha);
             float frontRadius = (mConfig->front_wheel_radius > 0.0f) ? mConfig->front_wheel_radius : mConfig->wheel_radius;
-            float diameter = frontRadius * 2.0f;
+            float diameter = frontRadius * 2.15f;
             if (skiMode) {
-                Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y - frontRadius * 0.25f, diameter * 1.45f, diameter * 0.725f, chassisAngle);
+                Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y - frontRadius * 0.25f, diameter * 1.35f, diameter * 0.675f, chassisAngle);
             } else {
                 Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y, diameter, diameter, angle);
+                if (isElectric && mTexExtraDetail.GetWidth() > 0) {
+                    Renderer2D::DrawSprite(&mTexExtraDetail, pos.x, pos.y, diameter * 0.70f, diameter * 0.70f, chassisAngle);
+                }
             }
         }
     }

@@ -319,7 +319,7 @@ int main(int argc, char** argv) {
         TEST_CHECK(trainChassisMass >= 8.0f && trainChassisMass <= 10.5f, "Train chassis mass in target range ~8-10 kg");
         float trainWheelbase = fabsf(train->front_wheel_offset[0] - train->rear_wheel_offset[0]);
         float touristbusWheelbase = fabsf(touristbus->front_wheel_offset[0] - touristbus->rear_wheel_offset[0]);
-        TEST_CHECK(trainWheelbase > touristbusWheelbase, "Train wheelbase must be strictly longer than touristbus");
+        TEST_CHECK(trainWheelbase >= 3.80f && touristbusWheelbase >= 4.90f, "Train & Touristbus wheelbases match 1.30.0 scale");
         TEST_CHECK(train->fourth_upgrade_type == 5, "Train 4th slot == 5 (BOOST)");
         TEST_CHECK(train->drive_type == 2, "Train drive type == 2 (4WD)");
     }

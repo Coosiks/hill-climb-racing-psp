@@ -1029,7 +1029,12 @@ void Game::UpdatePhysicsStep(float dt) {
             float sinA = sinf(cAng);
             float exX = cPos.x + (rx * cosA - ry * sinA);
             float exY = cPos.y + (rx * sinA + ry * cosA);
-            ParticleSystem::EmitExhaust(exX, exY, cVel.x, cVel.y);
+            const char* cid = (mCar->GetConfig()) ? mCar->GetConfig()->id : "";
+            bool noExhaust = (strcmp(cid, "sleigh") == 0 || strcmp(cid, "electric") == 0 ||
+                              strcmp(cid, "hovercraft") == 0 || strcmp(cid, "moonlander") == 0);
+            if (!noExhaust) {
+                ParticleSystem::EmitExhaust(exX, exY, cVel.x, cVel.y);
+            }
         }
 
         // Moonlander Thruster Jet flame particles & thruster audio (BUG-053)

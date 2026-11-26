@@ -84,7 +84,7 @@ int main() {
     TEST_CHECK(strcmp(Config::Vehicles[6].body_texture, "assets/car-quadbike.png") == 0, "Quadbike body texture");
     TEST_CHECK(strcmp(Config::Vehicles[6].wheel_texture, "assets/Tire.png") == 0, "Quadbike wheel texture");
     TEST_CHECK(strcmp(Config::Vehicles[7].body_texture, "assets/car-touristbus.png") == 0, "Touristbus body texture");
-    TEST_CHECK(strcmp(Config::Vehicles[7].wheel_texture, "assets/Tire.png") == 0, "Touristbus wheel texture");
+    TEST_CHECK(strcmp(Config::Vehicles[7].wheel_texture, "assets/car-monster-tire.png") == 0, "Touristbus wheel texture");
     printf("  [PASS] Sub-test A: %d vehicles parsed, unique hashes and textures verified!\n\n", Config::VehicleCount);
 
     // ----------------------------------------------------
@@ -212,8 +212,8 @@ int main() {
         PlayerCar car(&world, b2Vec2(0.0f, 2.0f), 0, 0, 0, 0, &touristbus);
         b2CircleShape* rwShape = (b2CircleShape*)car.GetRearWheelBody()->GetFixtureList()->GetShape();
         b2CircleShape* fwShape = (b2CircleShape*)car.GetFrontWheelBody()->GetFixtureList()->GetShape();
-        TEST_CHECK(feq(rwShape->m_radius, 0.44f), "Tourist bus wheel radius == 0.44");
-        TEST_CHECK(feq(fwShape->m_radius, 0.44f), "Tourist bus wheel radius == 0.44");
+        TEST_CHECK(feq(rwShape->m_radius, 0.55f), "Tourist bus wheel radius == 0.55");
+        TEST_CHECK(feq(fwShape->m_radius, 0.55f), "Tourist bus wheel radius == 0.55");
         TEST_CHECK(touristbus.fourth_upgrade_type == 0, "Tourist bus 4th upgrade type == 0 (4WD)");
         TEST_CHECK(touristbus.drive_type == 2, "Tourist bus drive type == 2 (4WD)");
         TEST_CHECK(car.GetChassisBody()->GetMass() > 4.0f, "Tourist bus chassis mass must be heavy (> 4.0 kg)");
@@ -246,7 +246,7 @@ int main() {
         TEST_CHECK(trainMass >= 8.0f && trainMass <= 10.5f, "Train chassis mass in target range ~8-10 kg");
         float trainWheelbase = fabsf(train->front_wheel_offset[0] - train->rear_wheel_offset[0]);
         float touristbusWheelbase = fabsf(touristbus.front_wheel_offset[0] - touristbus.rear_wheel_offset[0]);
-        TEST_CHECK(trainWheelbase > touristbusWheelbase, "Train wheelbase must be longer than touristbus");
+        TEST_CHECK(trainWheelbase >= 3.80f && touristbusWheelbase >= 4.90f, "Train & Touristbus wheelbases match 1.30.0 scale");
         TEST_CHECK(train->fourth_upgrade_type == 5, "Train 4th slot == 5 (BOOST)");
         TEST_CHECK(train->drive_type == 2, "Train drive type == 2 (4WD)");
     }

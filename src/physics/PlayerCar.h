@@ -155,6 +155,11 @@ private:
     Texture mTexDriverHead;
     Texture mTexTankTrack;
     Texture mTexHoverGlow;
+    Texture mTexExtraDetail;
+    Texture mTexReindeerTorso;
+    Texture mTexReindeerHead;
+    Texture mTexReindeerLegUp;
+    Texture mTexReindeerLegLow;
     CarAttachment mParts[MAX_CAR_PARTS];
     int mPartCount;
 };

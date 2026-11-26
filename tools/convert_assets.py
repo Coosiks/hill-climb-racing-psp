@@ -392,7 +392,7 @@ def get_target_format(filename, cli_format):
 
     # High-detail vehicle body and wheel components in RGBA8888
     vehicle_keywords = [
-        "car.png", "tire.png", "car-", "bike-", "-tire", "wheel", "tank-", "tractor", "driver-"
+        "car.png", "tire.png", "car-", "bike-", "-tire", "wheel", "tank-", "tractor", "driver-", "reindeer-"
     ]
     if any(k in fname for k in vehicle_keywords):
         return FORMAT_RGBA8888
@@ -521,7 +521,7 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
                         shutil.copy2(src_path, dst_path)
                     processed_count += 1
 
-    # T-131b: Extract sleigh chassis sprite from atlas/sleigh.plist if available
+    # T-131b: Extract sleigh chassis & reindeer team sprites from atlas/sleigh.plist if available
     sleigh_png = os.path.join(out_dir, "car-sleigh.png")
     sleigh_tex = os.path.join(out_dir, "car-sleigh.tex")
     atlas_png = os.path.join(out_dir, "atlas", "sleigh.png")
@@ -538,6 +538,20 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
             "size": fsize
         })
         processed_count += 1
+    for r_frame in ["reindeer-torso.png", "reindeer-head.png", "reindeer-leg-up.png", "reindeer-leg-low.png"]:
+        dst_png = os.path.join(out_dir, r_frame)
+        dst_tex = os.path.splitext(dst_png)[0] + ".tex"
+        if extract_frame_from_atlas(atlas_png, atlas_plist, r_frame, dst_png):
+            ow, oh, pw, ph, fcode, fsize = convert_image_to_tex(dst_png, dst_tex, target_format=FORMAT_RGBA8888, swizzle=swizzle)
+            manifest.append({
+                "file": r_frame,
+                "tex": os.path.splitext(r_frame)[0] + ".tex",
+                "orig": f"{ow}x{oh}",
+                "pot": f"{pw}x{ph}",
+                "format": "RGBA8888",
+                "size": fsize
+            })
+            processed_count += 1
 
     # Extract hippievan chassis and tire from atlas/car-hippievan.plist if available
     hv_atlas_png = os.path.join(out_dir, "atlas", "car-hippievan.png")

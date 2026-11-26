@@ -74,6 +74,8 @@ VehicleConfig Config::VehicleJeep = {
     0.40f,                      // rear_wheel_radius
     3.40f,                      // sprite_width
     1.45f,                      // sprite_height
+    0.0f,                       // sprite_offset_x
+    0.0f,                       // sprite_offset_y
     2,                          // drive_type: 2 = AWD
     0,                          // fourth_upgrade_type: 0 = AWD
     0.0f,                       // downforce_coeff
@@ -254,6 +256,8 @@ bool Config::LoadVehicles(const char* filepath) {
                 else if (strcmp(key, "rear_wheel_radius") == 0) v.rear_wheel_radius = (float)atof(val);
                 else if (strcmp(key, "sprite_width") == 0) v.sprite_width = (float)atof(val);
                 else if (strcmp(key, "sprite_height") == 0) v.sprite_height = (float)atof(val);
+                else if (strcmp(key, "sprite_offset_x") == 0) v.sprite_offset_x = (float)atof(val);
+                else if (strcmp(key, "sprite_offset_y") == 0) v.sprite_offset_y = (float)atof(val);
                 else if (strcmp(key, "body_texture") == 0) CopyCfgStr(v.body_texture, val);
                 else if (strcmp(key, "wheel_texture") == 0) {
                     CopyCfgStr(v.wheel_texture, val);
