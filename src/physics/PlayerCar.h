@@ -85,6 +85,7 @@ private:
     // Box2D Bodies & Joints
     b2Body* mChassis;
     b2Body* mRearWheel;
+    b2Body* mMidWheel;
     b2Body* mFrontWheel;
     b2Body* mDriverHead;
 
@@ -94,6 +95,7 @@ private:
     BodyTransform mPrevDriverHead;
 
     b2WheelJoint* mRearJoint;
+    b2WheelJoint* mMidJoint;
     b2WheelJoint* mFrontJoint;
     b2RevoluteJoint* mNeckJoint;
 

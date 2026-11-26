@@ -289,7 +289,7 @@ int main() {
         VehicleConfig* vc = &Config::Vehicles[i];
         PlayerCar pc(&world, b2Vec2(0.0f, 2.0f), 0, 0, 0, 0, vc);
         float cm = pc.GetChassisBody()->GetMass();
-        float fm = pc.GetFrontWheelBody()->GetMass();
+        float fm = pc.GetFrontWheelBody() ? pc.GetFrontWheelBody()->GetMass() : 0.0f;
         float rm = pc.GetRearWheelBody()->GetMass();
         float hm = pc.GetDriverHeadBody() ? pc.GetDriverHeadBody()->GetMass() : 0.0f;
         float total = cm + fm + rm + hm;

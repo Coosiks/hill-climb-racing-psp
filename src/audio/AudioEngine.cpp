@@ -16,7 +16,100 @@ bool AudioEngine::mEngineActive = false;
 bool AudioEngine::mPaused = false;
 float AudioEngine::mMusicVolume = 1.0f;
 float AudioEngine::mSFXVolume = 1.0f;
-int AudioEngine::mCurrentSfxToPlay = -1;
+volatile int AudioEngine::mSfxQueue[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+volatile int AudioEngine::mSfxQueueHead = 0;
+volatile int AudioEngine::mSfxQueueTail = 0;
+
+struct SfxVoice {
+    int sfxIndex;
+    unsigned int posFP;
+    unsigned int stepFP;
+    bool active;
+};
+#define MAX_SFX_VOICES 6
+static SfxVoice sSfxVoices[MAX_SFX_VOICES] = { {0} };
+static unsigned int sSharedEnginePosFP = 0;
+
+static void MixEngineAndVoices(short* outputBuffer, int samplesCount,
+                               const SoundBuffer& engBuf, float engPitch, bool engActive,
+                               const SoundBuffer* sfxBuffers, float sfxVolume,
+                               volatile int* qBuf, volatile int& qHead, volatile int& qTail,
+                               SfxVoice* voices, unsigned int& enginePosFP) {
+    // Drain pending SFX trigger queue into active voices (round-robin reuse if full)
+    while (qTail != qHead) {
+        int sfxIdx = qBuf[qTail];
+        qTail = (qTail + 1) & 7;
+        if (sfxIdx >= 0 && sfxIdx < SFX_COUNT && sfxBuffers[sfxIdx].samples && sfxBuffers[sfxIdx].sampleCount > 0) {
+            int slot = -1;
+            unsigned int maxAgePos = 0;
+            int oldestSlot = 0;
+            for (int v = 0; v < MAX_SFX_VOICES; ++v) {
+                if (!voices[v].active) { slot = v; break; }
+                if (voices[v].posFP >= maxAgePos) { maxAgePos = voices[v].posFP; oldestSlot = v; }
+            }
+            if (slot < 0) slot = oldestSlot;
+            float rate = (sfxBuffers[sfxIdx].sampleRate > 0) ? ((float)sfxBuffers[sfxIdx].sampleRate / 44100.0f) : 0.5f;
+            voices[slot].sfxIndex = sfxIdx;
+            voices[slot].posFP = 0;
+            voices[slot].stepFP = (unsigned int)(rate * 65536.0f);
+            if (voices[slot].stepFP == 0) voices[slot].stepFP = 32768;
+            voices[slot].active = true;
+        }
+    }
+
+    // 1. Mix Engine loop with linear interpolation
+    if (engActive && engBuf.samples && engBuf.sampleCount > 1) {
+        float pitch = engPitch;
+        if (pitch < 0.50f) pitch = 0.50f;
+        if (pitch > 2.00f) pitch = 2.00f;
+        float rateRatio = (engBuf.sampleRate > 0) ? ((float)engBuf.sampleRate / 44100.0f) : 1.0f;
+        unsigned int stepFP = (unsigned int)(pitch * rateRatio * 65536.0f);
+        unsigned int maxPosFP = (unsigned int)(engBuf.sampleCount) << 16;
+        const short* engSamples = engBuf.samples;
+        int engChannels = engBuf.channels;
+        int volFactor = (int)(sfxVolume * 180.0f);
+
+        for (int i = 0; i < samplesCount; ++i) {
+            int idx0 = (int)(enginePosFP >> 16);
+            if (idx0 >= engBuf.sampleCount) idx0 %= engBuf.sampleCount;
+            int idx1 = (idx0 + 1 < engBuf.sampleCount) ? (idx0 + 1) : 0;
+            unsigned int frac = enginePosFP & 0xFFFF;
+            int s0 = (engChannels == 1) ? engSamples[idx0] : engSamples[idx0 * 2];
+            int s1 = (engChannels == 1) ? engSamples[idx1] : engSamples[idx1 * 2];
+            int interp = s0 + (((s1 - s0) * (int)frac) >> 16);
+            short sample = (short)((interp * volFactor) >> 8);
+            outputBuffer[i * 2 + 0] = sample;
+            outputBuffer[i * 2 + 1] = sample;
+            enginePosFP += stepFP;
+            if (enginePosFP >= maxPosFP) enginePosFP -= maxPosFP;
+        }
+    }
+
+    // 2. Mix concurrent SFX voices with sample-rate matching + linear interpolation
+    int sfxVol = (int)(sfxVolume * 256.0f);
+    for (int v = 0; v < MAX_SFX_VOICES; ++v) {
+        if (!voices[v].active) continue;
+        const SoundBuffer& sfx = sfxBuffers[voices[v].sfxIndex];
+        if (!sfx.samples || sfx.sampleCount <= 0) { voices[v].active = false; continue; }
+        unsigned int limitFP = (unsigned int)sfx.sampleCount << 16;
+        for (int i = 0; i < samplesCount; ++i) {
+            if (voices[v].posFP >= limitFP) { voices[v].active = false; break; }
+            int idx0 = (int)(voices[v].posFP >> 16);
+            int idx1 = (idx0 + 1 < sfx.sampleCount) ? (idx0 + 1) : idx0;
+            unsigned int frac = voices[v].posFP & 0xFFFF;
+            int s0 = (sfx.channels == 1) ? sfx.samples[idx0] : sfx.samples[idx0 * 2];
+            int s1 = (sfx.channels == 1) ? sfx.samples[idx1] : sfx.samples[idx1 * 2];
+            int sfxSample = ((s0 + (((s1 - s0) * (int)frac) >> 16)) * sfxVol) >> 8;
+            int left = outputBuffer[i * 2 + 0] + sfxSample;
+            int right = outputBuffer[i * 2 + 1] + sfxSample;
+            if (left > 32767) left = 32767; else if (left < -32768) left = -32768;
+            if (right > 32767) right = 32767; else if (right < -32768) right = -32768;
+            outputBuffer[i * 2 + 0] = (short)left;
+            outputBuffer[i * 2 + 1] = (short)right;
+            voices[v].posFP += voices[v].stepFP;
+        }
+    }
+}
 
 #if defined(__PSP__)
 int AudioEngine::mChannelEngine = -1;
@@ -195,87 +288,20 @@ int AudioEngine::AudioThread(SceSize args, void* argp) {
     static short __attribute__((aligned(64))) mixbuf[2][AUDIO_BUF_SAMPLES * 2];
     int cur = 0;
 
-    unsigned int enginePosFP = 0;
-    int sfxCurrentIndex = -1;
-    int sfxSamplePos = 0;
-
     while (mAudioRunning) {
         short* outputBuffer = mixbuf[cur];
         memset(outputBuffer, 0, AUDIO_BUF_SAMPLES * 2 * sizeof(short));
 
         if (!mPaused) {
-            // Check for new SFX request
-            if (mCurrentSfxToPlay >= 0 && mCurrentSfxToPlay < SFX_COUNT) {
-                sfxCurrentIndex = mCurrentSfxToPlay;
-                sfxSamplePos = 0;
-                mCurrentSfxToPlay = -1;
-            }
-
-            // 1. Synthesize / Resample Engine Audio Loop
-            if (mEngineActive && !sAudioSwappingEngine && mEngineBuffer.samples && mEngineBuffer.sampleCount > 0) {
-                sAudioInEngineMix = true;
-                __sync_synchronize();
-                float pitch = mEnginePitch;
-                if (pitch < 0.50f) pitch = 0.50f;
-                if (pitch > 2.00f) pitch = 2.00f;
-
-                float rateRatio = (mEngineBuffer.sampleRate > 0) ? ((float)mEngineBuffer.sampleRate / 44100.0f) : 1.0f;
-                unsigned int stepFP = (unsigned int)(pitch * rateRatio * 65536.0f);
-                unsigned int maxPosFP = (unsigned int)(mEngineBuffer.sampleCount) << 16;
-                short* engSamples = mEngineBuffer.samples;
-                int engChannels = mEngineBuffer.channels;
-                int volFactor = (int)(mSFXVolume * 180.0f);
-
-                for (int i = 0; i < AUDIO_BUF_SAMPLES; ++i) {
-                    int sIdx = (enginePosFP >> 16);
-                    if (sIdx >= mEngineBuffer.sampleCount) sIdx = mEngineBuffer.sampleCount - 1;
-                    short sample = (engChannels == 1) ? engSamples[sIdx] : engSamples[sIdx * 2];
-
-                    sample = (short)((sample * volFactor) >> 8);
-
-                    outputBuffer[i * 2 + 0] = sample;
-                    outputBuffer[i * 2 + 1] = sample;
-
-                    enginePosFP += stepFP;
-                    if (enginePosFP >= maxPosFP) {
-                        enginePosFP -= maxPosFP;
-                    }
-                }
-                sAudioInEngineMix = false;
-                __sync_synchronize();
-            }
-
-            // 2. Mix Active SFX
-            if (sfxCurrentIndex >= 0 && sfxCurrentIndex < SFX_COUNT) {
-                SoundBuffer& sfx = mSfxBuffers[sfxCurrentIndex];
-                if (sfx.samples && sfxSamplePos < sfx.sampleCount) {
-                    int sfxVol = (int)(mSFXVolume * 256.0f);
-                    for (int i = 0; i < AUDIO_BUF_SAMPLES; ++i) {
-                        if (sfxSamplePos >= sfx.sampleCount) {
-                            sfxCurrentIndex = -1;
-                            break;
-                        }
-
-                        short sfxSample = (sfx.channels == 1) ? sfx.samples[sfxSamplePos] : sfx.samples[sfxSamplePos * 2];
-                        sfxSample = (short)((sfxSample * sfxVol) >> 8);
-
-                        int left = outputBuffer[i * 2 + 0] + sfxSample;
-                        int right = outputBuffer[i * 2 + 1] + sfxSample;
-
-                        if (left > 32767) left = 32767;
-                        if (left < -32768) left = -32768;
-                        if (right > 32767) right = 32767;
-                        if (right < -32768) right = -32768;
-
-                        outputBuffer[i * 2 + 0] = (short)left;
-                        outputBuffer[i * 2 + 1] = (short)right;
-
-                        sfxSamplePos++;
-                    }
-                } else {
-                    sfxCurrentIndex = -1;
-                }
-            }
+            bool canMixEngine = (!sAudioSwappingEngine);
+            if (mEngineActive && canMixEngine) { sAudioInEngineMix = true; __sync_synchronize(); }
+            MixEngineAndVoices(outputBuffer, AUDIO_BUF_SAMPLES,
+                               mEngineBuffer, mEnginePitch, mEngineActive && canMixEngine,
+                               mSfxBuffers, mSFXVolume,
+                               mSfxQueue, mSfxQueueHead, mSfxQueueTail,
+                               sSfxVoices, sSharedEnginePosFP);
+            sAudioInEngineMix = false;
+            __sync_synchronize();
 
             // 3. Mix Streaming Music Channel (T-132, H17c lock-free SPSC)
             if (sMusicPlaying && mMusicVolume > 0.001f) {
@@ -402,82 +428,19 @@ void AudioEngine::Shutdown() {
 
 #else // PC SDL Audio Implementation
 
-static unsigned int sPCEnginePosFP = 0;
-static int sPCSfxCurrentIndex = -1;
-static int sPCSfxSamplePos = 0;
-
 void AudioEngine::AudioCallback(void* userdata, Uint8* stream, int len) {
+    (void)userdata;
     short* outputBuffer = (short*)stream;
     int samplesCount = len / (2 * sizeof(short));
     memset(outputBuffer, 0, len);
 
     if (mPaused) return;
 
-    if (mCurrentSfxToPlay >= 0 && mCurrentSfxToPlay < SFX_COUNT) {
-        sPCSfxCurrentIndex = mCurrentSfxToPlay;
-        sPCSfxSamplePos = 0;
-        mCurrentSfxToPlay = -1;
-    }
-
-    // 1. Engine sound
-    if (mEngineActive && mEngineBuffer.samples && mEngineBuffer.sampleCount > 0) {
-        float pitch = mEnginePitch;
-        if (pitch < 0.50f) pitch = 0.50f;
-        if (pitch > 2.00f) pitch = 2.00f;
-
-        float rateRatio = (mEngineBuffer.sampleRate > 0) ? ((float)mEngineBuffer.sampleRate / 44100.0f) : 1.0f;
-        unsigned int stepFP = (unsigned int)(pitch * rateRatio * 65536.0f);
-        unsigned int maxPosFP = (unsigned int)(mEngineBuffer.sampleCount) << 16;
-        short* engSamples = mEngineBuffer.samples;
-        int engChannels = mEngineBuffer.channels;
-        int volFactor = (int)(mSFXVolume * 180.0f);
-
-        for (int i = 0; i < samplesCount; ++i) {
-            int sIdx = (sPCEnginePosFP >> 16);
-            if (sIdx >= mEngineBuffer.sampleCount) sIdx = mEngineBuffer.sampleCount - 1;
-            short sample = (engChannels == 1) ? engSamples[sIdx] : engSamples[sIdx * 2];
-            sample = (short)((sample * volFactor) >> 8);
-
-            outputBuffer[i * 2 + 0] = sample;
-            outputBuffer[i * 2 + 1] = sample;
-
-            sPCEnginePosFP += stepFP;
-            if (sPCEnginePosFP >= maxPosFP) {
-                sPCEnginePosFP -= maxPosFP;
-            }
-        }
-    }
-
-    // 2. SFX
-    if (sPCSfxCurrentIndex >= 0 && sPCSfxCurrentIndex < SFX_COUNT) {
-        SoundBuffer& sfx = mSfxBuffers[sPCSfxCurrentIndex];
-        if (sfx.samples && sPCSfxSamplePos < sfx.sampleCount) {
-            int sfxVol = (int)(mSFXVolume * 256.0f);
-            for (int i = 0; i < samplesCount; ++i) {
-                if (sPCSfxSamplePos >= sfx.sampleCount) {
-                    sPCSfxCurrentIndex = -1;
-                    break;
-                }
-
-                short sfxSample = (sfx.channels == 1) ? sfx.samples[sPCSfxSamplePos] : sfx.samples[sPCSfxSamplePos * 2];
-                sfxSample = (short)((sfxSample * sfxVol) >> 8);
-                int left = outputBuffer[i * 2 + 0] + sfxSample;
-                int right = outputBuffer[i * 2 + 1] + sfxSample;
-
-                if (left > 32767) left = 32767;
-                if (left < -32768) left = -32768;
-                if (right > 32767) right = 32767;
-                if (right < -32768) right = -32768;
-
-                outputBuffer[i * 2 + 0] = (short)left;
-                outputBuffer[i * 2 + 1] = (short)right;
-
-                sPCSfxSamplePos++;
-            }
-        } else {
-            sPCSfxCurrentIndex = -1;
-        }
-    }
+    MixEngineAndVoices(outputBuffer, samplesCount,
+                       mEngineBuffer, mEnginePitch, mEngineActive,
+                       mSfxBuffers, mSFXVolume,
+                       mSfxQueue, mSfxQueueHead, mSfxQueueTail,
+                       sSfxVoices, sSharedEnginePosFP);
 
     // 3. Mix Streaming Music Channel (T-132, H17c lock-free SPSC)
     if (sMusicPlaying && mMusicVolume > 0.001f) {
@@ -595,7 +558,12 @@ void AudioEngine::Shutdown() {
 
 void AudioEngine::PlaySFX(SoundEffect sfx) {
     if (sfx >= 0 && sfx < SFX_COUNT) {
-        mCurrentSfxToPlay = sfx;
+        int nextHead = (mSfxQueueHead + 1) & 7;
+        if (nextHead != mSfxQueueTail) {
+            mSfxQueue[mSfxQueueHead] = sfx;
+            __sync_synchronize();
+            mSfxQueueHead = nextHead;
+        }
     }
 }
 
@@ -722,14 +690,14 @@ bool AudioEngine::IsEngineActive() {
 // -----------------------------------------------------------------------------
 // Streaming Music API (T-132, H17c lock-free SPSC)
 // -----------------------------------------------------------------------------
-void AudioEngine::UpdateMusicStream() {
+void AudioEngine::UpdateMusicStream(bool prefill) {
 #if !defined(__PSP__)
-    if (sMusicPlaying && sOggMusicStream) {
+    if ((sMusicPlaying || prefill) && sOggMusicStream) {
         int head = sMusicRingHead;
         int tail = sMusicRingTail;
         int freeSamples = (tail - head - 1 + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
         if (freeSamples < 1024) return;
-        while (freeSamples >= 512 && sMusicPlaying) {
+        while (freeSamples >= 512 && (sMusicPlaying || prefill)) {
             short tmp[1024];
             int toGet = freeSamples > 1024 ? 1024 : freeSamples;
             int got = stb_vorbis_get_samples_short_interleaved(sOggMusicStream, 1, tmp, toGet);
@@ -750,14 +718,14 @@ void AudioEngine::UpdateMusicStream() {
         return;
     }
 #endif
-    if (!sMusicPlaying || !sMusicFile) return;
+    if ((!sMusicPlaying && !prefill) || !sMusicFile) return;
 
     int head = sMusicRingHead;
     int tail = sMusicRingTail;
     int freeSamples = (tail - head - 1 + MUSIC_RING_BUF_SAMPLES) % MUSIC_RING_BUF_SAMPLES;
     if (freeSamples < 1024) return;
 
-    while (freeSamples >= 512 && sMusicPlaying) {
+    while (freeSamples >= 512 && (sMusicPlaying || prefill)) {
         int toRead = freeSamples > 2048 ? 2048 : freeSamples;
         int bytesToRead = toRead * (int)sizeof(short);
 
@@ -880,10 +848,10 @@ bool AudioEngine::PlayMusic(const char* filepath) {
             sMusicRingTail = 0;
             sMusicPosFP = 0;
             sMusicUnderrunCount = 0;
+            if (mAudioDevice > 0) SDL_UnlockAudioDevice(mAudioDevice);
+            UpdateMusicStream(true);
             __sync_synchronize();
             sMusicPlaying = true;
-            if (mAudioDevice > 0) SDL_UnlockAudioDevice(mAudioDevice);
-            UpdateMusicStream();
             return true;
         }
 #endif
@@ -954,14 +922,15 @@ bool AudioEngine::PlayMusic(const char* filepath) {
     sMusicRingTail = 0;
     sMusicPosFP = 0;
     sMusicUnderrunCount = 0;
-    __sync_synchronize();
-    sMusicPlaying = true;
+    sMusicPlaying = false;
 #if !defined(__PSP__)
     if (mAudioDevice > 0) SDL_UnlockAudioDevice(mAudioDevice);
 #endif
 
-    // Pre-fill ring buffer to 100% capacity before starting playback
-    UpdateMusicStream();
+    // Pre-fill ring buffer before enabling audio callback playback
+    UpdateMusicStream(true);
+    __sync_synchronize();
+    sMusicPlaying = true;
     return true;
 }
 

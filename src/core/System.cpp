@@ -273,8 +273,8 @@ void System::PollInput() {
     if (state[SDL_SCANCODE_DOWN]  || state[SDL_SCANCODE_S]) ButtonsHeld |= PSP_CTRL_DOWN;
 
     if (state[SDL_SCANCODE_SPACE] || state[SDL_SCANCODE_RETURN]) ButtonsHeld |= PSP_CTRL_CROSS;
-    if (state[SDL_SCANCODE_ESCAPE] || state[SDL_SCANCODE_BACKSPACE]) ButtonsHeld |= PSP_CTRL_CIRCLE;
-    if (state[SDL_SCANCODE_P] || state[SDL_SCANCODE_PAUSE]) ButtonsHeld |= PSP_CTRL_START;
+    if (state[SDL_SCANCODE_BACKSPACE]) ButtonsHeld |= PSP_CTRL_CIRCLE;
+    if (state[SDL_SCANCODE_ESCAPE] || state[SDL_SCANCODE_P] || state[SDL_SCANCODE_PAUSE]) ButtonsHeld |= PSP_CTRL_START;
     if (state[SDL_SCANCODE_TAB]) ButtonsHeld |= PSP_CTRL_SELECT;
 
     // Upgrade hotkeys

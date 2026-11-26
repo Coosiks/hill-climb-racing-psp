@@ -485,8 +485,146 @@ int main() {
     }
     printf("  -> Sub-test E PASS\n\n");
 
+    // -------------------------------------------------------------
+    // Sub-test F: Root Audit Overhaul Verification (Honest Gameplay, Hazards, Camera, Texture & Audio)
+    // -------------------------------------------------------------
+    printf("[Sub-test F] Checking honest lvl20 vehicle parity, Rooftops chasm/Volcano hazards, RGBA4444/aspect textures, adaptive camera, Garage +-5 jump & AudioEngine...\n");
+    {
+        // 1. Cheat-free 4s Countryside launch for stock & lvl20 special vehicles
+        const char* checkVehs[] = { "onewheeler", "hovercraft", "moonlander", "tank", "snowmobile", "jeep", "sleigh" };
+        for (int i = 0; i < 7; ++i) {
+            const VehicleConfig* vc = Config::FindVehicleById(checkVehs[i]);
+            TEST_CHECK(vc != NULL, "Vehicle config must exist");
+            int idx = (int)(vc - Config::Vehicles);
+            for (int tier = 0; tier < 2; ++tier) {
+                int lvl = (tier == 0) ? 0 : 20;
+                Game g;
+                PlayerInfo::Reset();
+                PlayerInfo::UnlockStage(PlayerInfo::HashId("countryside"));
+                uint32_t vh = PlayerInfo::HashId(vc->id);
+                PlayerInfo::UnlockVehicle(vh);
+                for (int s = 0; s < 4; ++s) PlayerInfo::SetVehicleUpgrade(vh, s, lvl);
+                g.SetCurrentStage(STAGE_COUNTRYSIDE);
+                g.SetCurrentVehicle(idx);
+                g.StartRace();
+                System::ButtonsHeld = PSP_CTRL_RTRIGGER;
+                for (int step = 0; step < 150; ++step) g.UpdatePhysicsStep(FIXED_TIMESTEP);
+                System::ButtonsHeld = 0;
+                printf("  %s lvl%d 2.5s: dist=%.2fm dead=%d\n", checkVehs[i], lvl, g.GetMaxDistance(), g.GetCar()->IsDead() ? 1 : 0);
+                TEST_CHECK(!g.GetCar()->IsDead() && g.GetMaxDistance() > 10.0f,
+                           "Honest 2.5s launch (lvl0 and lvl20) must survive and travel > 10m cleanly");
+                g.EndRace();
+            }
+        }
+
+        // 2. Rooftops has discrete drop gaps (< -10m) & kills fallen cars; Tank has 3 road wheels (mid wheel exists)
+        {
+            b2World rw(b2Vec2(0.0f, -10.0f));
+            Terrain rt(&rw, STAGE_ROOFTOPS);
+            TEST_CHECK(rt.GetHeightAtX(85.0f) < -10.0f, "Rooftops must contain genuine building gap chasms (< -10m)");
+
+            Game gr;
+            PlayerInfo::Reset();
+            PlayerInfo::UnlockStage(PlayerInfo::HashId("rooftops"));
+            PlayerInfo::UnlockVehicle(PlayerInfo::HashId("jeep"));
+            gr.SetCurrentStage(STAGE_ROOFTOPS);
+            gr.SetCurrentVehicle(0);
+            gr.StartRace();
+            // Park near roof gap edge and coast off without rescue cheats
+            gr.GetCar()->GetChassisBody()->SetTransform(b2Vec2(85.0f, -12.0f), 0.0f);
+            gr.UpdatePhysicsStep(FIXED_TIMESTEP);
+            TEST_CHECK(gr.GetCar()->IsDead(), "Falling below Rooftops chasm (< -11m) must trigger Driver Down");
+            gr.EndRace();
+        }
+
+        // 3. Cave items stay strictly below ceiling & SpawnItemsAhead includes 500-coins >= 850m
+        {
+            b2World cw(b2Vec2(0.0f, -10.0f));
+            Terrain ct(&cw, STAGE_CAVE);
+            for (float px = 30.0f; px <= 960.0f; px += 30.0f) {
+                ct.Update(px);
+            }
+            const Collectible* items = ct.GetItems();
+            int n = ct.GetItemCount();
+            for (int i = 0; i < n; ++i) {
+                TEST_CHECK(items[i].y < ct.GetCeilingHeightAtX(items[i].x),
+                           "Cave item spawn Y must stay strictly below ceiling");
+            }
+        }
+
+        // 4. RGBA4444 smooth-alpha .tex + opaque 5551 terrain + proportional PNG downscale
+        {
+            Texture smokeTex;
+            TEST_CHECK(smokeTex.LoadTex("assets/smoke.tex"), "smoke.tex must load cleanly");
+            TEST_CHECK(smokeTex.GetFormat() == GU_PSM_4444, "smoke.tex must use GU_PSM_4444 smooth alpha");
+
+            Texture groundTex;
+            TEST_CHECK(groundTex.LoadTex("assets/terrain-ground.tex"), "terrain-ground.tex must load cleanly");
+            TEST_CHECK(groundTex.GetFormat() == GU_PSM_5551, "terrain-ground.tex must keep GU_PSM_5551");
+
+            Texture springPng;
+            TEST_CHECK(springPng.Load("assets/lowres-terrain-seasons-spring-surface.png"), "Oversized PNG must load");
+            TEST_CHECK(springPng.GetWidth() == 512 && springPng.GetHeight() == 32,
+                       "1024x64 PNG must downscale proportionally to 512x32");
+        }
+
+        // 5. Adaptive camera zoom frames Tourist Bus wider than Jeep, and Garage UP/DOWN jumps +-5
+        {
+            Game g;
+            PlayerInfo::Reset();
+            PlayerInfo::UnlockStage(PlayerInfo::HashId("countryside"));
+            PlayerInfo::UnlockVehicle(PlayerInfo::HashId("jeep"));
+            PlayerInfo::UnlockVehicle(PlayerInfo::HashId("touristbus"));
+            g.SetCurrentStage(STAGE_COUNTRYSIDE);
+
+            g.SetCurrentVehicle(0);
+            g.StartRace();
+            for (int s = 0; s < 30; ++s) g.UpdatePlaying(FIXED_TIMESTEP);
+            float jeepZoom = g.GetCameraZoom();
+            g.EndRace();
+
+            const VehicleConfig* bus = Config::FindVehicleById("touristbus");
+            TEST_CHECK(bus != NULL, "Tourist Bus must exist");
+            g.SetCurrentVehicle((int)(bus - Config::Vehicles));
+            g.StartRace();
+            for (int s = 0; s < 30; ++s) g.UpdatePlaying(FIXED_TIMESTEP);
+            float busZoom = g.GetCameraZoom();
+            g.EndRace();
+            TEST_CHECK(busZoom < jeepZoom - 0.05f, "Adaptive camera must zoom out wider for large Tourist Bus");
+
+            // Garage UP/DOWN +-5 jump
+            g.SetCurrentStage(0);
+            System::ButtonsPressed = PSP_CTRL_DOWN;
+            g.UpdateGarage();
+            System::ButtonsPressed = 0;
+            TEST_CHECK(g.GetCurrentStage() == 5, "Garage DOWN must jump +5 stages");
+            System::ButtonsPressed = PSP_CTRL_UP;
+            g.UpdateGarage();
+            System::ButtonsPressed = 0;
+            TEST_CHECK(g.GetCurrentStage() == 0, "Garage UP must jump -5 stages");
+        }
+
+        // 6. AudioEngine multi-SFX queue + prefilled music stream zero underruns
+        {
+            AudioEngine::Init();
+            AudioEngine::PlaySFX(SFX_COIN);
+            AudioEngine::PlaySFX(SFX_REFUEL);
+            AudioEngine::PlaySFX(SFX_CLICK);
+            if (AudioEngine::PlayMusic("assets/audio/bgmusic_country.ogg")) {
+                TEST_CHECK(AudioEngine::IsMusicPlaying() && AudioEngine::GetMusicRingSampleCount() > 0 &&
+                           AudioEngine::GetMusicUnderrunCount() == 0,
+                           "Music must prefill ring buffer before starting playback");
+                AudioEngine::StopMusic();
+            }
+            AudioEngine::Shutdown();
+        }
+
+        CleanupSaveFiles("save");
+    }
+    printf("  -> Sub-test F PASS\n\n");
+
     printf("=================================================================\n");
-    printf("   ALL 5 STABILIZATION SUB-TESTS PASSED (TEST 26 VERIFIED)       \n");
+    printf("   ALL 6 STABILIZATION SUB-TESTS PASSED (FINAL VERIFIED)         \n");
     printf("=================================================================\n");
     return 0;
 }

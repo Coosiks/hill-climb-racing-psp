@@ -85,9 +85,11 @@ public:
         }
         return (modX >= 18.0f && modX <= 32.0f);
     }
+    float GetPoolSurfaceY(float x) const;
     float GetStageFriction() const;
     float GetCoinMultiplier() const;
     const StageConfig* GetStageConfig() const { return mStageConfig; }
+    StageType GetStageType() const { return mStageType; }
 
     int GetItemCount() const { return mItemCount; }
     const Collectible* GetItems() const { return mItems; }

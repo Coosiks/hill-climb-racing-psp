@@ -85,10 +85,10 @@ int main() {
         0x6dfb669a32592de7ULL, // Desert
         0xf7cc9dd1f3aa54b0ULL, // Arctic
         0x0083f35054ddbad2ULL, // Moon
-        0x79cb14fc941aed46ULL, // Highway (deterministic double)
-        0x4b3f21147a6045caULL, // Cave
-        0x307e7d5f71ea2410ULL, // Mars
-        0xabd7ad1150f9fbf7ULL  // Forest (deterministic double)
+        0x38177290f869560bULL, // Highway
+        0x17c907bfa1af843eULL, // Cave
+        0x83f9140086a76014ULL, // Mars
+        0x18f4e37021de766bULL  // Forest
     };
 
     const int NUM_POINTS = 4001; // 0 to 2000m with step 0.5m
@@ -234,7 +234,7 @@ int main() {
         const VehicleConfig& vc = Config::Vehicles[i];
         PlayerCar pc(&dummyWorld, b2Vec2(0.0f, 2.0f), 0, 0, 0, 0, &vc);
         float cm = pc.GetChassisBody()->GetMass();
-        float wm = pc.GetFrontWheelBody()->GetMass() + pc.GetRearWheelBody()->GetMass();
+        float wm = (pc.GetFrontWheelBody() ? pc.GetFrontWheelBody()->GetMass() : 0.0f) + pc.GetRearWheelBody()->GetMass();
         float hm = pc.GetDriverHeadBody() ? pc.GetDriverHeadBody()->GetMass() : 0.0f;
         float tm = cm + wm + hm;
         const char* slotName = "UNKNOWN";

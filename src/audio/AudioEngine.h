@@ -56,7 +56,7 @@ public:
     // Streaming Music API (T-132, H17c lock-free SPSC)
     static bool PlayMusic(const char* filepath);
     static void StopMusic();
-    static void UpdateMusicStream();
+    static void UpdateMusicStream(bool prefill = false);
     static bool IsMusicPlaying();
     static int GetMusicUnderrunCount();
     static int GetMusicRingSampleCount();
@@ -78,7 +78,9 @@ private:
     static bool mPaused;
     static float mMusicVolume;
     static float mSFXVolume;
-    static int mCurrentSfxToPlay;
+    static volatile int mSfxQueue[8];
+    static volatile int mSfxQueueHead;
+    static volatile int mSfxQueueTail;
 
     static bool LoadOgg(const char* filepath, SoundBuffer* outBuf);
     static bool LoadAudioFile(const char* baseNameWithoutExt, SoundBuffer* outBuf);

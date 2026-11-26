@@ -25,15 +25,21 @@ public:
     // b2ContactListener callbacks
     virtual void BeginContact(b2Contact* contact);
     virtual void EndContact(b2Contact* contact);
+    virtual void PostSolve(b2Contact* contact, const b2ContactImpulse* impulse);
 
     void SetListener(GameListener* listener) { mListener = listener; }
     void SetTerrain(Terrain* terrain) { mTerrain = terrain; }
     Terrain* GetTerrain() { return mTerrain; }
 
 private:
+    void TriggerDriverDown();
+
     b2World* mWorld;
     GameListener* mListener;
     Terrain* mTerrain;
+    int mDriverTerrainContacts;
+    float mDriverContactAccumSec;
+    bool mDriverDownTriggered;
 };
 
 #endif // HCR_PHYSICS_WORLD_H

@@ -13,8 +13,8 @@ static inline float clampf(float v, float lo, float hi) {
 PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int suspLvl, int tireLvl, int awdLvl, const VehicleConfig* vConfig, const Terrain* terrain)
     : mWorld(world), mEngineLevel(engineLvl), mSuspensionLevel(suspLvl),
       mTireLevel(tireLvl), mAWDLevel(awdLvl),
-      mChassis(NULL), mRearWheel(NULL), mFrontWheel(NULL), mDriverHead(NULL),
-      mRearJoint(NULL), mFrontJoint(NULL), mNeckJoint(NULL),
+      mChassis(NULL), mRearWheel(NULL), mMidWheel(NULL), mFrontWheel(NULL), mDriverHead(NULL),
+      mRearJoint(NULL), mMidJoint(NULL), mFrontJoint(NULL), mNeckJoint(NULL),
       mConfig(vConfig ? vConfig : &Config::VehicleJeep),
       mTerrain(terrain),
       mFuel(Config::Physics.max_fuel * (mConfig->fourth_upgrade_type == 1
@@ -79,6 +79,9 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
 
     if (mConfig && strcmp(mConfig->id, "tank") == 0) {
         mTexTankTrack.LoadPNG("assets/chaintrack.png");
+    } else if (mConfig && strcmp(mConfig->id, "snowmobile") == 0) {
+        mTexTankTrack.LoadPNG("assets/chaintrack.png");
+        mTexExtraDetail.LoadPNG("assets/car-tank-tire.png");
     } else if (mConfig && strcmp(mConfig->id, "hovercraft") == 0) {
         mTexHoverGlow.LoadPNG("assets/hovercraft_skirtpart.png");
     }
@@ -173,14 +176,18 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     }
 
     // 2. Create Wheels (offsets and properties from mConfig)
+    bool singleWheel = mConfig && fabsf(mConfig->front_wheel_offset[0] - mConfig->rear_wheel_offset[0]) < 0.05f;
+    bool hoverMode = (mConfig->special_physics_mode == 2);
+    bool isTankVeh = (mConfig && strcmp(mConfig->id, "tank") == 0);
+
     float wheelFriction = mConfig->wheel_base_friction * powf(mConfig->upg_mult_tires, mTireLevel);
     float rearFriction = wheelFriction;
     float frontFriction = wheelFriction;
     if (mConfig->special_physics_mode == 1) {
         frontFriction = wheelFriction * mConfig->ski_friction_mult;
-    } else if (mConfig->special_physics_mode == 2) {
-        rearFriction = 0.05f;
-        frontFriction = 0.05f;
+    } else if (hoverMode) {
+        rearFriction = 0.02f;
+        frontFriction = 0.02f;
     }
 
     float rearRadius = (mConfig->rear_wheel_radius > 0.0f) ? mConfig->rear_wheel_radius : mConfig->wheel_radius;
@@ -195,6 +202,7 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     rwfd.friction = rearFriction;
     rwfd.restitution = mConfig->wheel_restitution;
     rwfd.filter.categoryBits = CAT_WHEEL;
+    // Hidden hovercraft wheels act as zero-friction circular hull bumpers against terrain peaks
     rwfd.filter.maskBits = CAT_TERRAIN | CAT_ITEM;
 
     // Rear Wheel
@@ -203,29 +211,30 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     mRearWheel = mWorld->CreateBody(&bd);
     mRearWheel->CreateFixture(&rwfd);
 
-    // Front Wheel
-    b2CircleShape frontWheelShape;
-    frontWheelShape.m_radius = frontRadius;
-
-    b2FixtureDef fwfd;
-    fwfd.shape = &frontWheelShape;
-    fwfd.density = mConfig->wheel_density;
-    fwfd.friction = frontFriction;
-    fwfd.restitution = mConfig->wheel_restitution;
-    fwfd.filter.categoryBits = CAT_WHEEL;
-    fwfd.filter.maskBits = CAT_TERRAIN | CAT_ITEM;
-
+    // Front Wheel (skip duplicate overlapping wheel body on single-wheel vehicles like OneWheeler)
     b2Vec2 frontPos = startPos + b2Vec2(mConfig->front_wheel_offset[0], mConfig->front_wheel_offset[1]);
-    bd.position = frontPos;
-    mFrontWheel = mWorld->CreateBody(&bd);
-    mFrontWheel->CreateFixture(&fwfd);
+    if (!singleWheel) {
+        b2CircleShape frontWheelShape;
+        frontWheelShape.m_radius = frontRadius;
+
+        b2FixtureDef fwfd;
+        fwfd.shape = &frontWheelShape;
+        fwfd.density = mConfig->wheel_density;
+        fwfd.friction = frontFriction;
+        fwfd.restitution = mConfig->wheel_restitution;
+        fwfd.filter.categoryBits = CAT_WHEEL;
+        fwfd.filter.maskBits = CAT_TERRAIN | CAT_ITEM;
+
+        bd.position = frontPos;
+        mFrontWheel = mWorld->CreateBody(&bd);
+        mFrontWheel->CreateFixture(&fwfd);
+    }
 
     // 3. Create Wheel Joints (Suspension from mConfig)
     float springFreq = mConfig->base_spring_freq * powf(mConfig->upg_mult_suspension, (float)mSuspensionLevel);
     float springDamp = mConfig->base_spring_damp;
     b2Vec2 axis(0.0f, 1.0f); // Upwards
 
-    bool hoverMode = (mConfig->special_physics_mode == 2);
     float initMotorCap = (mConfig->base_motor_torque > 0.0f) ? (mConfig->base_motor_torque * 2.0f) : 20.0f;
 
     // Rear Wheel Joint
@@ -237,22 +246,51 @@ PlayerCar::PlayerCar(b2World* world, const b2Vec2& startPos, int engineLvl, int 
     jd.motorSpeed = 0.0f;
     jd.enableMotor = !hoverMode && (mConfig->drive_type == 0 || mConfig->drive_type == 2);
     jd.enableLimit = true;
-    jd.lowerTranslation = -0.35f; // TODO-TUNE: calibrate to vehicle sprite/reference video
+    jd.lowerTranslation = -0.35f;
     jd.upperTranslation =  0.35f;
     mRearJoint = (b2WheelJoint*)mWorld->CreateJoint(&jd);
 
     // Front Wheel Joint
-    jd.Initialize(mChassis, mFrontWheel, mFrontWheel->GetPosition(), axis);
-    jd.frequencyHz = springFreq;
-    jd.dampingRatio = springDamp;
-    jd.maxMotorTorque = initMotorCap;
-    jd.motorSpeed = 0.0f;
-    bool frontMotor = (mConfig->drive_type == 1) || (mConfig->drive_type == 2 && (mConfig->fourth_upgrade_type != 0 || mAWDLevel > 0));
-    jd.enableMotor = !hoverMode && frontMotor;
-    jd.enableLimit = true;
-    jd.lowerTranslation = -0.35f;
-    jd.upperTranslation =  0.35f;
-    mFrontJoint = (b2WheelJoint*)mWorld->CreateJoint(&jd);
+    if (mFrontWheel) {
+        jd.Initialize(mChassis, mFrontWheel, mFrontWheel->GetPosition(), axis);
+        jd.frequencyHz = springFreq;
+        jd.dampingRatio = springDamp;
+        jd.maxMotorTorque = initMotorCap;
+        jd.motorSpeed = 0.0f;
+        bool frontMotor = (mConfig->drive_type == 1) || (mConfig->drive_type == 2 && (mConfig->fourth_upgrade_type != 0 || mAWDLevel > 0));
+        jd.enableMotor = !hoverMode && frontMotor;
+        jd.enableLimit = true;
+        jd.lowerTranslation = -0.35f;
+        jd.upperTranslation =  0.35f;
+        mFrontJoint = (b2WheelJoint*)mWorld->CreateJoint(&jd);
+    }
+
+    // Tank middle support road wheel to prevent sharp peaks piercing track center span
+    if (isTankVeh && mFrontWheel) {
+        b2CircleShape midShape;
+        midShape.m_radius = rearRadius;
+        b2FixtureDef mwfd;
+        mwfd.shape = &midShape;
+        mwfd.density = mConfig->wheel_density * 0.5f;
+        mwfd.friction = wheelFriction;
+        mwfd.restitution = mConfig->wheel_restitution;
+        mwfd.filter.categoryBits = CAT_WHEEL;
+        mwfd.filter.maskBits = CAT_TERRAIN;
+        bd.position = 0.5f * (rearPos + frontPos);
+        mMidWheel = mWorld->CreateBody(&bd);
+        mMidWheel->CreateFixture(&mwfd);
+
+        jd.Initialize(mChassis, mMidWheel, mMidWheel->GetPosition(), axis);
+        jd.frequencyHz = springFreq;
+        jd.dampingRatio = springDamp;
+        jd.maxMotorTorque = 0.0f;
+        jd.motorSpeed = 0.0f;
+        jd.enableMotor = false;
+        jd.enableLimit = true;
+        jd.lowerTranslation = -0.35f;
+        jd.upperTranslation =  0.35f;
+        mMidJoint = (b2WheelJoint*)mWorld->CreateJoint(&jd);
+    }
 
     // 4. Create Driver Head
     b2Vec2 headPos = startPos + b2Vec2(mConfig->driver_head_offset[0], mConfig->driver_head_offset[1]);
@@ -363,12 +401,17 @@ PlayerCar::~PlayerCar() {
         mWorld->DestroyJoint(mFrontJoint);
         mFrontJoint = NULL;
     }
+    if (mMidJoint) {
+        mWorld->DestroyJoint(mMidJoint);
+        mMidJoint = NULL;
+    }
     if (mRearJoint) {
         mWorld->DestroyJoint(mRearJoint);
         mRearJoint = NULL;
     }
     if (mDriverHead) mWorld->DestroyBody(mDriverHead);
     if (mFrontWheel) mWorld->DestroyBody(mFrontWheel);
+    if (mMidWheel) mWorld->DestroyBody(mMidWheel);
     if (mRearWheel) mWorld->DestroyBody(mRearWheel);
     if (mChassis) mWorld->DestroyBody(mChassis);
 }
@@ -457,7 +500,13 @@ bool PlayerCar::IsFrontWheelOnGround() const {
 }
 
 bool PlayerCar::IsInAir() const {
-    return !IsRearWheelOnGround() && !IsFrontWheelOnGround();
+    if (IsRearWheelOnGround() || IsFrontWheelOnGround()) return false;
+    if (mMidWheel) {
+        for (b2ContactEdge* ce = mMidWheel->GetContactList(); ce; ce = ce->next) {
+            if (IsGroundContact(ce, mMidWheel)) return false;
+        }
+    }
+    return true;
 }
 
 void PlayerCar::Accelerate() {
@@ -517,7 +566,7 @@ void PlayerCar::Update(float dt) {
 
     // 1. Throttle pedal response ramp
     if (mThrottleActive && !mOutOfFuel) {
-        mThrottleRamp += dt / 0.12f;
+        mThrottleRamp += dt / 0.18f;
         if (mThrottleRamp > 1.0f) mThrottleRamp = 1.0f;
     } else {
         mThrottleRamp -= dt / 0.10f;
@@ -525,20 +574,21 @@ void PlayerCar::Update(float dt) {
     }
 
     // 2. Air time and contacts check (hoverGrounded excludes flat hovercraft glide from free AIR TIME coins - BUG-046)
+    bool singleWheel = mConfig && fabsf(mConfig->front_wheel_offset[0] - mConfig->rear_wheel_offset[0]) < 0.05f;
     bool hoverMode = (mConfig->special_physics_mode == 2);
     bool hoverGrounded = false;
     float hoverSlopeAngle = 0.0f;
+    float hoverGroundY = 0.0f;
     if (hoverMode && mChassis) {
         float curX = mChassis->GetPosition().x;
         float curY = mChassis->GetPosition().y;
-        float groundY = mTerrain ? mTerrain->GetHeightAtX(curX) : 0.0f;
-        if (curY - groundY <= mConfig->hover_height * 1.35f) {
+        float hC = mTerrain ? mTerrain->GetHeightAtX(curX) : 0.0f;
+        float hR = mTerrain ? mTerrain->GetHeightAtX(curX - 1.1f) : hC;
+        float hF = mTerrain ? mTerrain->GetHeightAtX(curX + 1.1f) : hC;
+        hoverGroundY = 0.25f * hR + 0.50f * hC + 0.25f * hF;
+        hoverSlopeAngle = atan2f(hF - hR, 2.2f);
+        if (curY - hoverGroundY <= mConfig->hover_height * 1.85f) {
             hoverGrounded = true;
-            if (mTerrain) {
-                float y1 = mTerrain->GetHeightAtX(curX - 0.5f);
-                float y2 = mTerrain->GetHeightAtX(curX + 0.5f);
-                hoverSlopeAngle = atan2f(y2 - y1, 1.0f);
-            }
         }
     }
 
@@ -582,7 +632,8 @@ void PlayerCar::Update(float dt) {
     // 2b. Wheelie tracking (rear wheel on ground, front in air, pitch angle in [0.08, 1.40] rad)
     bool rearOnGround = IsRearWheelOnGround();
     bool frontOnGround = IsFrontWheelOnGround();
-    bool isWheelie = (!mIsDead && !hoverGrounded && rearOnGround && !frontOnGround && angle > 0.08f && angle < 1.40f);
+    bool isWheelie = (!mIsDead && !singleWheel && !hoverGrounded && rearOnGround && !frontOnGround &&
+                      angle > 0.08f && angle < 1.40f);
 
     if (isWheelie) {
         mWheelieTime += dt;
@@ -596,27 +647,38 @@ void PlayerCar::Update(float dt) {
         mWheelieTime = 0.0f;
     }
 
-    // 3. 1:1 Motor & Wheel Physics Actuation (from libgame.so PlayerCar::accelerate)
-    float maxSpeed = mConfig->base_motor_speed * powf(1.05f, mEngineLevel);
-    float engineTorque = mConfig->base_motor_torque * powf(mConfig->upg_mult_engine, mEngineLevel);
+    // 3. 1:1 Motor & Wheel Physics Actuation (aligned with libgame.so PlayerCar::accelerate / decelerate)
+    float maxSpeed = mConfig->base_motor_speed * powf(1.032f, (float)mEngineLevel);
+    float torqueRate = 1.0f + (mConfig->upg_mult_engine - 1.0f) * 0.52f;
+    float engineTorque = mConfig->base_motor_torque * powf(torqueRate, (float)mEngineLevel);
     if (mConfig->fourth_upgrade_type == 5 && mAWDLevel > 0 && mThrottleActive && !mOutOfFuel) {
-        float boostMult = 1.0f + 0.05f * (float)mAWDLevel;
-        maxSpeed *= boostMult;
-        engineTorque *= boostMult;
+        maxSpeed *= (1.0f + 0.025f * (float)mAWDLevel);
+        engineTorque *= (1.0f + 0.018f * (float)mAWDLevel);
     }
     float awdFactor = (mConfig->fourth_upgrade_type == 0) ? ((float)mAWDLevel / 18.0f) : 0.50f;
     if (awdFactor > 0.50f) awdFactor = 0.50f;
     float airTorque = GetAirPitchTorque();
 
+    // Scale wheel motor reaction torque by 0.25x in mid-air and curb excessive wheelie pitch-up early
+    float airMotorScale = (IsInAir() && !hoverGrounded) ? 0.25f : 1.0f;
+    float wheeliePitchClamp = 1.0f;
+    float curPitchVel = mChassis ? mChassis->GetAngularVelocity() : 0.0f;
+    if (!inAir && rearOnGround && !frontOnGround && !singleWheel && (angle > 0.14f || curPitchVel > 0.45f) && curPitchVel > 0.15f) {
+        float angExcess = (angle > 0.14f) ? (angle - 0.14f) * 2.6f : 0.0f;
+        float velExcess = (curPitchVel > 0.25f) ? (curPitchVel - 0.25f) * 0.45f : 0.0f;
+        wheeliePitchClamp = clampf(1.0f - angExcess - velExcess, 0.01f, 1.0f);
+    }
+    float driveTorqueScale = airMotorScale * wheeliePitchClamp;
+
     if (mThrottleActive && !mOutOfFuel) {
         if (hoverMode) {
             mRearJoint->EnableMotor(false);
             if (mFrontJoint) mFrontJoint->EnableMotor(false);
-        } else if (mConfig->drive_type == 0) {
-            // RWD
+        } else if (mConfig->drive_type == 0 || singleWheel || !mFrontJoint) {
+            // RWD (or single wheel)
             float rearOmega = fabsf(mRearWheel->GetAngularVelocity());
-            float rearRatio = clampf((maxSpeed - rearOmega) / maxSpeed, 0.0f, 1.0f);
-            float rearTorque = (mThrottleRamp + 0.5f) * engineTorque * rearRatio;
+            float rearRatio = clampf(maxSpeed - rearOmega, 0.0f, 1.0f);
+            float rearTorque = (mThrottleRamp + 0.5f) * engineTorque * rearRatio * driveTorqueScale;
 
             mRearJoint->SetMotorSpeed(-maxSpeed);
             mRearJoint->SetMaxMotorTorque(rearTorque);
@@ -625,8 +687,8 @@ void PlayerCar::Update(float dt) {
         } else if (mConfig->drive_type == 1) {
             // FWD
             float frontOmega = fabsf(mFrontWheel->GetAngularVelocity());
-            float frontRatio = clampf((maxSpeed - frontOmega) / maxSpeed, 0.0f, 1.0f);
-            float frontTorque = (mThrottleRamp + 0.5f) * engineTorque * frontRatio;
+            float frontRatio = clampf(maxSpeed - frontOmega, 0.0f, 1.0f);
+            float frontTorque = (mThrottleRamp + 0.5f) * engineTorque * frontRatio * driveTorqueScale;
 
             mFrontJoint->SetMotorSpeed(-maxSpeed);
             mFrontJoint->SetMaxMotorTorque(frontTorque);
@@ -635,8 +697,8 @@ void PlayerCar::Update(float dt) {
         } else {
             // AWD (drive_type == 2)
             float rearOmega = fabsf(mRearWheel->GetAngularVelocity());
-            float rearRatio = clampf((maxSpeed - rearOmega) / maxSpeed, 0.0f, 1.0f);
-            float rearTorque = (mThrottleRamp + 0.5f) * engineTorque * (1.0f - awdFactor) * rearRatio;
+            float rearRatio = clampf(maxSpeed - rearOmega, 0.0f, 1.0f);
+            float rearTorque = (mThrottleRamp + 0.5f) * engineTorque * (1.0f - awdFactor) * rearRatio * driveTorqueScale;
 
             mRearJoint->SetMotorSpeed(-maxSpeed);
             mRearJoint->SetMaxMotorTorque(rearTorque);
@@ -645,8 +707,8 @@ void PlayerCar::Update(float dt) {
             bool frontActive = (mConfig->fourth_upgrade_type == 0) ? (mAWDLevel > 0) : true;
             if (frontActive && mFrontJoint) {
                 float frontOmega = fabsf(mFrontWheel->GetAngularVelocity());
-                float frontRatio = clampf((maxSpeed - frontOmega) / maxSpeed, 0.0f, 1.0f);
-                float frontTorque = (mThrottleRamp + 0.5f) * engineTorque * awdFactor * frontRatio;
+                float frontRatio = clampf(maxSpeed - frontOmega, 0.0f, 1.0f);
+                float frontTorque = (mThrottleRamp + 0.5f) * engineTorque * awdFactor * frontRatio * driveTorqueScale;
 
                 mFrontJoint->SetMotorSpeed(-maxSpeed);
                 mFrontJoint->SetMaxMotorTorque(frontTorque);
@@ -656,9 +718,20 @@ void PlayerCar::Update(float dt) {
             }
         }
 
-        // Air control: gas tilts nose up (backflip, CCW, positive torque)
-        if (mAirTime > 0.08f && !hoverGrounded) {
-            mChassis->ApplyTorque(airTorque, true);
+        // BOOST linear propulsion along chassis forward axis when grounded (avoids violent wheelie flip on lvl 20)
+        if (mConfig->fourth_upgrade_type == 5 && mAWDLevel > 0 && !inAir && !hoverMode && mChassis) {
+            float boostForce = mChassis->GetMass() * 0.28f * (float)mAWDLevel * mThrottleRamp;
+            mChassis->ApplyForceToCenter(b2Vec2(cosf(angle) * boostForce, sinf(angle) * boostForce), true);
+        }
+
+        // Air control: cap torque relative to chassis inertia so light bikes do not helicopter
+        if (mAirTime > 0.28f && !hoverGrounded && mChassis) {
+            float targetSpin = clampf(airTorque * 0.42f, 3.0f, 5.2f);
+            float curW = mChassis->GetAngularVelocity();
+            float scale = clampf((targetSpin - curW) / targetSpin, 0.0f, 1.0f);
+            float inertiaCap = mChassis->GetInertia() * 3.8f;
+            float maxAirTorque = (airTorque * 0.85f < inertiaCap) ? (airTorque * 0.85f) : inertiaCap;
+            mChassis->ApplyTorque(scale * maxAirTorque, true);
         }
     } else if (mBrakeActive) {
         if (hoverMode) {
@@ -667,11 +740,12 @@ void PlayerCar::Update(float dt) {
         } else {
             float forwardSpeed = mChassis->GetLinearVelocity().x;
 
-            if (forwardSpeed > 1.0f) {
-                // Forward motion: active wheel braking
-                if (mConfig->drive_type == 0 || mConfig->drive_type == 2) {
+            if (forwardSpeed > 2.5f) {
+                // Forward motion: controlled wheel braking (20 N*m grounded, 1 N*m in air - libgame.so parity)
+                float brakeTorque = (mAirTime > 0.08f) ? 1.0f : clampf(mChassis->GetMass() * 4.5f, 14.0f, 32.0f);
+                if (mConfig->drive_type == 0 || mConfig->drive_type == 2 || singleWheel || !mFrontJoint) {
                     mRearJoint->SetMotorSpeed(0.0f);
-                    mRearJoint->SetMaxMotorTorque(engineTorque * 2.0f);
+                    mRearJoint->SetMaxMotorTorque(brakeTorque);
                     mRearJoint->EnableMotor(true);
                 } else {
                     mRearJoint->EnableMotor(false);
@@ -680,18 +754,20 @@ void PlayerCar::Update(float dt) {
                 bool frontBrake = (mConfig->drive_type == 1) || (mConfig->drive_type == 2 && (mConfig->fourth_upgrade_type != 0 || mAWDLevel > 0));
                 if (frontBrake && mFrontJoint) {
                     mFrontJoint->SetMotorSpeed(0.0f);
-                    mFrontJoint->SetMaxMotorTorque(engineTorque * 1.5f);
+                    mFrontJoint->SetMaxMotorTorque(brakeTorque * 0.85f);
                     mFrontJoint->EnableMotor(true);
                 } else if (mFrontJoint) {
                     mFrontJoint->EnableMotor(false);
                 }
             } else {
-                // Stopped or reversing: drive in reverse
+                // Stopped or reversing: reverse with smooth powf(..., 4.05f) rolloff
                 float reverseSpeed = maxSpeed * 0.5f;
 
-                if (mConfig->drive_type == 0 || mConfig->drive_type == 2) {
+                if (mConfig->drive_type == 0 || mConfig->drive_type == 2 || singleWheel || !mFrontJoint) {
+                    float rearOmega = fabsf(mRearWheel->GetAngularVelocity());
+                    float rearRatio = powf(clampf(reverseSpeed - rearOmega, 0.0f, 1.0f), 4.05f);
                     mRearJoint->SetMotorSpeed(reverseSpeed);
-                    mRearJoint->SetMaxMotorTorque(engineTorque * 0.8f);
+                    mRearJoint->SetMaxMotorTorque(engineTorque * 0.65f * rearRatio * airMotorScale);
                     mRearJoint->EnableMotor(true);
                 } else {
                     mRearJoint->EnableMotor(false);
@@ -699,8 +775,10 @@ void PlayerCar::Update(float dt) {
 
                 bool frontRev = (mConfig->drive_type == 1) || (mConfig->drive_type == 2 && (mConfig->fourth_upgrade_type != 0 || mAWDLevel > 0));
                 if (frontRev && mFrontJoint) {
+                    float frontOmega = fabsf(mFrontWheel->GetAngularVelocity());
+                    float frontRatio = powf(clampf(reverseSpeed - frontOmega, 0.0f, 1.0f), 4.05f);
                     mFrontJoint->SetMotorSpeed(reverseSpeed);
-                    mFrontJoint->SetMaxMotorTorque(engineTorque * 0.5f);
+                    mFrontJoint->SetMaxMotorTorque(engineTorque * 0.45f * frontRatio * airMotorScale);
                     mFrontJoint->EnableMotor(true);
                 } else if (mFrontJoint) {
                     mFrontJoint->EnableMotor(false);
@@ -708,9 +786,14 @@ void PlayerCar::Update(float dt) {
             }
         }
 
-        // Air control: brake tilts nose down (frontflip, CW, negative torque)
-        if (mAirTime > 0.08f && !hoverGrounded) {
-            mChassis->ApplyTorque(-airTorque, true);
+        // Air control: brake tilts nose down (inertia-capped so light bikes do not helicopter)
+        if (mAirTime > 0.28f && !hoverGrounded && mChassis) {
+            float targetSpin = clampf(airTorque * 0.42f, 3.0f, 5.2f);
+            float curW = mChassis->GetAngularVelocity();
+            float scale = clampf((curW + targetSpin) / targetSpin, 0.0f, 1.0f);
+            float inertiaCap = mChassis->GetInertia() * 3.8f;
+            float maxAirTorque = (airTorque * 0.85f < inertiaCap) ? (airTorque * 0.85f) : inertiaCap;
+            mChassis->ApplyTorque(-scale * maxAirTorque, true);
         }
     } else {
         // Coasting / Idle: disable motor so wheels rotate completely freely down hills
@@ -773,19 +856,18 @@ void PlayerCar::Update(float dt) {
         mChassis->ApplyTorque(-mChassis->GetAngularVelocity() * 0.5f * (float)mAWDLevel, true);
     }
 
-    // Single-wheel gyro self-balancing (e.g. OneWheeler): prevents instant flip on launch while permitting air flips
-    bool singleWheel = mConfig && fabsf(mConfig->front_wheel_offset[0] - mConfig->rear_wheel_offset[0]) < 0.05f;
+    // Single-wheel gyro self-balancing (e.g. OneWheeler): keeps rider upright on hills while permitting flips in air
     if (singleWheel && mChassis && !mIsDead && mAirTime <= 0.08f) {
         float cAng = mChassis->GetAngle();
         while (cAng > 3.14159265f)  cAng -= 6.2831853f;
         while (cAng < -3.14159265f) cAng += 6.2831853f;
-        float kP = 24.0f + 1.5f * (float)mAWDLevel;
-        float kD = 7.0f + 0.5f * (float)mAWDLevel;
+        float kP = 34.0f + 1.5f * (float)mAWDLevel;
+        float kD = 10.0f + 0.5f * (float)mAWDLevel;
         mChassis->ApplyTorque(-cAng * kP - mChassis->GetAngularVelocity() * kD, true);
     }
 
     // Special Physics Modes Actuation (T-131b)
-    if (mConfig->special_physics_mode == 1 && frontOnGround && mTerrain && mChassis && !mIsDead) {
+    if (mConfig->special_physics_mode == 1 && frontOnGround && mTerrain && mChassis && !mIsDead && mFrontWheel) {
         // Mode 1: SKI_GLIDE - Align nose with ground slope when front ski makes contact
         float x = mFrontWheel->GetPosition().x;
         float y1 = mTerrain->GetHeightAtX(x - 0.5f);
@@ -797,23 +879,26 @@ void PlayerCar::Update(float dt) {
         while (angleDiff < -3.14159265f) angleDiff += 6.2831853f;
         mChassis->ApplyTorque(angleDiff * 30.0f - mChassis->GetAngularVelocity() * 5.0f, true);
     } else if (mConfig->special_physics_mode == 2 && mChassis && !mIsDead) {
-        // Mode 2: HOVER_CUSHION - Repulsive air cushion, pitch damping, and upgraded propeller thrust (BUG-019)
-        float curX = mChassis->GetPosition().x;
+        // Mode 2: HOVER_CUSHION - 3-point terrain height cushion, anti-launch damping, and propeller thrust
         float curY = mChassis->GetPosition().y;
-        float groundY = mTerrain ? mTerrain->GetHeightAtX(curX) : 0.0f;
-        float clearance = curY - groundY;
-        if (clearance < mConfig->hover_height && clearance > -2.0f) {
+        float clearance = curY - hoverGroundY;
+        if (clearance < mConfig->hover_height * 1.85f && clearance > -2.0f) {
             float vy = mChassis->GetLinearVelocity().y;
-            float cushionForce = mConfig->hover_k * (mConfig->hover_height - clearance) - mConfig->hover_c * vy;
+            float cushionForce = 0.0f;
+            if (clearance < mConfig->hover_height) {
+                cushionForce = mConfig->hover_k * (mConfig->hover_height - clearance) - mConfig->hover_c * vy;
+            } else if (vy > 1.2f) {
+                cushionForce = -mChassis->GetMass() * 4.5f * (vy - 1.2f);
+            }
             float maxCushion = mChassis->GetMass() * 150.0f;
             if (cushionForce > maxCushion) cushionForce = maxCushion;
-            if (cushionForce < 0.0f) cushionForce = 0.0f;
+            if (cushionForce < -mChassis->GetMass() * 30.0f) cushionForce = -mChassis->GetMass() * 30.0f;
             mChassis->ApplyForceToCenter(b2Vec2(0.0f, cushionForce), true);
 
             float angleDiff = hoverSlopeAngle - mChassis->GetAngle();
             while (angleDiff > 3.14159265f)  angleDiff -= 6.2831853f;
             while (angleDiff < -3.14159265f) angleDiff += 6.2831853f;
-            mChassis->ApplyTorque(angleDiff * 14.0f - mChassis->GetAngularVelocity() * 3.5f, true);
+            mChassis->ApplyTorque(angleDiff * 28.0f - mChassis->GetAngularVelocity() * 7.5f, true);
         }
         if (mThrottleActive && !mOutOfFuel) {
             float chassisAngle = mChassis->GetAngle();
@@ -831,7 +916,7 @@ void PlayerCar::Update(float dt) {
             mChassis->ApplyForceToCenter(b2Vec2(-thrustMag * forwardDir.x, -thrustMag * forwardDir.y), true);
         }
     } else if (mConfig->special_physics_mode == 3 && mThrusterActive && !mOutOfFuel && !mIsDead) {
-        // Mode 3: THRUSTER_JET - Mass-proportional vertical thrust across all bodies (BUG-020: raise cap to 6.0g)
+        // Mode 3: THRUSTER_JET - Mass-proportional thrust along chassis local UP vector
         float g = fabsf(mWorld->GetGravity().y);
         if (g < 0.1f) g = 9.8f;
         float boostFactor = 1.0f + mConfig->thruster_boost_per_level * (float)mAWDLevel;
@@ -839,10 +924,12 @@ void PlayerCar::Update(float dt) {
         if (totalMult > 6.0f) totalMult = 6.0f;
         if (totalMult < 0.0f) totalMult = 0.0f;
 
-        if (mChassis)    mChassis->ApplyForceToCenter(b2Vec2(0.0f, mChassis->GetMass() * g * totalMult), true);
-        if (mRearWheel)  mRearWheel->ApplyForceToCenter(b2Vec2(0.0f, mRearWheel->GetMass() * g * totalMult), true);
-        if (mFrontWheel) mFrontWheel->ApplyForceToCenter(b2Vec2(0.0f, mFrontWheel->GetMass() * g * totalMult), true);
-        if (mDriverHead) mDriverHead->ApplyForceToCenter(b2Vec2(0.0f, mDriverHead->GetMass() * g * totalMult), true);
+        float cAng = mChassis->GetAngle();
+        b2Vec2 thrustDir(-sinf(cAng), cosf(cAng));
+        if (mChassis)    mChassis->ApplyForceToCenter((mChassis->GetMass() * g * totalMult) * thrustDir, true);
+        if (mRearWheel)  mRearWheel->ApplyForceToCenter((mRearWheel->GetMass() * g * totalMult) * thrustDir, true);
+        if (mFrontWheel) mFrontWheel->ApplyForceToCenter((mFrontWheel->GetMass() * g * totalMult) * thrustDir, true);
+        if (mDriverHead) mDriverHead->ApplyForceToCenter((mDriverHead->GetMass() * g * totalMult) * thrustDir, true);
     }
 
     // 8. Viscous Mud Damping (T-123)
@@ -877,6 +964,24 @@ void PlayerCar::Update(float dt) {
                 mChassis->ApplyForceToCenter(cdrag, true);
             }
         }
+
+        // Hazardous liquid contact (lava on Volcano/Ragnarok, toxic slime on Nuclear)
+        StageType st = mTerrain->GetStageType();
+        if ((st == STAGE_VOLCANO || st == STAGE_RAGNAROK || st == STAGE_NUCLEAR) &&
+            mConfig->special_physics_mode != 2 && mChassis && mTerrain->IsInMudZone(mChassis->GetPosition().x)) {
+            float poolY = mTerrain->GetPoolSurfaceY(mChassis->GetPosition().x);
+            if (mDriverHead && mDriverHead->GetPosition().y < poolY - 0.12f) {
+                Kill();
+            } else if (mChassis->GetPosition().y < poolY - 0.05f) {
+                mFuel -= 12.0f * dt;
+                if (mFuel <= 0.0f) { mFuel = 0.0f; mOutOfFuel = true; }
+            }
+        }
+    }
+
+    // 9. Urban rooftop abyss fall check
+    if (mTerrain && mTerrain->GetStageType() == STAGE_ROOFTOPS && mChassis && mChassis->GetPosition().y < -11.0f) {
+        Kill();
     }
 }
 
@@ -1056,11 +1161,11 @@ void PlayerCar::Render(float alpha) {
             if (i == 0) {
                 // Continuous red harness strap from sleigh bow to lead reindeer neck
                 b2Vec2 neckAnchor = rCenter + b2Mul(rRot, b2Vec2(0.45f, 0.14f));
-                for (int s = 0; s < 16; ++s) {
-                    float t = ((float)s + 0.5f) / 16.0f;
+                for (int s = 0; s < 32; ++s) {
+                    float t = ((float)s + 0.5f) / 32.0f;
                     float lx = bowWorld.x + (neckAnchor.x - bowWorld.x) * t;
                     float ly = bowWorld.y + (neckAnchor.y - bowWorld.y) * t;
-                    Renderer2D::DrawFilledRect(lx - 0.06f, ly - 0.024f, 0.12f, 0.048f, 0xFF2828B8);
+                    Renderer2D::DrawFilledRect(lx - 0.032f, ly - 0.020f, 0.064f, 0.040f, 0xFF2828B8);
                 }
             }
         }
@@ -1102,33 +1207,61 @@ void PlayerCar::Render(float alpha) {
         if (spanLen < 0.2f) spanLen = 2.6f;
         float trkAngle = atan2f(span.y, span.x);
         b2Vec2 mid = 0.5f * (rearPos + frontPos);
+        b2Vec2 dir(cosf(trkAngle), sinf(trkAngle));
         b2Vec2 nrm(-sinf(trkAngle), cosf(trkAngle));
 
         if (mTexTankTrack.GetWidth() > 0) {
-            // Rounded track end caps + continuous dark inner belt + tiled top/bottom caterpillar links
-            Renderer2D::DrawSprite(&mTexTankTrack, rearPos.x, rearPos.y, r * 2.15f, r * 2.15f, trkAngle, 0xFF282828);
-            Renderer2D::DrawSprite(&mTexTankTrack, frontPos.x, frontPos.y, r * 2.15f, r * 2.15f, trkAngle, 0xFF282828);
-            Renderer2D::DrawSprite(&mTexTankTrack, mid.x, mid.y, spanLen, r * 1.95f, trkAngle, 0xCC222222);
-
-            const int segs = 7;
-            float segW = spanLen / (float)segs;
-            b2Vec2 dir(cosf(trkAngle), sinf(trkAngle));
-            for (int s = 0; s < segs; ++s) {
-                float off = ((float)s + 0.5f - (float)segs * 0.5f) * segW;
-                b2Vec2 topP = mid + off * dir + (r * 0.94f) * nrm;
-                b2Vec2 botP = mid + off * dir - (r * 0.94f) * nrm;
-                Renderer2D::DrawSprite(&mTexTankTrack, topP.x, topP.y, segW * 1.05f, 0.14f, trkAngle, 0xFFFFFFFF);
-                Renderer2D::DrawSprite(&mTexTankTrack, botP.x, botP.y, segW * 1.05f, 0.14f, trkAngle, 0xFFFFFFFF);
-            }
+            Renderer2D::DrawSprite(&mTexTankTrack, mid.x, mid.y, spanLen, r * 1.92f, trkAngle, 0xCC202020);
         }
 
-        // 6 spinning road wheels seated inside the track run (matches HCR 1.30.0)
+        // 6 spinning road wheels seated inside the track belt BEFORE outer tread links
         for (int w = 0; w < 6; ++w) {
             float t = (float)w / 5.0f;
             b2Vec2 wp = (1.0f - t) * rearPos + t * frontPos;
             float wAng = (w < 3) ? rearAngle : frontAngle;
-            Renderer2D::DrawSprite(&mTexTire, wp.x, wp.y, r * 2.05f, r * 2.05f, wAng);
+            Renderer2D::DrawSprite(&mTexTire, wp.x, wp.y, r * 1.72f, r * 1.72f, wAng);
         }
+
+        if (mTexTankTrack.GetWidth() > 0) {
+            Renderer2D::DrawSprite(&mTexTankTrack, rearPos.x, rearPos.y, r * 1.96f, r * 1.96f, trkAngle, 0x40202020);
+            Renderer2D::DrawSprite(&mTexTankTrack, frontPos.x, frontPos.y, r * 1.96f, r * 1.96f, trkAngle, 0x40202020);
+            const int segs = 7;
+            float segW = spanLen / (float)segs;
+            for (int s = 0; s < segs; ++s) {
+                float off = ((float)s + 0.5f - (float)segs * 0.5f) * segW;
+                b2Vec2 topP = mid + off * dir + (r * 0.90f) * nrm;
+                b2Vec2 botP = mid + off * dir - (r * 0.90f) * nrm;
+                Renderer2D::DrawSprite(&mTexTankTrack, topP.x, topP.y, segW * 1.05f, 0.14f, trkAngle, 0xFFFFFFFF);
+                Renderer2D::DrawSprite(&mTexTankTrack, botP.x, botP.y, segW * 1.05f, 0.14f, trkAngle, 0xFFFFFFFF);
+            }
+        }
+    } else if (skiMode && mRearWheel && mFrontWheel) {
+        // Snowmobile: rear caterpillar drive track + dual rollers, front sliding ski
+        b2Vec2 rearPos = (1.0f - alpha) * mPrevRearWheel.position + alpha * mRearWheel->GetPosition();
+        float rearAngle = LerpAngle(mPrevRearWheel.angle, mRearWheel->GetAngle(), alpha);
+        float rearR = (mConfig->rear_wheel_radius > 0.0f) ? mConfig->rear_wheel_radius : mConfig->wheel_radius;
+        b2Vec2 rDir(cosf(chassisAngle), sinf(chassisAngle));
+        b2Vec2 rNrm(-sinf(chassisAngle), cosf(chassisAngle));
+        Texture* rollerTex = (mTexExtraDetail.GetWidth() > 0) ? &mTexExtraDetail : &mTexTire;
+        for (int k = -1; k <= 1; k += 2) {
+            b2Vec2 rp = rearPos + ((float)k * rearR * 0.65f) * rDir;
+            Renderer2D::DrawSprite(rollerTex, rp.x, rp.y, rearR * 1.45f, rearR * 1.45f, rearAngle);
+        }
+        if (mTexTankTrack.GetWidth() > 0) {
+            b2Vec2 topP = rearPos + (rearR * 0.78f) * rNrm;
+            b2Vec2 botP = rearPos - (rearR * 0.78f) * rNrm;
+            Renderer2D::DrawSprite(&mTexTankTrack, rearPos.x, rearPos.y, rearR * 2.5f, rearR * 1.65f, chassisAngle, 0x60202020);
+            Renderer2D::DrawSprite(&mTexTankTrack, topP.x, topP.y, rearR * 2.5f, 0.12f, chassisAngle, 0xFFFFFFFF);
+            Renderer2D::DrawSprite(&mTexTankTrack, botP.x, botP.y, rearR * 2.5f, 0.12f, chassisAngle, 0xFFFFFFFF);
+        } else {
+            Renderer2D::DrawSprite(&mTexTire, rearPos.x, rearPos.y, rearR * 2.02f, rearR * 2.02f, rearAngle);
+        }
+
+        b2Vec2 frontPos = (1.0f - alpha) * mPrevFrontWheel.position + alpha * mFrontWheel->GetPosition();
+        float frontR = (mConfig->front_wheel_radius > 0.0f) ? mConfig->front_wheel_radius : mConfig->wheel_radius;
+        float skiW = frontR * 3.1f;
+        float skiH = frontR * 1.25f;
+        Renderer2D::DrawSprite(&mTexFrontTire, frontPos.x, frontPos.y - frontR * 0.35f, skiW, skiH, chassisAngle);
     } else {
         if (mRearWheel && (!mConfig || mConfig->hide_wheels == 0)) {
             b2Vec2 curPos = mRearWheel->GetPosition();
@@ -1136,14 +1269,10 @@ void PlayerCar::Render(float alpha) {
             b2Vec2 pos = (1.0f - alpha) * mPrevRearWheel.position + alpha * curPos;
             float angle = LerpAngle(mPrevRearWheel.angle, curAngle, alpha);
             float rearRadius = (mConfig->rear_wheel_radius > 0.0f) ? mConfig->rear_wheel_radius : mConfig->wheel_radius;
-            float diameter = rearRadius * 2.15f;
-            if (skiMode) {
-                Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y - rearRadius * 0.25f, diameter * 1.35f, diameter * 0.675f, chassisAngle);
-            } else {
-                Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y, diameter, diameter, angle);
-                if (isElectric && mTexExtraDetail.GetWidth() > 0) {
-                    Renderer2D::DrawSprite(&mTexExtraDetail, pos.x, pos.y, diameter * 0.70f, diameter * 0.70f, chassisAngle);
-                }
+            float diameter = rearRadius * 2.02f;
+            Renderer2D::DrawSprite(&mTexTire, pos.x, pos.y, diameter, diameter, angle);
+            if (isElectric && mTexExtraDetail.GetWidth() > 0) {
+                Renderer2D::DrawSprite(&mTexExtraDetail, pos.x, pos.y, diameter * 0.70f, diameter * 0.70f, chassisAngle);
             }
         }
 
@@ -1153,14 +1282,10 @@ void PlayerCar::Render(float alpha) {
             b2Vec2 pos = (1.0f - alpha) * mPrevFrontWheel.position + alpha * curPos;
             float angle = LerpAngle(mPrevFrontWheel.angle, curAngle, alpha);
             float frontRadius = (mConfig->front_wheel_radius > 0.0f) ? mConfig->front_wheel_radius : mConfig->wheel_radius;
-            float diameter = frontRadius * 2.15f;
-            if (skiMode) {
-                Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y - frontRadius * 0.25f, diameter * 1.35f, diameter * 0.675f, chassisAngle);
-            } else {
-                Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y, diameter, diameter, angle);
-                if (isElectric && mTexExtraDetail.GetWidth() > 0) {
-                    Renderer2D::DrawSprite(&mTexExtraDetail, pos.x, pos.y, diameter * 0.70f, diameter * 0.70f, chassisAngle);
-                }
+            float diameter = frontRadius * 2.02f;
+            Renderer2D::DrawSprite(&mTexFrontTire, pos.x, pos.y, diameter, diameter, angle);
+            if (isElectric && mTexExtraDetail.GetWidth() > 0) {
+                Renderer2D::DrawSprite(&mTexExtraDetail, pos.x, pos.y, diameter * 0.70f, diameter * 0.70f, chassisAngle);
             }
         }
     }

@@ -361,6 +361,20 @@ def convert_image_to_tex(img_data_or_path, dst_path, target_format=FORMAT_RGBA88
             struct.pack_into('<H', short_array, idx, val)
             idx += 2
         pixel_bytes = bytes(short_array)
+    elif target_format == FORMAT_RGBA4444:
+        bpp = 2
+        # Convert 32bpp RGBA to 16bpp A4B4G4R4 (little-endian for PSP GE)
+        short_array = bytearray(pot_w * pot_h * 2)
+        idx = 0
+        for i in range(0, len(raw_pixels), 4):
+            r = raw_pixels[i] >> 4
+            g = raw_pixels[i+1] >> 4
+            b = raw_pixels[i+2] >> 4
+            a = raw_pixels[i+3] >> 4
+            val = (a << 12) | (b << 8) | (g << 4) | r
+            struct.pack_into('<H', short_array, idx, val)
+            idx += 2
+        pixel_bytes = bytes(short_array)
     else: # FORMAT_RGBA8888
         bpp = 4
         pixel_bytes = raw_pixels
@@ -401,7 +415,14 @@ def get_target_format(filename, cli_format):
     if fname in ["antenna.png", "bridgewoodblock.png"]:
         return FORMAT_RGBA8888
 
-    # Default: 5551 for terrain ground/surface, pedals, buttons, fonts
+    # Smooth-alpha / gradient textures use RGBA4444 (16bpp with 4-bit smooth alpha instead of 1-bit cutout)
+    smooth_alpha_keywords = [
+        "font", "smoke", "lava", "slime", "cloud", "snow", "-surface", "light", "mud"
+    ]
+    if any(k in fname for k in smooth_alpha_keywords) or fname.startswith("rain"):
+        return FORMAT_RGBA4444
+
+    # Default: 5551 for opaque terrain ground fills and simple icons
     return FORMAT_RGBA5551
 
 def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode="auto", swizzle=True, convert_audio=True, convert_music=True):
@@ -450,7 +471,7 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
                         "tex": os.path.splitext(rel_path)[0] + ".tex",
                         "orig": f"{ow}x{oh}",
                         "pot": f"{pw}x{ph}",
-                        "format": "RGBA8888" if fcode == FORMAT_RGBA8888 else "RGBA5551",
+                        "format": "RGBA8888" if fcode == FORMAT_RGBA8888 else ("RGBA4444" if fcode == FORMAT_RGBA4444 else "RGBA5551"),
                         "size": fsize
                     })
                     processed_count += 1
@@ -498,7 +519,7 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
                         "tex": os.path.splitext(rel_path)[0] + ".tex",
                         "orig": f"{ow}x{oh}",
                         "pot": f"{pw}x{ph}",
-                        "format": "RGBA8888" if fcode == FORMAT_RGBA8888 else "RGBA5551",
+                        "format": "RGBA8888" if fcode == FORMAT_RGBA8888 else ("RGBA4444" if fcode == FORMAT_RGBA4444 else "RGBA5551"),
                         "size": fsize
                     })
                     processed_count += 1

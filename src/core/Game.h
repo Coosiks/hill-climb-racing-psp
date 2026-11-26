@@ -37,9 +37,11 @@ public:
     void EndRace();
     void CommitRaceResults();
     void UpdatePhysicsStep(float dt);
+    void UpdatePlaying(float frameTime);
     void UpdateGarage();
     void UpdatePause();
     void UpdateGameOver(float frameTime = 0.0f);
+    float GetCameraZoom() const { return mCameraZoom; }
     void LoadStagePreview();
     const Texture& GetStagePreviewTexture() const { return mTexStagePreview; }
 
@@ -124,7 +126,6 @@ private:
 
     void RenderGarage();
 
-    void UpdatePlaying(float frameTime);
     void RenderPlaying();
 
     void RenderPause();

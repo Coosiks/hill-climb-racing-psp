@@ -253,6 +253,21 @@ bool Texture::LoadTex(const char* filepath) {
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, header.pot_w, header.pot_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba32);
                 free(rgba32);
             }
+        } else if (header.format == GU_PSM_4444) {
+            uint8_t* rgba32 = (uint8_t*)malloc(header.pot_w * header.pot_h * 4);
+            if (rgba32) {
+                const uint16_t* src16 = (const uint16_t*)linearBuf;
+                int totalPixels = header.pot_w * header.pot_h;
+                for (int i = 0; i < totalPixels; ++i) {
+                    uint16_t p = src16[i];
+                    rgba32[i * 4 + 0] = (uint8_t)((p & 0x0F) * 17);
+                    rgba32[i * 4 + 1] = (uint8_t)(((p >> 4) & 0x0F) * 17);
+                    rgba32[i * 4 + 2] = (uint8_t)(((p >> 8) & 0x0F) * 17);
+                    rgba32[i * 4 + 3] = (uint8_t)(((p >> 12) & 0x0F) * 17);
+                }
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, header.pot_w, header.pot_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba32);
+                free(rgba32);
+            }
         }
         free(linearBuf);
     }
@@ -290,8 +305,18 @@ bool Texture::LoadPNG_PC(const char* filepath) {
 
     int srcW = mWidth;
     int srcH = mHeight;
-    int dstW = (srcW > 512) ? 512 : srcW;
-    int dstH = (srcH > 512) ? 512 : srcH;
+    int dstW = srcW;
+    int dstH = srcH;
+    if (srcW > 512 || srcH > 512) {
+        int maxDim = (srcW > srcH) ? srcW : srcH;
+        float scale = 512.0f / (float)maxDim;
+        dstW = (int)(srcW * scale + 0.5f);
+        dstH = (int)(srcH * scale + 0.5f);
+        if (dstW < 1) dstW = 1;
+        if (dstH < 1) dstH = 1;
+        if (dstW > 512) dstW = 512;
+        if (dstH > 512) dstH = 512;
+    }
 
     mWidth = dstW;
     mHeight = dstH;
