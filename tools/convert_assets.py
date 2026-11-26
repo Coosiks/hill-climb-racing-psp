@@ -339,7 +339,12 @@ def convert_image_to_tex(img_data_or_path, dst_path, target_format=FORMAT_RGBA88
 
     # Create POT canvas
     pot_img = Image.new('RGBA', (pot_w, pot_h), (0, 0, 0, 0))
-    pot_img.paste(img, (0, 0))
+    if orig_w < pot_w and (pot_w % orig_w) == 0 and orig_h == pot_h:
+        for x_off in range(0, pot_w, orig_w):
+            pot_img.paste(img, (x_off, 0))
+        orig_w = pot_w
+    else:
+        pot_img.paste(img, (0, 0))
     raw_pixels = pot_img.tobytes()
 
     if target_format == FORMAT_RGBA5551:
@@ -353,6 +358,20 @@ def convert_image_to_tex(img_data_or_path, dst_path, target_format=FORMAT_RGBA88
             b = raw_pixels[i+2] >> 3
             a = 1 if raw_pixels[i+3] > 128 else 0
             val = (a << 15) | (b << 10) | (g << 5) | r
+            struct.pack_into('<H', short_array, idx, val)
+            idx += 2
+        pixel_bytes = bytes(short_array)
+    elif target_format == FORMAT_RGBA4444:
+        bpp = 2
+        # Convert 32bpp RGBA to 16bpp A4B4G4R4 (little-endian for PSP GE)
+        short_array = bytearray(pot_w * pot_h * 2)
+        idx = 0
+        for i in range(0, len(raw_pixels), 4):
+            r = raw_pixels[i] >> 4
+            g = raw_pixels[i+1] >> 4
+            b = raw_pixels[i+2] >> 4
+            a = raw_pixels[i+3] >> 4
+            val = (a << 12) | (b << 8) | (g << 4) | r
             struct.pack_into('<H', short_array, idx, val)
             idx += 2
         pixel_bytes = bytes(short_array)
@@ -387,7 +406,7 @@ def get_target_format(filename, cli_format):
 
     # High-detail vehicle body and wheel components in RGBA8888
     vehicle_keywords = [
-        "car.png", "tire.png", "car-", "bike-", "-tire", "wheel", "tank-", "tractor", "driver-"
+        "car.png", "tire.png", "car-", "bike-", "-tire", "wheel", "tank-", "tractor", "driver-", "reindeer-"
     ]
     if any(k in fname for k in vehicle_keywords):
         return FORMAT_RGBA8888
@@ -396,7 +415,14 @@ def get_target_format(filename, cli_format):
     if fname in ["antenna.png", "bridgewoodblock.png"]:
         return FORMAT_RGBA8888
 
-    # Default: 5551 for terrain ground/surface, pedals, buttons, fonts
+    # Smooth-alpha / gradient textures use RGBA4444 (16bpp with 4-bit smooth alpha instead of 1-bit cutout)
+    smooth_alpha_keywords = [
+        "font", "smoke", "lava", "slime", "cloud", "snow", "-surface", "light", "mud"
+    ]
+    if any(k in fname for k in smooth_alpha_keywords) or fname.startswith("rain"):
+        return FORMAT_RGBA4444
+
+    # Default: 5551 for opaque terrain ground fills and simple icons
     return FORMAT_RGBA5551
 
 def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode="auto", swizzle=True, convert_audio=True, convert_music=True):
@@ -445,7 +471,7 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
                         "tex": os.path.splitext(rel_path)[0] + ".tex",
                         "orig": f"{ow}x{oh}",
                         "pot": f"{pw}x{ph}",
-                        "format": "RGBA8888" if fcode == FORMAT_RGBA8888 else "RGBA5551",
+                        "format": "RGBA8888" if fcode == FORMAT_RGBA8888 else ("RGBA4444" if fcode == FORMAT_RGBA4444 else "RGBA5551"),
                         "size": fsize
                     })
                     processed_count += 1
@@ -493,7 +519,7 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
                         "tex": os.path.splitext(rel_path)[0] + ".tex",
                         "orig": f"{ow}x{oh}",
                         "pot": f"{pw}x{ph}",
-                        "format": "RGBA8888" if fcode == FORMAT_RGBA8888 else "RGBA5551",
+                        "format": "RGBA8888" if fcode == FORMAT_RGBA8888 else ("RGBA4444" if fcode == FORMAT_RGBA4444 else "RGBA5551"),
                         "size": fsize
                     })
                     processed_count += 1
@@ -516,7 +542,7 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
                         shutil.copy2(src_path, dst_path)
                     processed_count += 1
 
-    # T-131b: Extract sleigh chassis sprite from atlas/sleigh.plist if available
+    # T-131b: Extract sleigh chassis & reindeer team sprites from atlas/sleigh.plist if available
     sleigh_png = os.path.join(out_dir, "car-sleigh.png")
     sleigh_tex = os.path.join(out_dir, "car-sleigh.tex")
     atlas_png = os.path.join(out_dir, "atlas", "sleigh.png")
@@ -533,6 +559,20 @@ def process_assets(apk_path=None, assets_dir=None, out_dir="assets", format_mode
             "size": fsize
         })
         processed_count += 1
+    for r_frame in ["reindeer-torso.png", "reindeer-head.png", "reindeer-leg-up.png", "reindeer-leg-low.png"]:
+        dst_png = os.path.join(out_dir, r_frame)
+        dst_tex = os.path.splitext(dst_png)[0] + ".tex"
+        if extract_frame_from_atlas(atlas_png, atlas_plist, r_frame, dst_png):
+            ow, oh, pw, ph, fcode, fsize = convert_image_to_tex(dst_png, dst_tex, target_format=FORMAT_RGBA8888, swizzle=swizzle)
+            manifest.append({
+                "file": r_frame,
+                "tex": os.path.splitext(r_frame)[0] + ".tex",
+                "orig": f"{ow}x{oh}",
+                "pot": f"{pw}x{ph}",
+                "format": "RGBA8888",
+                "size": fsize
+            })
+            processed_count += 1
 
     # Extract hippievan chassis and tire from atlas/car-hippievan.plist if available
     hv_atlas_png = os.path.join(out_dir, "atlas", "car-hippievan.png")
@@ -581,10 +621,30 @@ def audit_assets(out_dir="assets", allow_missing=False, stages_cfg="config/stage
     
     stage_png_ok = 0
     stage_tex_ok = 0
+    stage_icon_png_ok = 0
+    stage_icon_tex_ok = 0
     music_ok = 0
+
+    STAGE_ICON_ALIAS = {
+        "mountain": "cliffs",
+        "mudpool": "mud",
+        "arcticcave": "arctic-cave",
+    }
 
     print(f"[AUDIT] Auditing {len(stages)} Stages...")
     for s in stages:
+        icon_id = STAGE_ICON_ALIAS.get(s, s)
+        icon_png = os.path.join(out_dir, f"stage-icon-{icon_id}.png")
+        icon_tex = os.path.join(out_dir, f"stage-icon-{icon_id}.tex")
+        if os.path.isfile(icon_png):
+            stage_icon_png_ok += 1
+        else:
+            missing_files.append(f"Stage [{s}] icon PNG missing: {icon_png}")
+        if os.path.isfile(icon_tex):
+            stage_icon_tex_ok += 1
+        else:
+            missing_files.append(f"Stage [{s}] icon TEX missing: {icon_tex}")
+
         for key in ["ground_texture", "surface_texture"]:
             tex_val = cp_stages.get(s, key, fallback="")
             if not tex_val:
@@ -642,6 +702,7 @@ def audit_assets(out_dir="assets", allow_missing=False, stages_cfg="config/stage
 
     print("\n--------------------------------------------------")
     print(f"Stage Textures:   PNG {stage_png_ok}/{len(stages)*2} | TEX {stage_tex_ok}/{len(stages)*2}")
+    print(f"Stage Icons:      PNG {stage_icon_png_ok}/{len(stages)} | TEX {stage_icon_tex_ok}/{len(stages)}")
     print(f"Vehicle Textures: PNG {veh_png_ok}/{len(vehicles)*3} | TEX {veh_tex_ok}/{len(vehicles)*3}")
     print(f"Stage Music:      AUDIO {music_ok}/{len(stages)}")
     print("--------------------------------------------------")

@@ -56,7 +56,7 @@ public:
 
     // Terrain rendering
     static void DrawTerrainFill(Texture* groundTex, const float* pointsX, const float* pointsY, int count, float bottomY, unsigned int color = 0xFFFFFFFF);
-    static void DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, const float* pointsY, int count, float thickness, unsigned int color = 0xFFFFFFFF);
+    static void DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, const float* pointsY, int count, float thickness, unsigned int color = 0xFFFFFFFF, bool invertV = false);
 
     // Batching & inspection
     static void FlushBatch();

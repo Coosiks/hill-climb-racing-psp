@@ -90,6 +90,21 @@ void Renderer2D::AddQuadToBatch(Texture* tex,
     sBatchedQuadCount++;
 }
 
+static inline void ComputeCurveNormal(const float* px, const float* py, int i, int count, float* outNx, float* outNy) {
+    int i0 = (i > 0) ? (i - 1) : 0;
+    int i1 = (i + 1 < count) ? (i + 1) : (count - 1);
+    float dx = px[i1] - px[i0];
+    float dy = py[i1] - py[i0];
+    float len = sqrtf(dx * dx + dy * dy);
+    if (len < 1e-5f) {
+        *outNx = 0.0f;
+        *outNy = 1.0f;
+        return;
+    }
+    *outNx = -dy / len;
+    *outNy = dx / len;
+}
+
 #if defined(__PSP__)
 
 void Renderer2D::Init() {
@@ -317,7 +332,7 @@ void Renderer2D::DrawTerrainFill(Texture* groundTex, const float* pointsX, const
 
     FlushBatch();
 
-    groundTex->Bind(GU_REPEAT);
+    groundTex->Bind(GU_LINEAR);
     sceGuTexWrap(GU_REPEAT, GU_REPEAT);
 
     int vertCount = count * 2;
@@ -354,12 +369,12 @@ void Renderer2D::DrawTerrainFill(Texture* groundTex, const float* pointsX, const
     sDrawCallCount++;
 }
 
-void Renderer2D::DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, const float* pointsY, int count, float thickness, unsigned int color) {
+void Renderer2D::DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, const float* pointsY, int count, float thickness, unsigned int color, bool invertV) {
     if (!surfaceTex || count < 2) return;
 
     FlushBatch();
 
-    surfaceTex->Bind(GU_REPEAT);
+    surfaceTex->Bind(GU_LINEAR);
     sceGuTexWrap(GU_REPEAT, GU_CLAMP);
 
     int vertCount = count * 2;
@@ -368,25 +383,31 @@ void Renderer2D::DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, c
 
     const float UV_OFFSET = 10000.0f;
     const float halfThick = thickness * 0.5f;
+    float maxU = surfaceTex->GetMaxU();
+    float maxV = surfaceTex->GetMaxV();
+    float vTop = invertV ? maxV : 0.0f;
+    float vBot = invertV ? 0.0f : maxV;
 
     for (int i = 0; i < count; ++i) {
         float x = pointsX[i];
         float y = pointsY[i];
+        float nx = 0.0f, ny = 1.0f;
+        ComputeCurveNormal(pointsX, pointsY, i, count, &nx, &ny);
 
-        float u = (x + UV_OFFSET) * 0.5f;
+        float u = (x + UV_OFFSET) * 0.5f * maxU;
 
         v[i * 2 + 0].u = u;
-        v[i * 2 + 0].v = 0.0f;
+        v[i * 2 + 0].v = vTop;
         v[i * 2 + 0].color = color;
-        v[i * 2 + 0].x = x;
-        v[i * 2 + 0].y = y + halfThick;
+        v[i * 2 + 0].x = x + nx * halfThick;
+        v[i * 2 + 0].y = y + ny * halfThick;
         v[i * 2 + 0].z = 0.0f;
 
         v[i * 2 + 1].u = u;
-        v[i * 2 + 1].v = 1.0f;
+        v[i * 2 + 1].v = vBot;
         v[i * 2 + 1].color = color;
-        v[i * 2 + 1].x = x;
-        v[i * 2 + 1].y = y - halfThick;
+        v[i * 2 + 1].x = x - nx * halfThick;
+        v[i * 2 + 1].y = y - ny * halfThick;
         v[i * 2 + 1].z = 0.0f;
     }
 
@@ -608,7 +629,7 @@ void Renderer2D::DrawTerrainFill(Texture* groundTex, const float* pointsX, const
 
     FlushBatch();
 
-    groundTex->Bind(GL_REPEAT);
+    groundTex->Bind(GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
@@ -632,28 +653,34 @@ void Renderer2D::DrawTerrainFill(Texture* groundTex, const float* pointsX, const
     sDrawCallCount++;
 }
 
-void Renderer2D::DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, const float* pointsY, int count, float thickness, unsigned int color) {
+void Renderer2D::DrawTerrainSurface(Texture* surfaceTex, const float* pointsX, const float* pointsY, int count, float thickness, unsigned int color, bool invertV) {
     if (!surfaceTex || count < 2) return;
 
     FlushBatch();
 
-    surfaceTex->Bind(GL_REPEAT);
+    surfaceTex->Bind(GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     const float UV_OFFSET = 10000.0f;
     const float halfThick = thickness * 0.5f;
+    float maxU = surfaceTex->GetMaxU();
+    float maxV = surfaceTex->GetMaxV();
+    float vTop = invertV ? maxV : 0.0f;
+    float vBot = invertV ? 0.0f : maxV;
 
     SetGLColor(color);
     glBegin(GL_TRIANGLE_STRIP);
     for (int i = 0; i < count; ++i) {
         float x = pointsX[i];
         float y = pointsY[i];
+        float nx = 0.0f, ny = 1.0f;
+        ComputeCurveNormal(pointsX, pointsY, i, count, &nx, &ny);
 
-        float u = (x + UV_OFFSET) * 0.5f;
+        float u = (x + UV_OFFSET) * 0.5f * maxU;
 
-        glTexCoord2f(u, 0.0f); glVertex2f(x, y + halfThick);
-        glTexCoord2f(u, 1.0f); glVertex2f(x, y - halfThick);
+        glTexCoord2f(u, vTop); glVertex2f(x + nx * halfThick, y + ny * halfThick);
+        glTexCoord2f(u, vBot); glVertex2f(x - nx * halfThick, y - ny * halfThick);
     }
     glEnd();
     sDrawCallCount++;

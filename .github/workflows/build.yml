@@ -2,7 +2,7 @@ name: CI Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'fix/stabilization-batch-1' ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -93,6 +93,8 @@ jobs:
           ./build-pc/test_full_parity_1300
           ./build-pc/test_audio_pause_bonus
           ./build-pc/test_assets_music_ring
+          ./build-pc/test_spawn_clearance
+          ./build-pc/test_stabilization
 
       - name: Upload PC Artifacts
         uses: actions/upload-artifact@v4

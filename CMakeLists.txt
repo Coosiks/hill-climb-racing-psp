@@ -37,8 +37,14 @@ find_package(OpenGL REQUIRED)
 include_directories(${SDL2_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIR})
 
 add_executable(hcr_pc ${HCR_SOURCES})
+execute_process(COMMAND git rev-parse HEAD
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    OUTPUT_VARIABLE GIT_SHA OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+if(NOT GIT_SHA)
+    set(GIT_SHA "unknown")
+endif()
 target_link_libraries(hcr_pc box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
-target_compile_definitions(hcr_pc PRIVATE NDEBUG)
+target_compile_definitions(hcr_pc PRIVATE NDEBUG GIT_SHA="${GIT_SHA}")
 
 add_executable(test_physics tools/test_physics.cpp)
 target_link_libraries(test_physics box2d m pthread)
@@ -351,6 +357,40 @@ add_executable(test_assets_music_ring
     src/audio/AudioEngine.cpp
 )
 target_link_libraries(test_assets_music_ring box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
+add_executable(test_spawn_clearance
+    tools/test_spawn_clearance.cpp
+    src/core/Game.cpp
+    src/core/Config.cpp
+    src/core/PlayerInfo.cpp
+    src/core/System.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
+    src/physics/PlayerCar.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Font.cpp
+    src/graphics/Renderer2D.cpp
+    src/graphics/ParticleSystem.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_spawn_clearance box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
+
+add_executable(test_stabilization
+    tools/test_stabilization.cpp
+    src/core/Game.cpp
+    src/core/Config.cpp
+    src/core/PlayerInfo.cpp
+    src/core/System.cpp
+    src/physics/PhysicsWorld.cpp
+    src/physics/Terrain.cpp
+    src/physics/PlayerCar.cpp
+    src/graphics/Texture.cpp
+    src/graphics/Font.cpp
+    src/graphics/Renderer2D.cpp
+    src/graphics/ParticleSystem.cpp
+    src/audio/AudioEngine.cpp
+)
+target_link_libraries(test_stabilization box2d ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} m pthread)
 
 
 

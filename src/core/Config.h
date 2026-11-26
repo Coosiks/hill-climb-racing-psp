@@ -73,6 +73,8 @@ struct VehicleConfig {
     float rear_wheel_radius;
     float sprite_width;
     float sprite_height;
+    float sprite_offset_x;
+    float sprite_offset_y;
     int drive_type;          // 0 = RWD, 1 = FWD, 2 = AWD
     int fourth_upgrade_type; // 0 = AWD, 1 = FUEL, 2 = AIR_CONTROL, 3 = DOWNFORCE, 4 = STABILITY, 5 = BOOST
     float downforce_coeff;

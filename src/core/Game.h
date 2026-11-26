@@ -37,7 +37,13 @@ public:
     void EndRace();
     void CommitRaceResults();
     void UpdatePhysicsStep(float dt);
+    void UpdatePlaying(float frameTime);
+    void UpdateGarage();
     void UpdatePause();
+    void UpdateGameOver(float frameTime = 0.0f);
+    float GetCameraZoom() const { return mCameraZoom; }
+    void LoadStagePreview();
+    const Texture& GetStagePreviewTexture() const { return mTexStagePreview; }
 
     int GetRaceCollectedCoins() const { return mRaceCollectedCoins; }
     int GetRaceTrickBonusCoins() const { return mRaceTrickBonusCoins; }
@@ -80,6 +86,7 @@ private:
     bool mIsNewRecord;
     float mMaxDistance;
     bool mGameOverReasonDriverDown;
+    bool mResultsCommitted;
 
     // Stunt bonus banner
     float mStuntTimer;
@@ -87,6 +94,7 @@ private:
     int mStuntCoins;
     float mOutOfFuelStopTimer;
     float mOutOfFuelFallbackTimer;
+    float mGameOverTimer;
 
     // Camera
     float mCameraX;
@@ -99,7 +107,6 @@ private:
     float mRenderAlpha;
 
     // UI Textures
-    Texture mTexLogo;
     Texture mTexCoinIcon;
     Texture mTexFuelIcon;
     Texture mTexPedalGas;
@@ -114,19 +121,14 @@ private:
 
     Font mFont;
 
-    void LoadStagePreview();
     void LoadVehiclePreview();
     bool CanStartRace() const;
 
-    void UpdateGarage();
     void RenderGarage();
 
-    void UpdatePlaying(float frameTime);
     void RenderPlaying();
 
     void RenderPause();
-
-    void UpdateGameOver();
     void RenderGameOver();
 
     void RenderHUD();

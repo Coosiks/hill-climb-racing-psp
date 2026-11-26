@@ -1,3 +1,4 @@
+hcr-git-*.stamp
 # Build artifacts & binaries
 build*/
 release/

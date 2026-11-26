@@ -36,6 +36,9 @@ struct SuspensionBridge {
     int chunkIndex;
     float startX;
     float endX;
+    float startY;
+    float endY;
+    float plankWidth;
     int plankCount;
     b2Body* planks[MAX_BRIDGE_PLANKS];
     b2RevoluteJoint* joints[MAX_BRIDGE_PLANKS + 1];
@@ -82,9 +85,11 @@ public:
         }
         return (modX >= 18.0f && modX <= 32.0f);
     }
+    float GetPoolSurfaceY(float x) const;
     float GetStageFriction() const;
     float GetCoinMultiplier() const;
     const StageConfig* GetStageConfig() const { return mStageConfig; }
+    StageType GetStageType() const { return mStageType; }
 
     int GetItemCount() const { return mItemCount; }
     const Collectible* GetItems() const { return mItems; }
@@ -122,6 +127,7 @@ private:
     Collectible mItems[MAX_COLLECTIBLES];
     int mItemCount;
     float mLastItemSpawnX;
+    float mNextFuelX;
 
     // Deferred destroy ring buffer
     b2Body* mDestroyQueue[DEFERRED_QUEUE_CAPACITY];
@@ -132,6 +138,8 @@ private:
     // Textures
     Texture mTexGround;
     Texture mTexSurface;
+    Texture mTexLiquid;
+    Texture mTexRooftopWall;
     Texture mTexCoin5;
     Texture mTexCoin25;
     Texture mTexCoin100;

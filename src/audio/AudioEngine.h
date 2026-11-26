@@ -18,6 +18,7 @@ enum SoundEffect {
     SFX_REFUEL,
     SFX_CLICK,
     SFX_UPGRADE,
+    SFX_THRUSTER,
     SFX_COUNT
 };
 
@@ -35,6 +36,7 @@ public:
 
     static void PlaySFX(SoundEffect sfx);
     static void UpdateEngineSound(float rev, bool active, float dt = 0.0166667f);
+    static void LoadVehicleEngine(const char* vehicleId);
 
     static void PauseAll();
     static void ResumeAll();
@@ -54,7 +56,7 @@ public:
     // Streaming Music API (T-132, H17c lock-free SPSC)
     static bool PlayMusic(const char* filepath);
     static void StopMusic();
-    static void UpdateMusicStream();
+    static void UpdateMusicStream(bool prefill = false);
     static bool IsMusicPlaying();
     static int GetMusicUnderrunCount();
     static int GetMusicRingSampleCount();
@@ -76,7 +78,9 @@ private:
     static bool mPaused;
     static float mMusicVolume;
     static float mSFXVolume;
-    static int mCurrentSfxToPlay;
+    static volatile int mSfxQueue[8];
+    static volatile int mSfxQueueHead;
+    static volatile int mSfxQueueTail;
 
     static bool LoadOgg(const char* filepath, SoundBuffer* outBuf);
     static bool LoadAudioFile(const char* baseNameWithoutExt, SoundBuffer* outBuf);

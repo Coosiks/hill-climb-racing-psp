@@ -86,20 +86,20 @@ int main() {
         0x6dfb669a32592de7ULL, // 1: Desert (Frozen baseline)
         0xf7cc9dd1f3aa54b0ULL, // 2: Arctic (Frozen baseline)
         0x0083f35054ddbad2ULL, // 3: Moon (Frozen baseline)
-        0x79cb14fc941aed46ULL, // 4: Highway (Deterministic double)
-        0x4b3f21147a6045caULL, // 5: Cave (Frozen baseline)
-        0x307e7d5f71ea2410ULL, // 6: Mars (Frozen baseline)
-        0xabd7ad1150f9fbf7ULL, // 7: Forest (Deterministic double)
-        0x3f496da68e62c7ecULL, // 8: Mountain (Deterministic double)
-        0x12fd17d4ac8a936dULL, // 9: Mudpool (Deterministic double)
-        0x50aa43daaf13ada2ULL, // 10: Volcano (Deterministic double)
-        0xd9e985e660616346ULL, // 11: Beach (Frozen baseline)
-        0xa8fd4bb25c7067d8ULL, // 12: Rollercoaster (Deterministic double)
-        0x8177c160f2e579b9ULL, // 13: Night (Deterministic double)
-        0x721cab00477aa490ULL, // 14: Rooftops (Deterministic double)
-        0x168b4778e4ccfc72ULL, // 15: Junkyard (Deterministic double)
-        0x53ed7a75b127d093ULL, // 16: Construction (Deterministic double)
-        0xcd88490d45999148ULL  // 17: Rainbow (Deterministic double)
+        0x38177290f869560bULL, // 4: Highway
+        0x17c907bfa1af843eULL, // 5: Cave
+        0x83f9140086a76014ULL, // 6: Mars
+        0x18f4e37021de766bULL, // 7: Forest
+        0x09474c26a03555f7ULL, // 8: Mountain
+        0xb157f101e6988ddeULL, // 9: Mudpool
+        0x399eed0c879f0b1bULL, // 10: Volcano
+        0xd920a446c0299459ULL, // 11: Beach
+        0x08282fbda9ed6b43ULL, // 12: Rollercoaster
+        0x0b90766649f62ed9ULL, // 13: Night
+        0x827f20352b8b6f8bULL, // 14: Rooftops
+        0x4cf29d89406e73c4ULL, // 15: Junkyard
+        0x53ed7a75b127d093ULL, // 16: Construction
+        0x7fb3da7c76ddd61fULL  // 17: Rainbow
     };
 
     const int NUM_POINTS = 4001; // 0 to 2000m with step 0.5m

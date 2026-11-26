@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <math.h>
 #include <Box2D/Box2D.h>
+#include "core/Config.h"
 #include "physics/PlayerCar.h"
 
 #define TIMESTEP (1.0f / 60.0f)
 #define LIMIT_TOLERANCE 0.02f // Box2D numerical constraint solver tolerance
 
-int main() {
+static int RunDrop(const VehicleConfig& config, int level, const char* csvPath) {
     printf("==================================================\n");
     printf("   HCR Regression Test: Suspension Travel Limits  \n");
     printf("==================================================\n");
@@ -28,15 +29,18 @@ int main() {
     ground->CreateFixture(&gfd);
 
     // Drop from 5 meters height:
-    // Wheel rest offset is Y = -0.50m, wheel radius is 0.40m -> wheel bottom is -0.90m from chassis.
-    // To drop wheels from exactly 5.0m above ground (Y = 0), chassis starts at Y = 5.90m.
     const float DROP_HEIGHT = 5.0f;
-    b2Vec2 spawnPos(0.0f, DROP_HEIGHT + 0.90f);
+    const float rearRadius = config.rear_wheel_radius > 0.0f ? config.rear_wheel_radius : config.wheel_radius;
+    const float frontRadius = config.front_wheel_radius > 0.0f ? config.front_wheel_radius : config.wheel_radius;
+    b2Vec2 spawnPos(0.0f, DROP_HEIGHT + fmaxf(rearRadius - config.rear_wheel_offset[1],
+                                             frontRadius - config.front_wheel_offset[1]));
     printf("Spawning car at Y = %.2fm (free-fall drop height: %.2fm)...\n", spawnPos.y, DROP_HEIGHT);
 
-    PlayerCar car(&world, spawnPos, 0, 0, 0, 0);
+    PlayerCar car(&world, spawnPos, 0, level, 0, 0, &config);
+    printf("Drop lvl%d: %.6f Hz\n", level, car.GetRearJoint()->GetSpringFrequencyHz());
 
-    FILE* csv = fopen("suspension_droptest.csv", "w");
+    FILE* csv = fopen(csvPath, "w");
+    if (!csv) return 1;
     if (csv) {
         fprintf(csv, "step,time_sec,chassis_y,rear_trans,front_trans,rear_vel_y,front_vel_y,is_dead\n");
     }
@@ -121,4 +125,23 @@ int main() {
 
     printf("Suspension travel limits regression test PASSED successfully!\n");
     return 0;
+}
+
+int main() {
+    const int base = RunDrop(Config::VehicleJeep, 0, "suspension_droptest.csv");
+    Config::LoadAll();
+    const VehicleConfig* jeep = Config::FindVehicleById("jeep");
+    if (!jeep || Config::VehicleCount != 29) return 1;
+
+    printf("vehicle,lvl0_hz,lvl20_hz\n");
+    for (int i = 0; i < Config::VehicleCount; ++i) {
+        const VehicleConfig& config = Config::Vehicles[i];
+        b2World world(b2Vec2(0.0f, -10.0f));
+        PlayerCar base(&world, b2Vec2(0.0f, 3.0f), 0, 0, 0, 0, &config);
+        PlayerCar upgraded(&world, b2Vec2(0.0f, 3.0f), 0, 20, 0, 0, &config);
+        printf("%s,%.6f,%.6f\n", config.id, base.GetRearJoint()->GetSpringFrequencyHz(),
+               upgraded.GetRearJoint()->GetSpringFrequencyHz());
+    }
+    const int upgraded = RunDrop(*jeep, 20, "suspension_droptest_lvl20.csv");
+    return base || upgraded;
 }
